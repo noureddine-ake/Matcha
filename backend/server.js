@@ -1,7 +1,10 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { pool } from './src/config/config.js';
-import { getAllUsers,createUser } from './src/models/userModel.js';
+import { registerRoute } from './src/routes/authRoutes.js';
+import { profileRoute } from './src/routes/profileRoutes.js';
+import cors from 'cors';
+import authMiddleware from './src/middlewares/authMiddleware.js';
 
 // Load environment variables
 dotenv.config();
@@ -10,54 +13,24 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 
-// get users
-// app.get('/users', async (req, res) => {
-//   try {
-    
-//     const users = await getAllUsers();
-//     res.status(200).json(users);
-//   }
-//   catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-// add user route
-// app.post('/users', async (req, res) => {
-//   try {
-//     const { email, username, first_name, last_name, password_hash } = req.body;
+// cors policy 
+const corsOptions = {
+  origin: ["http://localhost:3000"],
+  credentials: true,
+  optionsSuccessStatus: 200
+}
+app.use(cors(corsOptions));
 
-//     // Basic validation
-//     if (!email || !username || !password_hash) {
-//       return res.status(400).json({ error: 'email, username, and password_hash are required' });
-//     }
 
-//     // // Check if user already exists
-//     // const existingUser = await getUserByEmail(email);
-//     // if (existingUser) {
-//     //   return res.status(409).json({ error: 'User with this email already exists' });
-//     // }
-
-//     const user = await createUser({
-//       email,
-//       username,
-//       first_name,
-//       last_name,
-//       password_hash
-//     });
-
-//     res.status(201).json(user);
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// });
 // Health check route
 app.get('/health', async (req, res) => {
   try {
     const client = await pool.connect();
-    await client.query('SELECT 1'); // simple test query
+    await client.query('SELECT 1');
     client.release();
 
     res.status(200).json({
@@ -73,7 +46,13 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// routes
+app.use('/api/auth', registerRoute);
+app.use('/api/profile', profileRoute);
+
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
