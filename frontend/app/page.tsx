@@ -2,8 +2,11 @@
 import React from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 const HomePage = () => {
+  const router = useRouter();
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -34,7 +37,7 @@ const HomePage = () => {
         <div className="text-2xl font-bold bg-gradient text-primary bg-clip-text">
           Matcha
         </div>
-        <button className="px-6 py-2 rounded-full bg-purple text-primary font-medium hover:opacity-90 transition-opacity">
+        <button className="px-6 py-2 rounded-full bg-purple text-primary font-medium hover:opacity-90 transition-opacity" onClick={() => router.push('/auth/login')}>
           Sign In
         </button>
       </motion.header>
@@ -49,9 +52,9 @@ const HomePage = () => {
         <div className="text-xl font-bold bg-gradient text-primary bg-clip-text">
           Matcha
         </div>
-        <button className="px-4 py-1 rounded-full bg-purple text-primary text-sm font-medium">
+        <Button className="px-4 py-1 rounded-full bg-purple text-primary text-sm font-medium" onClick={() => router.push('/auth/login')}>
           Sign In
-        </button>
+        </Button>
       </motion.header>
 
       {/* Main Section - Mobile */}
@@ -116,6 +119,7 @@ const HomePage = () => {
             variants={itemVariants}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => router.push('/auth/registration')}
           >
             Get Started
           </motion.button>
@@ -170,6 +174,7 @@ const HomePage = () => {
               variants={itemVariants}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={() => router.push('/auth/registration')}
             >
               Get Started
             </motion.button>

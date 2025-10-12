@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) NOT NULL,
   is_verified BOOLEAN DEFAULT FALSE,
   verification_token VARCHAR(255),
+  completed_profile BOOLEAN DEFAULT FALSE,
   reset_token VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -104,4 +105,11 @@ CREATE TABLE IF NOT EXISTS reports (
   reported_user_id INT REFERENCES users(id) ON DELETE CASCADE,
   reason TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS email_verifications (
+  id SERIAL PRIMARY KEY,
+  user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  verification_code INT NOT NULL,
+  expires_at TIMESTAMP
 );

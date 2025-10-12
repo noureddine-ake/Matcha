@@ -1,3 +1,8 @@
+// ====================================================
+// this file contains all the models about users Tables
+// ====================================================
+
+
 import { pool } from '../config/config.js';
 
 // CREATE
@@ -48,4 +53,14 @@ export async function deleteUser(id) {
 export async function getAllUsers() {
   const { rows } = await pool.query(`SELECT * FROM users ORDER BY id ASC`);
   return rows;
+}
+
+// GET A USER BY EMAIL
+export async function getUserAttr(attr, value) {
+  const allowedFields = ["email", "id", "username"]
+  if (! allowedFields.includes(attr)) {
+    throw new Error("Sorry, Invalid attrebute to get user");
+  }
+  const { rows, rowCount } = await pool.query(`SELECT * FROM users WHERE ${attr} = $1`, value);
+  return { rows, rowCount };
 }
