@@ -1,0 +1,79 @@
+version: "3.9"
+
+services:
+  # ====================
+  # PostgreSQL Database
+  # ====================
+  postgres:
+    image: postgres:16
+    container_name: matcha-postgres
+    env_file: .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db:/docker-entrypoint-initdb.d
+
+    networks:
+      - app-network
+
+  # ====================
+  # Redis Cache
+  # ====================
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    ports:
+      - "6379:6379"
+
+  # ====================
+  # Backend (Express)
+  # ====================
+  backend:
+    build: ./backend
+    container_name: backend
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+    networks:
+      - app-network
+
+  # ====================
+  # Frontend (Next.js)
+  # ====================
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app   # bind mount source code
+      - /app/node_modules # keep container node_modules separate
+    networks:
+      - app-network
+
+# ====================
+# Networks & Volumes
+# ====================
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

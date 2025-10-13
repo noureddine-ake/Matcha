@@ -6,7 +6,52 @@ import {
   getTagByName,
   isUserTagExisted,
 } from '../models/tagModel.js';
-import { updateUser } from '../models/userModel.js';
+import { updateUser, getUserAttr } from '../models/userModel.js';
+import bcrypt from 'bcryptjs';
+
+
+
+export const getProfile = async (req, res) => {
+  try {
+    const userId = req.user.data.id;
+
+    const userResult = await getUserAttr('id', [userId]);
+    if (!userResult.rowCount) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+
+    // Exclude sensitive fields
+    const profile = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      is_verified: user.is_verified,
+      avatar: user.avatar || null,
+    };
+
+    res.status(200).json({ profile });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const logoutController = (req, res) => {
+  // Clear the JWT cookie
+  res.cookie('token', '', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    expires: new Date(0), // expire immediately
+  });
+
+  console.log("User logged out successfully!");
+  res.status(200).json({ message: 'Logged out successfully' });
+};
 
 export const completeProfile = async (req, res) => {
   try {
