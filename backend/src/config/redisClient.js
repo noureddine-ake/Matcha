@@ -1,12 +1,14 @@
-import { createClient } from "redis";
+// // src/config/redisClient.js
+import { createClient } from 'redis';
 
-// Use Docker service name 'redis' as host
 const redisClient = createClient({
-  url: process.env.REDIS_URL || "redis://redis:6379"
+  url: 'redis://localhost:6379'
 });
 
-redisClient.on("error", (err) => console.error("Redis error:", err));
+redisClient.on('error', (err) => console.error('Redis Client Error', err));
 
-await redisClient.connect(); // connect once when server starts
+await redisClient.connect(); // ✅ top-level await works in ES module
+
+console.log('✅ Redis connected');
 
 export default redisClient;
