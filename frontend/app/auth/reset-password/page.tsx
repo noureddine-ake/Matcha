@@ -8,7 +8,7 @@ const App = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError('');
@@ -26,8 +26,12 @@ const App = () => {
           setEmail('');
         }, 3000);
       }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send reset email. Please try again.');
+    }  catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to send reset email. Please try again.');
+      }
       console.error('Reset password error:', err);
     } finally {
       setIsSubmitting(false);
@@ -85,7 +89,7 @@ const App = () => {
               className="text-gray-400 text-sm"
               style={{ color: 'var(--gray)' }}
             >
-              Enter your email address and we'll send you a link to reset your password
+              {"Enter your email address and we'll send you a link to reset your password"}
             </p>
           </div>
 
@@ -236,7 +240,7 @@ const App = () => {
             className="text-xs text-gray-500"
             style={{ color: 'var(--gray)' }}
           >
-            Didn't receive the email? Check your spam folder or{' '}
+            {"Didn't receive the email? Check your spam folder or "}
             <a 
               href="#" 
               className="font-medium hover:underline"

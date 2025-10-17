@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { motion, AnimatePresence } from "framer-motion"
+import { X, Upload, Check, Heart, UserIcon, MessageSquare, Tag, Camera } from "lucide-react"
 import Image from "next/image"
-import { X, Upload, Check } from "lucide-react"
 import api from "@/lib/api"
 
 type Gender = "male" | "female" | "non-binary" | "other"
@@ -148,14 +148,12 @@ export default function ProfileCompletePage() {
       profileData.photos.forEach((photo, index) => {
         formData.append(`photo${index}`, photo)
       })
-      console.log("formData :", formData);
-      const response = await api.post("/profile/complete", formData, {
-        headers: {
-          "content-Type": "multipart/form-data"
-        }
-      })
+
+      const response = await api.post("/profile/complete",formData,)
+      
       console.log(response);
-      // router.push("/dashboard")
+
+      router.push("/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
@@ -181,15 +179,28 @@ export default function ProfileCompletePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient p-4">
-      <div className="w-full max-w-4xl">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 p-4">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+      </div>
+
+      <div className="w-full max-w-4xl relative z-10">
         {/* Logo */}
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           className="flex justify-center mb-8"
         >
-          <Image src="/Logo.png" width={150} height={150} alt="logo" />
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-xl opacity-30"></div>
+            <div className="relative bg-gradient-to-br from-white to-gray-100 rounded-2xl p-6 shadow-2xl">
+              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-24 h-24 flex items-center justify-center text-gray-500 text-xs">
+                Logo
+              </div>
+            </div>
+          </div>
         </motion.div>
 
         {/* Progress Bar */}
@@ -199,18 +210,18 @@ export default function ProfileCompletePage() {
               <div
                 key={step}
                 className={`w-full h-2 mx-1 rounded-full transition-all duration-300 ${
-                  step <= currentStep ? "bg-purple-400" : "bg-white/20"
+                  step <= currentStep ? "bg-gradient-to-r from-purple-500 to-pink-500" : "bg-white/20"
                 }`}
               />
             ))}
           </div>
-          <p className="text-white text-center text-sm">
+          <p className="text-white text-center text-sm font-medium">
             Step {currentStep} of {totalSteps}
           </p>
         </div>
 
         {/* Form Container */}
-        <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-8 shadow-2xl">
+        <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-white/20">
           <AnimatePresence mode="wait">
             {/* Step 1: Gender */}
             {currentStep === 1 && (
@@ -222,7 +233,11 @@ export default function ProfileCompletePage() {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <h2 className="text-3xl font-bold text-white mb-6">{"What's your gender?"}</h2>
+                <div className="text-center mb-8">
+                  <UserIcon className="w-12 h-12 text-purple-300 mx-auto mb-4" />
+                  <h2 className="text-3xl font-bold text-white mb-2">{"What's your gender ?"}</h2>
+                  <p className="text-purple-200">Help us personalize your experience</p>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   {(["male", "female", "non-binary", "other"] as Gender[]).map((gender) => (
                     <button
@@ -230,11 +245,11 @@ export default function ProfileCompletePage() {
                       onClick={() => handleGenderSelect(gender)}
                       className={`p-6 rounded-2xl border-2 transition-all duration-200 ${
                         profileData.gender === gender
-                          ? "border-purple-400 bg-purple-400/20"
-                          : "border-white/20 bg-white/5 hover:border-purple-400/50"
+                          ? "border-purple-400 bg-purple-400/20 shadow-lg shadow-purple-500/20"
+                          : "border-white/20 bg-white/5 hover:border-purple-400/50 hover:bg-white/10"
                       }`}
                     >
-                      <span className="text-white text-lg capitalize">{gender}</span>
+                      <span className="text-white text-lg capitalize font-medium">{gender}</span>
                     </button>
                   ))}
                 </div>
@@ -251,7 +266,11 @@ export default function ProfileCompletePage() {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <h2 className="text-3xl font-bold text-white mb-6">Who are you interested in?</h2>
+                <div className="text-center mb-8">
+                  <Heart className="w-12 h-12 text-purple-300 mx-auto mb-4" />
+                  <h2 className="text-3xl font-bold text-white mb-2">Who are you interested in?</h2>
+                  <p className="text-purple-200">Let us know your preferences</p>
+                </div>
                 <div className="grid grid-cols-1 gap-4">
                   {(["men", "women", "both"] as SexualPreference[]).map((preference) => (
                     <button
@@ -259,11 +278,11 @@ export default function ProfileCompletePage() {
                       onClick={() => handlePreferenceSelect(preference)}
                       className={`p-6 rounded-2xl border-2 transition-all duration-200 ${
                         profileData.sexualPreference === preference
-                          ? "border-purple-400 bg-purple-400/20"
-                          : "border-white/20 bg-white/5 hover:border-purple-400/50"
+                          ? "border-purple-400 bg-purple-400/20 shadow-lg shadow-purple-500/20"
+                          : "border-white/20 bg-white/5 hover:border-purple-400/50 hover:bg-white/10"
                       }`}
                     >
-                      <span className="text-white text-lg capitalize">{preference}</span>
+                      <span className="text-white text-lg capitalize font-medium">{preference}</span>
                     </button>
                   ))}
                 </div>
@@ -280,9 +299,13 @@ export default function ProfileCompletePage() {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <h2 className="text-3xl font-bold text-white mb-6">Tell us about yourself</h2>
+                <div className="text-center mb-8">
+                  <MessageSquare className="w-12 h-12 text-purple-300 mx-auto mb-4" />
+                  <h2 className="text-3xl font-bold text-white mb-2">Tell us about yourself</h2>
+                  <p className="text-purple-200">Share what makes you unique</p>
+                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="biography" className="text-white text-base">
+                  <Label htmlFor="biography" className="text-white text-base font-medium">
                     Biography (minimum 50 characters)
                   </Label>
                   <Textarea
@@ -290,9 +313,11 @@ export default function ProfileCompletePage() {
                     placeholder="Share your story, interests, what makes you unique..."
                     value={profileData.biography}
                     onChange={(e) => setProfileData({ ...profileData, biography: e.target.value })}
-                    className="min-h-[200px] bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-purple-400"
+                    className="min-h-[200px] bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-purple-400 text-lg"
                   />
-                  <p className="text-white/60 text-sm">{profileData.biography.length}/50 characters minimum</p>
+                  <p className={`text-sm ${profileData.biography.length >= 50 ? "text-green-300" : "text-white/60"}`}>
+                    {profileData.biography.length}/50 characters minimum
+                  </p>
                 </div>
               </motion.div>
             )}
@@ -307,8 +332,11 @@ export default function ProfileCompletePage() {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <h2 className="text-3xl font-bold text-white mb-6">What are your interests?</h2>
-                <p className="text-white/80 text-sm mb-4">Select at least 3 interests</p>
+                <div className="text-center mb-8">
+                  <Tag className="w-12 h-12 text-purple-300 mx-auto mb-4" />
+                  <h2 className="text-3xl font-bold text-white mb-2">What are your interests?</h2>
+                  <p className="text-purple-200">Select at least 3 interests</p>
+                </div>
 
                 {/* Selected Interests */}
                 {profileData.interests.length > 0 && (
@@ -316,10 +344,13 @@ export default function ProfileCompletePage() {
                     {profileData.interests.map((interest) => (
                       <span
                         key={interest}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-400/20 border border-purple-400 text-white rounded-full"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-400/20 border border-purple-400 text-white rounded-full font-medium"
                       >
                         {interest}
-                        <button onClick={() => handleRemoveInterest(interest)} className="hover:text-red-300">
+                        <button
+                          onClick={() => handleRemoveInterest(interest)}
+                          className="hover:text-red-300 transition-colors"
+                        >
                           <X className="w-4 h-4" />
                         </button>
                       </span>
@@ -329,22 +360,25 @@ export default function ProfileCompletePage() {
 
                 {/* Add Custom Interest */}
                 <div className="flex gap-2">
-                  <Input
-                    placeholder="Add custom interest (e.g., vegan, geek)"
-                    value={newInterest}
-                    onChange={(e) => setNewInterest(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault()
-                        handleAddInterest(newInterest)
-                      }
-                    }}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-full px-6 focus-visible:ring-2 focus-visible:ring-purple-400"
-                  />
+                  <div className="relative flex-1">
+                    <Tag className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-400 w-5 h-5" />
+                    <Input
+                      placeholder="Add custom interest (e.g., vegan, geek)"
+                      value={newInterest}
+                      onChange={(e) => setNewInterest(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault()
+                          handleAddInterest(newInterest)
+                        }
+                      }}
+                      className="h-12 bg-white/10 border-0 text-white placeholder:text-white/50 rounded-2xl pl-12 pr-6 focus-visible:ring-2 focus-visible:ring-purple-400"
+                    />
+                  </div>
                   <Button
                     type="button"
                     onClick={() => handleAddInterest(newInterest)}
-                    className="bg-purple-400 hover:bg-purple-500 rounded-full px-6"
+                    className="h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-2xl px-6"
                   >
                     Add
                   </Button>
@@ -352,7 +386,7 @@ export default function ProfileCompletePage() {
 
                 {/* Popular Interests */}
                 <div>
-                  <p className="text-white/80 text-sm mb-3">Popular interests:</p>
+                  <p className="text-white/80 text-sm mb-3 font-medium">Popular interests:</p>
                   <div className="flex flex-wrap gap-2">
                     {POPULAR_INTERESTS.map((interest) => (
                       <button
@@ -383,10 +417,11 @@ export default function ProfileCompletePage() {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <h2 className="text-3xl font-bold text-white mb-6">Add your photos</h2>
-                <p className="text-white/80 text-sm mb-4">
-                  Upload up to 5 photos. Click on a photo to set it as your profile picture.
-                </p>
+                <div className="text-center mb-8">
+                  <Camera className="w-12 h-12 text-purple-300 mx-auto mb-4" />
+                  <h2 className="text-3xl font-bold text-white mb-2">Add your photos</h2>
+                  <p className="text-purple-200">Upload up to 5 photos. Click to set profile picture.</p>
+                </div>
 
                 {/* Photo Grid */}
                 <div className="grid grid-cols-3 gap-4">
@@ -397,21 +432,22 @@ export default function ProfileCompletePage() {
                         alt={`Photo ${index + 1}`}
                         className={`w-full h-full object-cover rounded-2xl cursor-pointer transition-all duration-200 ${
                           profileData.profilePhotoIndex === index
-                            ? "ring-4 ring-purple-400"
+                            ? "ring-4 ring-purple-400 shadow-lg shadow-purple-500/50"
                             : "hover:ring-2 hover:ring-purple-400/50"
                         }`}
                         onClick={() => handleSetProfilePhoto(index)}
-                        width={150} height={150}
+                        width={200}
+                        height={200}
                       />
                       {profileData.profilePhotoIndex === index && (
-                        <div className="absolute top-2 left-2 bg-purple-400 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                        <div className="absolute top-2 left-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
                           <Check className="w-3 h-3" />
                           Profile
                         </div>
                       )}
                       <button
                         onClick={() => handleRemovePhoto(index)}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -420,15 +456,19 @@ export default function ProfileCompletePage() {
 
                   {/* Upload Button */}
                   {profileData.photos.length < 5 && (
-                    <label className="aspect-square border-2 border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-white/5 transition-all duration-200">
-                      <Upload className="w-8 h-8 text-white/60 mb-2" />
-                      <span className="text-white/60 text-sm">Upload Photo</span>
+                    <label className="aspect-square border-2 border-dashed border-white/30 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-white/5 transition-all duration-200 group">
+                      <Upload className="w-8 h-8 text-white/60 group-hover:text-purple-300 mb-2 transition-colors" />
+                      <span className="text-white/60 group-hover:text-white text-sm font-medium transition-colors">
+                        Upload Photo
+                      </span>
                       <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
                     </label>
                   )}
                 </div>
 
-                <p className="text-white/60 text-sm">{profileData.photos.length}/5 photos uploaded</p>
+                <p className="text-white/60 text-sm text-center font-medium">
+                  {profileData.photos.length}/5 photos uploaded
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -438,7 +478,7 @@ export default function ProfileCompletePage() {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mt-4 text-red-300 text-sm text-center bg-red-500/20 py-2 px-4 rounded-full"
+              className="mt-4 text-red-300 text-sm text-center bg-red-500/20 py-3 px-4 rounded-2xl"
             >
               {error}
             </motion.div>
@@ -450,7 +490,7 @@ export default function ProfileCompletePage() {
               <Button
                 onClick={handleBack}
                 variant="outline"
-                className="flex-1 h-12 bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-full"
+                className="flex-1 h-12 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white rounded-2xl font-semibold"
               >
                 Back
               </Button>
@@ -459,7 +499,7 @@ export default function ProfileCompletePage() {
               <Button
                 onClick={handleNext}
                 disabled={!canProceed()}
-                className="flex-1 h-12 bg-gradient-to-r from-purple-400 to-purple-500 hover:from-purple-500 hover:to-purple-600 text-white rounded-full disabled:opacity-50"
+                className="flex-1 h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-2xl disabled:opacity-50 font-semibold shadow-lg"
               >
                 Next
               </Button>
@@ -467,9 +507,16 @@ export default function ProfileCompletePage() {
               <Button
                 onClick={handleSubmit}
                 disabled={!canProceed() || loading}
-                className="flex-1 h-12 bg-gradient-to-r from-purple-400 to-purple-500 hover:from-purple-500 hover:to-purple-600 text-white rounded-full disabled:opacity-50"
+                className="flex-1 h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-2xl disabled:opacity-50 font-semibold shadow-lg"
               >
-                {loading ? "Completing..." : "Complete Profile"}
+                {loading ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Completing...
+                  </div>
+                ) : (
+                  "Complete Profile"
+                )}
               </Button>
             )}
           </div>
