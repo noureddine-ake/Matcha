@@ -9,11 +9,11 @@ import redisClient from "../config/redisClient.js";
 
 export const registrationControler = async (req, res) => {
   try {
-    const existingUserEmail = await getUserAttr('email', [req.body.email]);
+    const existingUserEmail = await getUserAttr('email', req.body.email);
     if (existingUserEmail.rowCount) {
       return res.status(400).json({ error: 'Email already exists' });
     }
-    const existingUsername = await getUserAttr('username', [req.body.username]);
+    const existingUsername = await getUserAttr('username', req.body.username);
     if (existingUsername.rowCount) {
       return res.status(400).json({ error: 'Email already exists' });
     }
@@ -34,7 +34,6 @@ export const registrationControler = async (req, res) => {
       },
       maxAge: '2 days',
     });
-    console.log(token);
     res.cookie('token', token, {
       httpOnly: true,
       secure: true,
@@ -42,7 +41,6 @@ export const registrationControler = async (req, res) => {
     });
     const code = Math.floor(100000 + Math.random() * 900000);
     const now = new Date(Date.now() + 5 * 60 * 1000);
-    console.log('mail', process.env.MAIL_USER, process.env.MAIL_PASS);
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -87,7 +85,7 @@ export const loginController = async (req, res) => {
     }
 
     // Find user by username
-    const existingUser = await getUserAttr('username', [username]);
+    const existingUser = await getUserAttr('username', username);
     
     if (!existingUser.rowCount) {
       return res.status(400).json({ error: 'Invalid username or password' });
@@ -146,7 +144,6 @@ export const verifyEmailControler = async (req, res) => {
   try {
     const uid = req.user.data.id;
     const row = await getUserOTP(uid);
-    console.log("codes : ", req.body.code, row[0].verification_code);
     if (req.body.code != row[0].verification_code) {
       return res.status(403).json({ error: 'wrog OTP' });
     }
@@ -179,7 +176,7 @@ export const requestPasswordReset = async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
-    const userResult = await getUserAttr('email', [email]);
+    const userResult = await getUserAttr('email', email);
     if (!userResult.rowCount) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -189,7 +186,6 @@ export const requestPasswordReset = async (req, res) => {
     // Generate unique token
     const token = randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    console.log("generated:",token);
 
     // Save token in DB (implement saveResetToken in your model)
     // await saveResetToken(user.id, token, expiresAt);
@@ -234,8 +230,7 @@ export const confirmPasswordReset = async (req, res) => {
 
     for (const key of keys) {
       const value = await redisClient.get(key);
-      console.log(value);
-      console.log(token);
+
       if (value === token) {
         userId = key.split(":")[1];
         break;

@@ -4,7 +4,6 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 function verifyJWT(req, res, next) {
 const authHeader = req.headers['authorization'];
-    console.log(authHeader)
 }
 
 function createJWToken(details) {
