@@ -22,6 +22,7 @@ export const getProfile = async (req, res) => {
     const user = userResult.rows[0];
 
     // Exclude sensitive fields
+    console.log(user);
     const profile = {
       id: user.id,
       username: user.username,
