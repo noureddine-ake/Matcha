@@ -4,7 +4,8 @@ import { pool } from './src/config/config.js';
 import { registerRoute } from './src/routes/authRoutes.js';
 import { profileRoute } from './src/routes/profileRoutes.js';
 import cors from 'cors';
-import authMiddleware from './src/middlewares/authMiddleware.js';
+import { googleOauthRoute } from './src/routes/oauthRoutes.js';
+import { googleCallbackController } from './src/controllers/oauthController.js';
 
 // Load environment variables
 dotenv.config();
@@ -46,10 +47,15 @@ app.get('/health', async (req, res) => {
   }
 });
 
+
 // routes
 app.use('/api/auth', registerRoute);
 app.use('/api/profile', profileRoute);
+app.use('/api/oauth', googleOauthRoute);
+app.use('/google/callback', googleCallbackController);
 
+// not found
+app.use((req, res) => res.send("not found"));
 
 // Start server
 app.listen(PORT, () => {

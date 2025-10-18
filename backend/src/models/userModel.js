@@ -61,6 +61,6 @@ export async function getUserAttr(attr, value) {
   if (! allowedFields.includes(attr)) {
     throw new Error("Sorry, Invalid attrebute to get user");
   }
-  const { rows, rowCount } = await pool.query(`SELECT * FROM users WHERE ${attr} = $1`, value);
+  const { rows, rowCount } = await pool.query(`SELECT * FROM users WHERE ${attr} = $1`, [value]);
   return { rows, rowCount };
 }

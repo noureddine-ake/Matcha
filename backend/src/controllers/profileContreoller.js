@@ -7,7 +7,6 @@ import {
   isUserTagExisted,
 } from '../models/tagModel.js';
 import { updateUser, getUserAttr } from '../models/userModel.js';
-import bcrypt from 'bcryptjs';
 
 
 
@@ -15,7 +14,7 @@ export const getProfile = async (req, res) => {
   try {
     const userId = req.user.data.id;
 
-    const userResult = await getUserAttr('id', [userId]);
+    const userResult = await getUserAttr('id', userId);
     if (!userResult.rowCount) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -63,7 +62,6 @@ export const completeProfile = async (req, res) => {
         error: 'Profile already created',
       });
     }
-    
     await createProfile({
       id: uid,
       gender: req.body.gender,
@@ -96,8 +94,7 @@ export const completeProfile = async (req, res) => {
       if (req.files && req.files[key] && req.files[key][0]) {
         const file = req.files[key][0];
         const photoPath = `/uploads/${file.filename}`;
-        // console.log(req.files[key][0]);
-        console.log("filename", file.filename);
+
         let existed_photo = await isPhotoExisted(photoPath);
         if (!existed_photo && req.files[key]) {
           await createPhoto({

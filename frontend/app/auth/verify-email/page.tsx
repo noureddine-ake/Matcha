@@ -5,7 +5,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Mail, ArrowRight } from 'lucide-react';
+import { Mail, ArrowRight, Heart } from 'lucide-react';
 import api from '@/lib/api';
 
 export default function VerifyEmailPage() {
@@ -114,7 +114,7 @@ export default function VerifyEmailPage() {
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
       </div>
 
-      <div className="w-full max-w-6xl relative z-10 space-y-8 lg:flex lg:items-center lg:space-x-16">
+      <div className="w-full max-w-6xl relative z-10 space-y-8 flex flex-col md:flex-row justify-center items-center md:space-x-16">
         {/* Left side - Branding */}
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
@@ -124,11 +124,15 @@ export default function VerifyEmailPage() {
         >
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-xl opacity-30"></div>
-            <div className="relative bg-gradient-to-br from-white to-gray-100 rounded-2xl p-8 shadow-2xl">
-              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-48 h-48 flex items-center justify-center text-gray-500">
-                Logo
+            <motion.div
+              className="flex items-center gap-2"
+              whileHover={{ scale: 1.05 }}
+            >
+              <div className="w-48 h-48 bg-gradient-to-br from-pink-400 to-purple-600 rounded-lg flex items-center justify-center">
+                <Heart className="w-20 h-20 text-white fill-white" />
               </div>
-            </div>
+              {/* <span className="text-2xl font-bold text-white">Matcha</span> */}
+            </motion.div>
           </div>
 
           <motion.div
