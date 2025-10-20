@@ -40,7 +40,14 @@ export const checkExistedProfiles = async (user_id) => {
 export const getProfileByUserId = async (user_id) => {
   const query = `SELECT * FROM profiles WHERE user_id = $1`;
   const { rows } = await pool.query(query, [user_id]);
-  return rows[0] || null;
+
+  if (!rows.length) {
+    console.log(`⚠️ No profile found for user_id: ${user_id}`);
+    return null;
+  }
+
+  console.log(`✅ Profile found for user_id ${user_id}:`, rows[0]);
+  return rows[0];
 };
 
 // Update a profile
@@ -99,3 +106,6 @@ export const setOnlineStatus = async (user_id, is_online) => {
   const { rows } = await pool.query(query, [is_online, user_id]);
   return rows[0];
 };
+
+
+

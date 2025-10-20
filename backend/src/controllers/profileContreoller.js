@@ -1,5 +1,5 @@
-import { createPhoto, isPhotoExisted } from '../models/photosModal.js';
-import { createProfile, checkExistedProfiles } from '../models/profileModel.js';
+import { createPhoto, isPhotoExisted,getPhotosByUserId } from '../models/photosModal.js';
+import { createProfile, checkExistedProfiles, getProfileByUserId } from '../models/profileModel.js';
 import {
   createTag,
   createUserTag,
@@ -7,6 +7,7 @@ import {
   isUserTagExisted,
 } from '../models/tagModel.js';
 import { updateUser, getUserAttr } from '../models/userModel.js';
+import { getUserTags } from '../models/tagModel.js';
 
 
 
@@ -14,38 +15,46 @@ export const getProfile = async (req, res) => {
   try {
     const userId = req.user.data.id;
 
-    const userResult = await getUserAttr('id', userId);
-    if (!userResult.rowCount) {
-      return res.status(404).json({ error: 'User not found' });
+    // Fetch main profile
+    const profile = await getProfileByUserId(userId);
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
     }
 
-    const user = userResult.rows[0];
+    // Fetch tags
+    const tags = await getUserTags(userId);
 
-    // Exclude sensitive fields
-    console.log(user);
-    const profile = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      is_verified: user.is_verified,
-      avatar: user.avatar || null,
-    };
+    // Fetch photos
+    const photos = await getPhotosByUserId(userId);
 
-    res.status(200).json({ profile });
+    // Optional: fetch basic user info (like name, email)
+    const user = await getUserAttr('id', userId);
+    console.log("profile :", profile);
+    console.log("tags :", tags);
+    console.log("photos :", photos);
+
+    res.status(200).json({
+      user: {
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+      },
+      profile,
+      tags,
+      photos,
+    });
   } catch (err) {
-    console.error(err);
+    console.error('Error fetching profile:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
 export const logoutController = (req, res) => {
   // Clear the JWT cookie
   res.cookie('token', '', {
     httpOnly: true,
     secure: true,
-    sameSite: 'strict',
+sameSite: 'strict',
     expires: new Date(0), // expire immediately
   });
 
@@ -64,7 +73,7 @@ export const completeProfile = async (req, res) => {
       });
     }
     await createProfile({
-      id: uid,
+      user_id: uid,
       gender: req.body.gender,
       sexual_preference: req.body.sexualPreference,
       biography: req.body.biography,
@@ -87,25 +96,26 @@ export const completeProfile = async (req, res) => {
       }
     }
     
-    const photoKeys = ['photo0', 'photo1', 'photo2', 'photo3', 'photo4'];
+    console.log('Uploaded files:', req.files);
 
-    
-
-    for (const key of photoKeys) {
-      if (req.files && req.files[key] && req.files[key][0]) {
-        const file = req.files[key][0];
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
         const photoPath = `/uploads/${file.filename}`;
-
-        let existed_photo = await isPhotoExisted(photoPath);
-        if (!existed_photo && req.files[key]) {
+        const index = parseInt(file.fieldname.replace('photo', '')); // get index if you need
+    
+        const existed_photo = await isPhotoExisted(photoPath);
+        if (!existed_photo) {
           await createPhoto({
             user_id: uid,
             photo_url: photoPath,
-            is_profile_picture: key === `photo${req.body.profilePhotoIndex}`,
+            is_profile_picture: index === parseInt(req.body.profilePhotoIndex),
           });
         }
       }
+    } else {
+      console.log('No files uploaded');
     }
+    
 
     await updateUser(uid, { completed_profile: true });
     

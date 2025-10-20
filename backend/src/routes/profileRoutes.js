@@ -6,7 +6,7 @@ import JWT from '../middlewares/authMiddleware.js';
 import { 
   completeProfile, 
   getProfile, 
-  logoutController 
+  logoutController
 } from '../controllers/profileContreoller.js';
 
 export const profileRoute = express.Router();
@@ -35,14 +35,8 @@ const upload = multer({ storage });
 // Complete profile (protected, with file uploads)
 profileRoute.post(
   '/complete',
-  JWT.verifyAndDecodeToken,
-  upload.fields([
-    { name: 'photo0', maxCount: 1 },
-    { name: 'photo1', maxCount: 1 },
-    { name: 'photo2', maxCount: 1 },
-    { name: 'photo3', maxCount: 1 },
-    { name: 'photo4', maxCount: 1 },
-  ]),
+  JWT.verifyAndDecodeToken,   // authenticate first
+  upload.any(),  // <-- change here
   completeProfile
 );
 
@@ -50,6 +44,5 @@ profileRoute.post(
 profileRoute.get('/', JWT.verifyAndDecodeToken, getProfile);
 
 // Logout current user
-profileRoute.post('/logout', logoutController);
+profileRoute.post('/logout', JWT.verifyAndDecodeToken, logoutController);
 
-// Reset password

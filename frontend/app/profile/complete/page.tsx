@@ -149,8 +149,12 @@ export default function ProfileCompletePage() {
         formData.append(`photo${index}`, photo)
       })
 
-      const response = await api.post("/profile/complete",formData,)
-      
+      const response = await api.post("/profile/complete", formData, {
+        headers: {
+          // Let the browser set Content-Type for FormData
+          "Content-Type": "multipart/form-data",
+        },
+      });      
       console.log(response);
 
       router.push("/dashboard")
