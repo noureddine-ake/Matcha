@@ -1,81 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import api from "@/lib/api";
 import { motion } from "framer-motion";
-import { Camera, Heart, MessageCircle, Eye, Edit3, MapPin, Calendar, Star } from "lucide-react";
+import { Camera, Heart, MessageCircle, Eye, Edit3, MapPin, Star } from "lucide-react";
+import Image from "next/image";
+import { useGlobal } from "@/contexts/globalcontext"
 
-interface User {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-}
-
-interface Photo {
-  id: number;
-  photo_url: string;
-  is_profile_picture: boolean;
-}
-
-interface Profile {
-  gender: string;
-  sexual_preference: string;
-  biography: string;
-  birth_date?: string;
-  city?: string;
-  country?: string;
-}
-
-interface Tag {
-  id: number;
-  name: string;
-}
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://backend:5000";
 
 export default function ProfilePage() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  // const {fetchProfile, user, loading, error, } = useGlobal()
+  const {fetchProfile, user, profile, tags, photos, stats, loading, error, } = useGlobal()
   const [isEditing, setIsEditing] = useState(false);
-  const [stats, setStats] = useState({
-    views: 0,
-    likes: 0,
-    matches: 0,
-    messages: 0
-  });
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await api.get("/profile");
-        const data = res.data;
-        setUser(data.user);
-        setProfile(data.profile);
-        setTags(data.tags || []);
-        setPhotos(data.photos || []);
-        
-        // Mock stats data - replace with actual API call
-        setStats({
-          views: 128,
-          likes: 42,
-          matches: 8,
-          messages: 5
-        });
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load profile");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProfile();
-  }, []);
+  }, [fetchProfile]);
 
   if (loading) {
     return (
@@ -102,10 +42,9 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+    <div className="size-full">
       {/* Profile Header */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-800/20 to-pink-800/20"></div>
         <div className="relative max-w-6xl mx-auto px-4 py-8">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -116,13 +55,15 @@ export default function ProfilePage() {
             <div className="relative">
               <div className="w-48 h-48 rounded-2xl overflow-hidden border-4 border-white/20 shadow-2xl">
                 {photos.length > 0 && photos.find(p => p.is_profile_picture) ? (
-                  <img
+                  <Image
                     src={`${BACKEND_URL}${photos.find(p => p.is_profile_picture)?.photo_url}`}
                     alt="Profile"
+                    height={500}
+                    width={500}
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <div className="w-full h-full  flex items-center justify-center">
                     <Camera className="w-16 h-16 text-white/50" />
                   </div>
                 )}
@@ -271,9 +212,11 @@ export default function ProfilePage() {
                       className="relative group"
                     >
                       <div className={`rounded-xl overflow-hidden aspect-square ${photo.is_profile_picture ? 'ring-4 ring-purple-500' : ''}`}>
-                        <img
+                        <Image
                           src={`${BACKEND_URL}${photo.photo_url}`}
                           alt="Profile photo"
+                          height={500}
+                          width={500}
                           className="w-full h-full object-cover"
                         />
                         {photo.is_profile_picture && (

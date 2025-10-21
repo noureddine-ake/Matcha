@@ -7,6 +7,7 @@ import cors from 'cors';
 import { googleOauthRoute } from './src/routes/oauthRoutes.js';
 import { googleCallbackController } from './src/controllers/oauthController.js';
 import path from 'path';
+import { SuggestionsRout } from './src/routes/suggestions.js';
 
 // Load environment variables
 dotenv.config();
@@ -58,6 +59,7 @@ app.use('/api/auth', registerRoute);
 app.use('/api/profile', profileRoute);
 app.use('/api/oauth', googleOauthRoute);
 app.use('/google/callback', googleCallbackController);
+app.use('/api', SuggestionsRout);
 
 // not found
 app.use((req, res) => res.send("not found"));

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import api from "@/lib/api";
+import { AxiosError } from 'axios';
 
 const ConfirmPassword = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -21,7 +22,7 @@ const ConfirmPassword = () => {
     }
   }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (newPassword !== confirmPassword) {
@@ -49,9 +50,18 @@ const ConfirmPassword = () => {
           window.location.href = '/auth/login'; // Redirect to login after success
         }, 3000);
       }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to reset password. Please try again.');
-      console.error('Confirm password error:', err);
+    } catch (err: unknown) {
+      if (err instanceof AxiosError) {
+        setError(err.response?.data?.message || 'Failed to reset password. Please try again.');
+        console.error('Confirm password error:', err);
+      } else if (err instanceof Error) {
+        // Fallback for generic errors
+        setError(err.message);
+        console.error('Confirm password error:', err);
+      } else {
+        setError('Failed to reset password. Please try again.');
+        console.error('Confirm password unknown error:', err);
+      }
     } finally {
       setIsSubmitting(false);
     }
