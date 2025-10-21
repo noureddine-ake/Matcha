@@ -8,7 +8,7 @@ import {
 } from '../models/tagModel.js';
 import { updateUser, getUserAttr } from '../models/userModel.js';
 import { getUserTags } from '../models/tagModel.js';
-import { pool } from '../config/config.js';
+
 
 
 export const getProfile = async (req, res) => {
@@ -52,10 +52,10 @@ export const getProfile = async (req, res) => {
 
 // updateProfile controller can be added here similarly
 export const updateProfile = async (req, res) => {
-
   try {
+    console.log('🔄 Update profile request received');
     const uid = req.user.data.id;
-    
+    console.log('Uploaded files:', req.files);
     // 1️⃣ Check if profile exists
     const existingProfile = await getProfileByUserId(uid);
     if (!existingProfile) {
@@ -81,12 +81,6 @@ export const updateProfile = async (req, res) => {
     if (req.body.biography) profileUpdates.biography = req.body.biography;
     if (req.body.latitude) profileUpdates.latitude = req.body.latitude;
     if (req.body.longitude) profileUpdates.longitude = req.body.longitude;
-    if (req.body.birth_date && !isNaN(Date.parse(req.body.birth_date))) {
-      // console.error('Parsed birth_date:', req.body.birth_date);
-      profileUpdates.birth_date = req.body.birth_date;
-    }
-        if (req.body.city) profileUpdates.city = req.body.city;
-    if (req.body.country) profileUpdates.country = req.body.country;
 
     if (Object.keys(profileUpdates).length > 0) {
       await pool.query(
@@ -117,21 +111,26 @@ export const updateProfile = async (req, res) => {
     }
 
     // 5️⃣ Update uploaded photos
+   
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         const photoPath = `/uploads/${file.filename}`;
-        const index = parseInt(file.fieldname.replace('photo', '')); // now works
         const existedPhoto = await isPhotoExisted(photoPath);
-        console.log('Processing file:', file.fieldname, 'as index', index);
+    
         if (!existedPhoto) {
+          
           await createPhoto({
             user_id: uid,
             photo_url: photoPath,
-            is_profile_picture: index === parseInt(req.body.profilePhotoIndex),
+            is_profile_picture:
+              file.fieldname === `photo${req.body.profilePhotoIndex}`,
           });
         }
       }
+    } else {
+      console.log('⚠️ No files received by multer');
     }
+    
     
     // 6️⃣ Return updated data
     const updatedProfile = await getProfileByUserId(uid);
@@ -149,33 +148,6 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-export const updateProfilePicture = async (req, res) => {
-  try {
-    const uid = req.user.data.id;
-
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    const photoPath = `/uploads/${req.file.filename}`;
-    const existedPhoto = await isPhotoExisted(photoPath);
-
-    if (existedPhoto) {
-      return res.status(400).json({ error: 'Photo already exists' });
-    }
-
-    await createPhoto({
-      user_id: uid,
-      photo_url: photoPath,
-      is_profile_picture: true,
-    });
-
-    res.status(200).json({ message: 'Profile picture updated successfully' });
-  } catch (err) {
-    console.error('Error updating profile picture:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-}
 
 export const logoutController = (req, res) => {
   // Clear the JWT cookie
@@ -186,7 +158,7 @@ sameSite: 'strict',
     expires: new Date(0), // expire immediately
   });
 
-  // console.log("User logged out successfully!");
+  console.log("User logged out successfully!");
   res.status(200).json({ message: 'Logged out successfully' });
 };
 
@@ -224,7 +196,7 @@ export const completeProfile = async (req, res) => {
       }
     }
 
-    // console.log('Uploaded files:', req.files);
+    console.log('Uploaded files:', req.files);
 
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
@@ -241,7 +213,7 @@ export const completeProfile = async (req, res) => {
         }
       }
     } else {
-      // console.log('No files uploaded');
+      console.log('No files uploaded');
     }
 
     await updateUser(uid, { completed_profile: true });
@@ -250,7 +222,7 @@ export const completeProfile = async (req, res) => {
       message: 'profile completed',
     });
   } catch (err) {
-    // console.log(err);
+    console.log(err);
     res.status(500).json({
       err: 'Internal sevser error',
     });

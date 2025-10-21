@@ -6,7 +6,9 @@ import JWT from '../middlewares/authMiddleware.js';
 import { 
   completeProfile, 
   getProfile, 
-  logoutController
+  logoutController,
+  updateProfile,
+  updateProfilePicture
 } from '../controllers/profileContreoller.js';
 
 export const profileRoute = express.Router();
@@ -42,6 +44,22 @@ profileRoute.post(
 
 // Get current logged-in user's profile (protected)
 profileRoute.get('/', JWT.verifyAndDecodeToken, getProfile);
+
+// ----------------------------
+// update user profile 
+profileRoute.put(
+  '/update',
+  JWT.verifyAndDecodeToken,
+  upload.any(), // ✅ this handles photo0, photo1, photo2...
+  updateProfile
+);
+
+profileRoute.put(
+  '/update-profile-picture',
+  JWT.verifyAndDecodeToken,
+  upload.single('profilePicture'),
+  updateProfilePicture
+);
 
 // Logout current user
 profileRoute.post('/logout', JWT.verifyAndDecodeToken, logoutController);
