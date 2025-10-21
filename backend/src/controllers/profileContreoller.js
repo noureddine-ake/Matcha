@@ -75,7 +75,7 @@ export const completeProfile = async (req, res) => {
     await createProfile({
       user_id: uid,
       gender: req.body.gender,
-      sexual_preference: req.body.sexualPreference,
+      sexual_preference: req.body.sexualPreference == "men" ? "male" : "female",
       biography: req.body.biography,
     });
     
@@ -95,7 +95,7 @@ export const completeProfile = async (req, res) => {
         await createUserTag({ user_id: uid, tag_id: existed_tag.id });
       }
     }
-    
+
     console.log('Uploaded files:', req.files);
 
     if (req.files && req.files.length > 0) {
@@ -115,10 +115,9 @@ export const completeProfile = async (req, res) => {
     } else {
       console.log('No files uploaded');
     }
-    
 
     await updateUser(uid, { completed_profile: true });
-    
+
     res.status(200).json({
       message: 'profile completed',
     });
