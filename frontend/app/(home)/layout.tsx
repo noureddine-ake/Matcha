@@ -38,7 +38,7 @@ export default function HomeLayout({
 
       {/* Header */}
       <motion.div
-        className="z-10 sticky top-0 bg-gradient-to-b from-indigo-900/80 to-transparent backdrop-blur-lg border-b border-white/10 px-6 py-4"
+        className="sticky top-0 bg-gradient-to-b from-indigo-900/80 to-transparent backdrop-blur-lg border-b border-white/10 px-6 py-4 z-30"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
@@ -63,7 +63,7 @@ export default function HomeLayout({
       </motion.div>
 
       {/* Content Area */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 sm:py-8 h-full">
         {children}
       </div>
 
