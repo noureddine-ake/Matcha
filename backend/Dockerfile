@@ -1,19 +1,20 @@
 FROM node:18-alpine
 
+# Install bash and make (optional, sometimes needed for some modules)
+RUN apk add --no-cache bash
+
 WORKDIR /app
 
-# Copy package files and install dependencies
+# Copy only package files first
 COPY package*.json ./
-RUN npm install
 
-# Copy the rest of the app
+# Install all dependencies
+RUN npm install --include=dev
+
+# Copy the rest of the application
 COPY . .
 
-# Expose port 5000
 EXPOSE 5000
 
-# Run your DB initialization script
-RUN node ./scripts/initDB.js
-
-# Start the server using npm run dev
-CMD ["npm", "run", "dev"]
+# Use npx to run nodemon from local node_modules
+CMD ["npx", "nodemon", "server.js"] 

@@ -14,6 +14,7 @@ export const createPhoto = async (photo) => {
     photo.is_profile_picture,
   ];
   const { rows } = await pool.query(query, values);
+  console.log('Photo created:', rows[0]);
   return rows[0];
 };
 
@@ -22,5 +23,16 @@ export const isPhotoExisted = async (url) => {
     const {rows} = await pool.query(query, [url]);
     console.log(rows.lenght);
     return rows.length;
-  };
-  
+};
+
+export const getPhotosByUserId = async (user_id) => {
+  const query = `SELECT * FROM photos WHERE user_id = $1`;
+  const { rows } = await pool.query(query, [user_id]);
+  return rows;
+}
+
+export const deletePhotoById = async (photo_id) => {
+  const query = `DELETE FROM photos WHERE id = $1 RETURNING *;`;
+  const { rows } = await pool.query(query, [photo_id]);
+  return rows[0];
+}
