@@ -119,3 +119,7 @@ export const deleteAllUserTags = async (user_id) => {
   const { rows } = await pool.query(query, [user_id]);
   return rows;
 };
+
+
+
+// new one
