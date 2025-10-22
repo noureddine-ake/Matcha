@@ -42,11 +42,11 @@ export const getProfileByUserId = async (user_id) => {
   const { rows } = await pool.query(query, [user_id]);
 
   if (!rows.length) {
-    console.log(`⚠️ No profile found for user_id: ${user_id}`);
+    // console.log(`⚠️ No profile found for user_id: ${user_id}`);
     return null;
   }
 
-  console.log(`✅ Profile found for user_id ${user_id}:`, rows[0]);
+  // console.log(`✅ Profile found for user_id ${user_id}:`, rows[0]);
   return rows[0];
 };
 

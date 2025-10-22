@@ -149,6 +149,8 @@ export default function ProfileCompletePage() {
         formData.append(`photo${index}`, photo)
       })
 
+      console.log("formData", formData);
+
       const response = await api.post("/profile/complete", formData, {
         headers: {
           // Let the browser set Content-Type for FormData
@@ -157,7 +159,7 @@ export default function ProfileCompletePage() {
       });      
       console.log(response);
 
-      router.push("/dashboard")
+      router.push("/profile")
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {

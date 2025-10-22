@@ -57,10 +57,14 @@ export async function getAllUsers() {
 
 // GET A USER BY EMAIL
 export async function getUserAttr(attr, value) {
-  const allowedFields = ["email", "id", "username"]
-  if (! allowedFields.includes(attr)) {
-    throw new Error("Sorry, Invalid attrebute to get user");
+  const allowedFields = ["email", "id", "username"];
+  if (!allowedFields.includes(attr)) {
+    throw new Error("Sorry, Invalid attribute to get user");
   }
-  const { rows, rowCount } = await pool.query(`SELECT * FROM users WHERE ${attr} = $1`, [value]);
-  return { rows, rowCount };
+  const { rows } = await pool.query(
+    `SELECT * FROM users WHERE ${attr} = $1`,
+    [value]
+  );
+  return rows[0] || null; // return single user object or null
 }
+
