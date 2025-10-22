@@ -1,1 +1,97 @@
+# -------------------------------
+# Environment files
+# -------------------------------
 .env
+.env.*
+!.env.example
+
+# -------------------------------
+# Node.js dependencies
+# -------------------------------
+node_modules/
+**/node_modules/
+
+# -------------------------------
+# Build outputs (Next.js + Express)
+# -------------------------------
+# Next.js build output
+.next/
+out/
+
+# Express build/output folders
+dist/
+build/
+
+# -------------------------------
+# Logs
+# -------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -------------------------------
+# OS-specific files
+# -------------------------------
+.DS_Store
+Thumbs.db
+
+# -------------------------------
+# Editor / IDE settings
+# -------------------------------
+.vscode/
+.idea/
+*.swp
+
+# -------------------------------
+# Runtime data / cache
+# -------------------------------
+.pnp/
+.pnp.js
+.cache/
+.next/cache/
+tmp/
+temp/
+
+# -------------------------------
+# TypeScript
+# -------------------------------
+*.tsbuildinfo
+
+# -------------------------------
+# Test / Coverage
+# -------------------------------
+coverage/
+.nyc_output/
+
+# -------------------------------
+# Miscellaneous
+# -------------------------------
+*.local
+*.pid
+*.seed
+*.pid.lock
+
+# -------------------------------
+# Docker / Containers
+# -------------------------------
+docker-compose.override.yml
+.docker/
+.dockerignore
+
+# -------------------------------
+# Optional: Frontend package manager locks (if only using one)
+# -------------------------------
+# If you use only npm:
+# yarn.lock
+# pnpm-lock.yaml
+
+# If you use Yarn:
+# package-lock.json
+# pnpm-lock.yaml
+
+# If you use pnpm:
+# package-lock.json
+# yarn.lock

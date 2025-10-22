@@ -50,7 +50,7 @@ profileRoute.get('/', JWT.verifyAndDecodeToken, getProfile);
 profileRoute.put(
   '/update',
   JWT.verifyAndDecodeToken,
-  upload.any(), // ✅ this handles photo0, photo1, photo2...
+  upload.any(),
   updateProfile
 );
 
