@@ -61,10 +61,10 @@ export async function getUserAttr(attr, value) {
   if (!allowedFields.includes(attr)) {
     throw new Error("Sorry, Invalid attribute to get user");
   }
-  const { rows } = await pool.query(
+  const rows = await pool.query(
     `SELECT * FROM users WHERE ${attr} = $1`,
     [value]
   );
-  return rows[0] || null; // return single user object or null
+  return rows;
 }
 
