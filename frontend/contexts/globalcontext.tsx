@@ -115,8 +115,8 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (err: unknown) {
       console.error("Profile update failed:", err);
-      if (err instanceof AxiosError)
-        setError(err.response?.data?.message || "Failed to update profile");
+      // if (err instanceof AxiosError)
+      //   setError(err.response?.data?.message || "Failed to update profile");
     } finally {
       setLoading(false);
     }
