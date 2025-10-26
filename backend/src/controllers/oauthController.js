@@ -1,5 +1,5 @@
 import JWT from '../middlewares/authMiddleware.js';
-import { createUser, getUserAttr } from '../models/userModel.js';
+import { createUser, getUserAttr, updateUser } from '../models/userModel.js';
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 
@@ -66,6 +66,7 @@ export const googleCallbackController = async (req, res) => {
           password_hash: hashedPassword,
         };
         user = await createUser(newUser);
+        await updateUser(user.id, { is_verified: true });
     }
     const token = JWT.createJWToken({
       sessionData: {

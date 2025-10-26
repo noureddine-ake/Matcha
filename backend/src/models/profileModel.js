@@ -41,12 +41,8 @@ export const getProfileByUserId = async (user_id) => {
   const query = `SELECT * FROM profiles WHERE user_id = $1`;
   const { rows } = await pool.query(query, [user_id]);
 
-  if (!rows.length) {
-    // console.log(`⚠️ No profile found for user_id: ${user_id}`);
+  if (!rows.length)
     return null;
-  }
-
-  // console.log(`✅ Profile found for user_id ${user_id}:`, rows[0]);
   return rows[0];
 };
 

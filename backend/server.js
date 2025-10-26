@@ -7,7 +7,8 @@ import cors from 'cors';
 import { googleOauthRoute } from './src/routes/oauthRoutes.js';
 import { googleCallbackController } from './src/controllers/oauthController.js';
 import path from 'path';
-import { SuggestionsRout } from './src/routes/suggestions.js';
+import { SuggestionsRout } from './src/routes/MatchRoutes.js';
+import { LikestionsRout } from './src/routes/likesRoutes.js';
 import { errorHandler } from './src/middlewares/errorMiddleware.js';
 
 
@@ -62,6 +63,7 @@ app.use('/api/profile', profileRoute);
 app.use('/api/oauth', googleOauthRoute);
 app.use('/google/callback', googleCallbackController);
 app.use('/api', SuggestionsRout);
+app.use('/api', LikestionsRout);
 
 // not found
 app.use((req, res) => res.send("not found"));

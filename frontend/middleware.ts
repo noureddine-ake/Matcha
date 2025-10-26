@@ -5,6 +5,10 @@ const protectedRoutes = [
   '/dashboard',
   '/profile',
   '/settings',
+  '/discover',
+  '/chat',
+  '/search',
+  '/likes',
   '/auth/verify-email',
 ];
 
@@ -28,7 +32,11 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/profile/:path*',
+    '/discover/:path*',
+    '/likes/:path*',
+    '/chat/:path*',
     '/settings/:path*',
+    '/search/:path*',
     '/auth/verify-email',
   ],
 };

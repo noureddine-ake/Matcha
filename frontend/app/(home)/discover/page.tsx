@@ -18,6 +18,10 @@ interface Suggestions {
   city: string | null;
   country: string | null;
   fame_rating: string;
+  last_seen: string;
+  is_online: boolean;
+  age: number;
+  distance: number;
   photos: Photo[];
   tags: string[];
 }
@@ -34,9 +38,9 @@ export default function DiscoverPage() {
       setLoading(true);
 
       try {
-        const { data } = await api.post('/suggestions');
-        console.log('dataqqqqq', data.suggestionsResult);
-        setSuggestionsResult(data.suggestionsResult);
+        const res = await api.post('/suggestions');
+        console.log('dataqqqqq', res.data.suggestions);
+        setSuggestionsResult(res.data.suggestions);
 
         setError('');
       } catch (err) {
@@ -49,30 +53,38 @@ export default function DiscoverPage() {
     fetchSuggestions();
   }, []);
 
-  const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
+  // const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
 
-
-  
   const controls = useAnimation();
-  const currentProfile = suggestionsResult[currentProfileIndex];
-  
-  
+  const currentProfile: Suggestions  = suggestionsResult[0];
+  // if (suggestionsResult.length >= currentProfileIndex)  {
+  //   currentProfile = suggestionsResult[currentProfileIndex];
+  // }
+
   // Handle swiping
-  const handleSwipe = (direction: 'left' | 'right') => {
-    controls
-      .start({
-        x: direction === 'left' ? -300 : 300,
-        opacity: 0,
-        transition: { duration: 0.3 },
-      })
-      .then(() => {
+  const handleSwipe = async (direction: 'left' | 'right') => {
+    try {
+      controls
+        .start({
+          x: direction === 'left' ? -300 : 300,
+          opacity: 0,
+          transition: { duration: 0.3 },
+        })
+
+        if (direction === 'right' && suggestionsResult.length > 0) {
+          const likedUserId = suggestionsResult[0].id;
+          await api.post(`/like/${likedUserId}`);
+        }
+
         setShowDetails(false);
         setCurrentImageIndex(0);
-        setCurrentProfileIndex((prev) => (prev + 1) % suggestionsResult.length);
+        setSuggestionsResult((prev) => [...prev.slice(1)]);
         controls.set({ x: 0, opacity: 1 });
-      });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Handle image click to go to next image
@@ -84,7 +96,6 @@ export default function DiscoverPage() {
   const handleToggleDetails = () => setShowDetails((prev) => !prev);
 
   if (loading) {
-    console.log('⏳ Showing loading state');
     return (
       <div className="text-red-400 w-full flex justify-center items-center h-[100px]">
         <Loader className="animate-spin" />
@@ -93,7 +104,6 @@ export default function DiscoverPage() {
   }
 
   if (error) {
-    console.log('❌ Showing error state');
     return (
       <div className="text-red-400 w-full flex justify-center items-center h-[100px]">
         Error loading suggestions

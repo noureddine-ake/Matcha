@@ -9,7 +9,6 @@ import React, {
   ReactNode,
 } from 'react';
 import api from '@/lib/api';
-import { AxiosError } from 'axios';
 
 // ==== Types ====
 

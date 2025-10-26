@@ -116,9 +116,8 @@ export const updateProfile = async (req, res) => {
       for (const file of req.files) {
         const photoPath = `/uploads/${file.filename}`;
         const existedPhoto = await isPhotoExisted(photoPath);
-    
+
         if (!existedPhoto) {
-          
           await createPhoto({
             user_id: uid,
             photo_url: photoPath,
