@@ -106,6 +106,12 @@ export const getProfileUser = async (req, res) => {
     }
     const user = userResult.rows[0];
     const userId = user.id;
+    // check if logged in user is trying to access their own profile
+    // if (req.user.data.id === userId) {
+    //   return res.status(400).json({ error: 'Use /profile to get your own profile' });
+    // }
+   
+
 
     // 2. Get profile
     const profile = await getProfileByUserId(userId);
@@ -123,7 +129,6 @@ export const getProfileUser = async (req, res) => {
       first_name: user.first_name,
       last_name: user.last_name,
       username: user.username,
-      email: user.email, // ⚠️ Consider omitting email for privacy in public profiles
       biography: profile.biography,
       birth_date: profile.birth_date,
       city: profile.city,

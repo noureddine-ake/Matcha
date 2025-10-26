@@ -66,8 +66,8 @@ profileRoute.post(
  */
 profileRoute.get('/', JWT.verifyAndDecodeToken, getProfile);
 
-
-
+// get another user's profile by username
+profileRoute.get('/user/:username', JWT.verifyAndDecodeToken, getProfileUser);
 // =============================================================================
 // PROFILE UPDATE ROUTES
 // =============================================================================

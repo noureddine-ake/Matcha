@@ -8,6 +8,8 @@ import { googleOauthRoute } from './src/routes/oauthRoutes.js';
 import { googleCallbackController } from './src/controllers/oauthController.js';
 import path from 'path';
 import { SuggestionsRout } from './src/routes/suggestions.js';
+import { errorHandler } from './src/middlewares/errorMiddleware.js';
+
 
 // Load environment variables
 dotenv.config();
@@ -26,7 +28,7 @@ app.use('/uploads', express.static(uploadsDir));
 
 // cors policy 
 const corsOptions = {
-  origin: ["http://localhost:3000"],
+  origin: [`${process.env.FRONTEND_URL}` || 'http://localhost:3000'],
   credentials: true,
   optionsSuccessStatus: 200
 }
@@ -63,6 +65,9 @@ app.use('/api', SuggestionsRout);
 
 // not found
 app.use((req, res) => res.send("not found"));
+
+// Error handling middleware
+app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {
