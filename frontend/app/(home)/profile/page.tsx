@@ -49,7 +49,6 @@ export default function ProfilePage() {
           window.location.href = '/';
         }
       );
-
     }
     catch (err) {
       console.error('Error during logout:', err);

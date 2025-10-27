@@ -12,10 +12,10 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
-    const token = localStorage.getItem("token");
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // const token = localStorage.getItem("token");
+    // if (token && config.headers) {
+    //   config.headers.Authorization = `Bearer ${token}`;
+    // }
 
     // Remove JSON Content-Type if sending FormData
     if (config.data instanceof FormData) {
@@ -32,7 +32,7 @@ api.interceptors.response.use(
   (error: AxiosError) => {
     if (error.response?.status === 401) {
       console.error("Unauthorized! Redirecting to login...");
-      window.location.href = "/login";
+      window.location.href = "/auth/login";
     }
     return Promise.reject(error);
   }
