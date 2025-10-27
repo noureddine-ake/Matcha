@@ -75,6 +75,7 @@ interface GlobalContextType {
   // Functions
   fetchProfile: () => Promise<void>;
   updateProfile: (data: FormUpdateUser) => Promise<void>;
+  fetchUserProfile?: (username: string) => Promise<User | null>;
 }
 
 // ==== Context ====
@@ -149,6 +150,19 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   //   [fetchProfile]
   // );
   
+  // ==== Fetch user profile by username ====
+  const fetchUserProfile = useCallback(
+    async (username: string): Promise<User | null> => {
+      try {
+        const res = await api.get<User>(`/profile/user/${username}`);
+        return res.data;
+      } catch (err) {
+        console.error('Failed to fetch user profile:', err);
+        return null;
+      }
+    },
+    []
+  );
 
   // ==== Memoized value ====
   const value = useMemo(
@@ -158,8 +172,9 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
       error,
       fetchProfile,
       updateProfile,
+      fetchUserProfile,
     }),
-    [user, loading, error, fetchProfile, updateProfile]
+    [user, loading, error, fetchProfile, updateProfile, fetchUserProfile]
   );
 
   return (

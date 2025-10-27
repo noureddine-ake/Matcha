@@ -41,6 +41,8 @@ export const registrationControler = async (req, res) => {
     });
     const code = Math.floor(100000 + Math.random() * 900000);
     const now = new Date(Date.now() + 5 * 60 * 1000);
+
+    // todo: add  to folder utils
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
