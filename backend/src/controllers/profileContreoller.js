@@ -23,7 +23,7 @@ import { getUserTags } from '../models/tagModel.js';
 import { pool } from '../config/config.js';
 import fs from 'fs';
 import path from 'path';
-import e from 'express';
+import JWT from '../middlewares/authMiddleware.js';
 
 /**
  * Retrieves the complete user profile including personal information, photos, and tags
@@ -497,10 +497,10 @@ export const logoutController = (req, res) => {
  */
 export const completeProfile = async (req, res) => {
   try {
-    const userId = req.user.data.id;
+    const userTokenData = req.user.data;
 
     // Check if profile already exists
-    const isProfileExisted = await checkExistedProfiles(userId);
+    const isProfileExisted = await checkExistedProfiles(userTokenData.id);
     if (isProfileExisted) {
       return res.status(403).json({
         error: 'Profile already created',
@@ -509,7 +509,7 @@ export const completeProfile = async (req, res) => {
     
     // Create initial profile record
     await createProfile({
-      user_id: userId,
+      user_id: userTokenData.id,
       gender: req.body.gender,
       sexual_preference: req.body.sexualPreference === 'men' ? 'male' : 'female',
       biography: req.body.biography,
@@ -526,19 +526,15 @@ export const completeProfile = async (req, res) => {
       if (!existingTag) {
         existingTag = await createTag({ name: tag, create_at: now });
       }
-      console.log("existingTag", existingTag);
       // Check if user-tag association already exists
       const UserTagExisted = await isUserTagExisted({
-        user_id: userId,
+        user_id: userTokenData.id,
         tag_id: existingTag.id,
-      });
-      console.log("UserTagExisted", UserTagExisted);
-      
+      });      
       // Create user-tag association if it doesn't exist
       if (!UserTagExisted) {
-        await createUserTag({ user_id: userId, tag_id: existingTag.id });
+        await createUserTag({ user_id: userTokenData.id, tag_id: existingTag.id });
       }
-      console.log("UserTagExisted", UserTagExisted);
     }
 
     // Handle profile photo uploads
@@ -548,20 +544,26 @@ export const completeProfile = async (req, res) => {
         const photoIndex = parseInt(file.fieldname.replace('photo', ''));
         
         const existedPhoto = await isPhotoExisted(photoPath);
-        console.log("existedPhoto", existedPhoto);
         if (!existedPhoto) {
           await createPhoto({
-            user_id: userId,
+            user_id: userTokenData.id,
             photo_url: photoPath,
             is_profile_picture: photoIndex === parseInt(req.body.profilePhotoIndex),
           });
         }
-        console.log("existedPhoto", existedPhoto);
       }
     }
 
     // Mark profile as completed in user record
-    await updateUser(userId, { completed_profile: true });
+    await updateUser(userTokenData.id, { completed_profile: true });
+    userTokenData.completed_profile = true;
+
+    const token = JWT.createJWToken({ sessionData: userTokenData, maxAge: '2 days' });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: 'lax',
+    });
 
     res.status(200).json({
       message: 'profile completed',

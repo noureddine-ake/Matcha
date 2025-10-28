@@ -73,16 +73,18 @@ export const googleCallbackController = async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
+        is_verified: true,
+        completed_profile: user.completed_profile,
       },
       maxAge: '2 days',
     });
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: 'strict',
+      sameSite: 'lax',
     });
 
-    const redirectUrl  = user.completed_profile ? "http://localhost:3000/dashboard" : "http://localhost:3000/profile/complete"
+    const redirectUrl  = user.completed_profile ? "http://localhost:3000/profile" : 'http://localhost:3000/profile/complete'
     res.redirect(redirectUrl);
   } catch (err) {
     console.error(err);
