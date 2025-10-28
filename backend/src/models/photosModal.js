@@ -14,7 +14,6 @@ export const createPhoto = async (photo) => {
     photo.is_profile_picture,
   ];
   const { rows } = await pool.query(query, values);
-  console.log('Photo created:', rows[0]);
   return rows[0];
 };
 
