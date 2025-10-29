@@ -1,7 +1,8 @@
-"use client";
+'use client';
 
 import React from 'react';
-import { motion } from "framer-motion"
+import { motion } from 'framer-motion';
+import MatchesCarousel from '@/components/matchesList';
 
 export default function ChatPage() {
   return (
@@ -11,10 +12,7 @@ export default function ChatPage() {
       transition={{ duration: 0.4 }}
       className="space-y-6"
     >
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-white mb-2">Messages</h1>
-        <p className="text-purple-200">Your conversations</p>
-      </div>
+      <MatchesCarousel />
 
       <div className="space-y-3 max-w-2xl mx-auto">
         {[1, 2, 3, 4, 5].map((i) => (
