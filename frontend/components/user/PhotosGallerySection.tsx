@@ -2,9 +2,10 @@
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera } from "lucide-react";
+import { Photo } from "@/types/profile";
 
 
-const PhotosGallerySection = ({ photos, backendUrl }: { photos: any[]; backendUrl: string }) => {
+const PhotosGallerySection = ({ photos, backendUrl }: { photos: Photo[]; backendUrl: string }) => {
     return (
       <motion.div
         layout
@@ -23,7 +24,7 @@ const PhotosGallerySection = ({ photos, backendUrl }: { photos: any[]; backendUr
             className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4  gap-4"
           >
             <AnimatePresence>
-              {photos.map((photo: any, index: number) => (
+              {photos.map((photo: Photo, index: number) => (
                 <motion.div
                   key={photo.id}
                   layout

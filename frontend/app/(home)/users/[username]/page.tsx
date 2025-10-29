@@ -28,6 +28,7 @@ import { BACKEND_URL } from "@/lib/constants/env";
 import { ProfileProps } from "@/types/profile";
 import { calculateAge } from "@/lib/date";
 import fetchFlag from "@/lib/fetchflag";
+import { AxiosError } from "axios";
 
 export default function PublicUserProfile() {
   const { username } = useParams();
@@ -58,8 +59,10 @@ export default function PublicUserProfile() {
         } else {
           setError("Profile not found");
         }
-      } catch (err: any) {
-        setError(err.response?.data?.error || "Profile not found");
+      } catch (err:unknown) {
+        if (err instanceof AxiosError)
+          setError(err.response?.data?.error || "Profile not found");
+        else setError("An unexpected error occurred");
       } finally {
         setLoading(false);
       }
