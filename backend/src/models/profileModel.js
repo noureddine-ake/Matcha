@@ -104,4 +104,35 @@ export const setOnlineStatus = async (user_id, is_online) => {
 };
 
 
+// update latitude and longitude of a user profile
+export const updateUserLocation = async (user_id, latitude, longitude) => {
+  const client = await pool.connect();
+  try {
+    // Try updating first
+    const updateResult = await client.query(
+      `UPDATE profiles
+       SET latitude = $2,
+           longitude = $3,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE user_id = $1
+       RETURNING *;`,
+      [user_id, latitude, longitude]
+    );
+
+    if (updateResult.rowCount > 0) return updateResult.rows[0];
+
+    // If not exists, insert
+    const insertResult = await client.query(
+      `INSERT INTO profiles (user_id, latitude, longitude)
+       VALUES ($1, $2, $3)
+       RETURNING *;`,
+      [user_id, latitude, longitude]
+    );
+
+    return insertResult.rows[0];
+  } finally {
+    client.release();
+  }
+};
+
 

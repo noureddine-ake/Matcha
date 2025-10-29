@@ -16,10 +16,11 @@ import {
   removeUserTag,
   updateUserTags,
   getAvailableTags,
-  getProfileUser
+  getProfileUser,
+  updateLocation
 } from '../controllers/profileContreoller.js';
-import { updateUser } from '../models/userModel.js';
 
+import {updateUserLocation} from '../models/profileModel.js';
 // Initialize router for profile-related endpoints
 export const profileRoute = express.Router();
 
@@ -187,6 +188,8 @@ profileRoute.delete(
 // AUTHENTICATION ROUTES
 // =============================================================================
 
+// updae latitude and longitude in user model 
+profileRoute.put('/update-location', JWT.verifyAndDecodeToken, updateLocation);
 /**
  * Logout current user by clearing authentication token
  * @route POST /profile/logout

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { Heart, MessageCircle, Search, User, Flame } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation";
+import api from "@/lib/api";
 
 export default function HomeLayout({
   children,
@@ -19,6 +20,43 @@ export default function HomeLayout({
     setActiveTab(pathname.slice(1))
 
   }, [pathname]);
+  useEffect(() => {
+    const stored = localStorage.getItem("user_location");
+  
+    // already stored successfully
+    if (stored && stored !== "denied") return;
+  
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          // ✅ Format to 6 decimal places to match DECIMAL(9,6)
+          const latitude = parseFloat(pos.coords.latitude.toFixed(6));
+          const longitude = parseFloat(pos.coords.longitude.toFixed(6));
+  
+          localStorage.setItem(
+            "user_location",
+            JSON.stringify({ latitude, longitude })
+          );
+  
+          try {
+            // send location to backend
+            await api.put("/profile/update-location", { latitude, longitude });
+            console.log("✅ Location synced with backend");
+          } catch (err) {
+            console.error("❌ Failed to send location:", err);
+          }
+        },
+        (err) => {
+          console.warn("⚠️ Location access denied:", err);
+          localStorage.setItem("user_location", "denied");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    } else {
+      console.warn("❌ Geolocation not supported by this browser");
+    }
+  }, []);
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 pb-24">
