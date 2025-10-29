@@ -5,10 +5,6 @@ import { motion } from "framer-motion"
 import { Heart, MessageCircle, Search, User, Flame } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation";
 import api from "@/lib/api";
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Heart, MessageCircle, User, Flame } from 'lucide-react';
-import { useRouter, usePathname } from 'next/navigation';
 import FilterPopup from '@/components/FilterPopup';
 import { DiscoverProvider } from '@/contexts/discover-context';
 import NotificationPopup from '@/components/NotificationPopup';
