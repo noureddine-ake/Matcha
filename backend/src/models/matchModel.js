@@ -129,7 +129,67 @@ export const searchSuggestions2 = async (userId, filters) => {
   return ret;
 };
 
-// suggested profiles 2
+// suggested all matches
+export const getAllMatches = async (data) => {
+  const query = `
+      SELECT 
+      u.id,
+      u.username,
+      u.first_name,
+      u.last_name,
+      p.gender,
+      p.sexual_preference,
+      p.biography,
+      p.city,
+      p.country,
+      p.fame_rating,
+      p.last_seen,
+      p.is_online,
+      EXTRACT(YEAR FROM AGE(p.birth_date)) AS age,
+      p.latitude,
+      p.longitude,
+      COALESCE(
+        json_agg(
+          DISTINCT jsonb_build_object(
+            'id', ph.id,
+            'photo_url', ph.photo_url,
+            'is_profile_picture', ph.is_profile_picture
+          )
+        ) FILTER (WHERE ph.id IS NOT NULL),
+        '[]'
+      ) AS photos,
+      COALESCE(
+        json_agg(
+          DISTINCT jsonb_build_object(
+            'id', t.id,
+            'name', t.name
+          )
+        ) FILTER (WHERE t.id IS NOT NULL),
+        '[]'
+      ) AS tags
+    FROM likes l1
+    JOIN likes l2 
+      ON l1.liker_user_id = l2.liked_user_id
+      AND l1.liked_user_id = l2.liker_user_id
+    JOIN users u ON u.id = l1.liked_user_id
+    JOIN profiles p ON p.user_id = u.id
+    LEFT JOIN photos ph ON ph.user_id = u.id
+    LEFT JOIN user_tags ut ON ut.user_id = u.id
+    LEFT JOIN tags t ON t.id = ut.tag_id
+    WHERE l1.liker_user_id = $1  -- current user ID
+    GROUP BY 
+      u.id, u.username, u.first_name, u.last_name,
+      p.gender, p.sexual_preference, p.biography, p.city, p.country,
+      p.fame_rating, p.last_seen, p.is_online, p.birth_date, p.latitude, p.longitude
+    ORDER BY p.fame_rating DESC
+    LIMIT $2 OFFSET $3;
+  `;
+  const values = [data.userId, parseInt(data.limit), parseInt(data.offset)];
+  const current = await pool.query(query, values);
+  return current;
+};
+
+// suggested profiles data for matches
 export const getProfileDataforMatches = async (userId) => {
   const query = `
     SELECT 
@@ -153,7 +213,7 @@ export const getProfileDataforMatches = async (userId) => {
 // get all likes for a user
 export const getUserLikes = async (userId) => {
   const query = `
-    SELECT 
+      SELECT 
       u.id,
       u.username,
       u.first_name,
@@ -195,6 +255,12 @@ export const getUserLikes = async (userId) => {
     LEFT JOIN user_tags ut ON ut.user_id = u.id
     LEFT JOIN tags t ON t.id = ut.tag_id
     WHERE l.liked_user_id = $1
+      AND NOT EXISTS (
+        SELECT 1 
+        FROM likes l2
+        WHERE l2.liker_user_id = $1 
+          AND l2.liked_user_id = l.liker_user_id
+      )
     GROUP BY 
       u.id, u.username, u.first_name, u.last_name,
       p.gender, p.sexual_preference, p.biography, p.city, p.country,

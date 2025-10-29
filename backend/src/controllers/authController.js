@@ -31,13 +31,15 @@ export const registrationControler = async (req, res) => {
         id: user.id,
         username: newUser.username,
         email: newUser.email,
+        is_verified: false,
+        completed_profile: user.completed_profile,
       },
       maxAge: '2 days',
     });
     res.cookie('token', token, {
       httpOnly: true,
       secure: true,
-      sameSite: 'strict',
+      sameSite: 'lax',
     });
     const code = Math.floor(100000 + Math.random() * 900000);
     const now = new Date(Date.now() + 5 * 60 * 1000);
@@ -113,6 +115,8 @@ export const loginController = async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
+        is_verified: user.is_verified,
+        completed_profile: user.completed_profile,
       },
       maxAge: '2 days',
     });
@@ -144,15 +148,23 @@ export const loginController = async (req, res) => {
 
 export const verifyEmailControler = async (req, res) => {
   try {
-    const uid = req.user.data.id;
-    const row = await getUserOTP(uid);
+    const user = req.user.data;
+    const row = await getUserOTP(user.id);
     if (req.body.code != row[0].verification_code) {
       return res.status(403).json({ error: 'wrog OTP' });
     }
     const fields = {
       is_verified: true,
     };
-    await updateUser(uid, fields);
+    await updateUser(user.id, fields);
+    user.is_verified = true;
+
+    const token = JWT.createJWToken({ sessionData: user, maxAge: '2 days' });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: 'lax',
+    });
     res.status(200).json({ message: 'done!' });
   } catch (err) {
     console.log(err);
