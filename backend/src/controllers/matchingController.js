@@ -1,7 +1,5 @@
 import { pool } from '../config/config.js';
-import { searchSuggestions2, getProfileDataforMatches } from '../models/matchModel.js';
-
-
+import { searchSuggestions2, getProfileDataforMatches, getAllMatches } from '../models/matchModel.js';
 
 // suggestions list
 export const getSuggestions = async (req, res) => {
@@ -273,3 +271,24 @@ export const likeUser = async (req, res) => {
 //     client.release();
 //   }
 // }
+
+export const getMatches = async (req, res) => {
+  try {
+    const userId = req.user.data.id;
+    const { limit = 50, offset = 0 } = req.query;
+
+    const result = await getAllMatches({userId, limit, offset});
+
+    res.json({
+      matches: result.rows,
+      count: result.rowCount,
+      // total: parseInt(countResult.rows[0].total),
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+  } catch (error) {
+    console.error('Get matches error:', error);
+    res.status(500).json({ error: 'Failed to get matches' });
+  }
+}

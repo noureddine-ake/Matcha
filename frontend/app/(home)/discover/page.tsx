@@ -5,83 +5,47 @@ import { motion, useAnimation } from 'framer-motion';
 import { Heart, Info, Loader, X } from 'lucide-react';
 import Image from 'next/image';
 import api from '@/lib/api';
-import { Photo } from '@/contexts/globalcontext';
-
-interface Suggestions {
-  id: number;
-  first_name: string | null;
-  last_name: string | null;
-  username: string;
-  gender: 'male' | 'female';
-  sexual_preference: 'male' | 'female';
-  biography: string | null;
-  city: string | null;
-  country: string | null;
-  fame_rating: string;
-  last_seen: string;
-  is_online: boolean;
-  age: number;
-  distance: number;
-  photos: Photo[];
-  tags: string[];
-}
+import { Suggestions, useDiscover } from '@/contexts/discover-context';
+import MatchPopup, { MatchData } from '@/components/matchPopup';
 
 export default function DiscoverPage() {
-  const backend_url = process.env.BACKEND_URL || 'http://backend:5000'
-  const [suggestionsResult, setSuggestionsResult] = useState<Suggestions[]>([]);
+  const backend_url = process.env.BACKEND_URL || 'http://backend:5000';
+  const discover = useDiscover();
+  const [matchData, setMatchData] = useState<MatchData | null>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchSuggestions = async () => {
-      setLoading(true);
-
-      try {
-        const res = await api.post('/suggestions');
-        console.log('dataqqqqq', res.data.suggestions);
-        setSuggestionsResult(res.data.suggestions);
-
-        setError('');
-      } catch (err) {
-        console.error(err);
-        setError('Failed to load profile');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSuggestions();
+    discover.fetchSuggestions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
 
   const controls = useAnimation();
-  const currentProfile: Suggestions  = suggestionsResult[0];
-  // if (suggestionsResult.length >= currentProfileIndex)  {
-  //   currentProfile = suggestionsResult[currentProfileIndex];
-  // }
+  const currentProfile: Suggestions | undefined = discover?.suggestions?.[0];
 
   // Handle swiping
   const handleSwipe = async (direction: 'left' | 'right') => {
     try {
-      controls
-        .start({
-          x: direction === 'left' ? -300 : 300,
-          opacity: 0,
-          transition: { duration: 0.3 },
-        })
+      controls.start({
+        x: direction === 'left' ? -300 : 300,
+        opacity: 0,
+        transition: { duration: 0.3 },
+      });
 
-        if (direction === 'right' && suggestionsResult.length > 0) {
-          const likedUserId = suggestionsResult[0].id;
-          await api.post(`/like/${likedUserId}`);
+      if (direction === 'right' && discover?.suggestions?.length > 0) {
+        const likedUserId = discover.suggestions[0].id;
+        const res = await api.post(`/like/${likedUserId}`);
+        if (res.data.isMatch) {
+          setMatchData(res.data.likedUser);
         }
+      }
 
-        setShowDetails(false);
-        setCurrentImageIndex(0);
-        setSuggestionsResult((prev) => [...prev.slice(1)]);
-        controls.set({ x: 0, opacity: 1 });
+      setShowDetails(false);
+      setCurrentImageIndex(0);
+      discover.setSuggestions((prev) => [...prev.slice(1)]);
+      controls.set({ x: 0, opacity: 1 });
     } catch (err) {
       console.error(err);
     }
@@ -95,7 +59,7 @@ export default function DiscoverPage() {
   // Toggle showing more details
   const handleToggleDetails = () => setShowDetails((prev) => !prev);
 
-  if (loading) {
+  if (discover.loading) {
     return (
       <div className="text-red-400 w-full flex justify-center items-center h-[100px]">
         <Loader className="animate-spin" />
@@ -103,23 +67,13 @@ export default function DiscoverPage() {
     );
   }
 
-  if (error) {
+  if (discover.error) {
     return (
       <div className="text-red-400 w-full flex justify-center items-center h-[100px]">
         Error loading suggestions
       </div>
     );
   }
-
-  if (!suggestionsResult.length || !currentProfile) {
-    console.log('⚠️ Showing no suggestions state');
-    return (
-      <div className="text-white w-full flex justify-center items-center h-[100px]">
-        No suggestions available
-      </div>
-    );
-  }
-
 
   return (
     <motion.div
@@ -133,19 +87,23 @@ export default function DiscoverPage() {
         <p className="text-purple-200">Swipe or tap to explore profiles</p>
       </div>
 
-      {suggestionsResult.length > 0 && currentProfile && (
-        <motion.div
-          key={currentProfile.id}
-          animate={controls}
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          onDragEnd={(_, info) => {
-            if (info.offset.x > 100) handleSwipe('right');
-            else if (info.offset.x < -100) handleSwipe('left');
-          }}
-          className="w-full max-w-md mx-auto select-none h-full flex flex-col justify-center"
-        >
-          <div className="relative group">
+      {matchData && <MatchPopup matchData={matchData} setMatchData={setMatchData}/>}
+
+      <motion.div
+        className="w-full max-w-md mx-auto select-none h-full flex flex-col justify-center"
+      >
+        {discover?.suggestions?.length > 0 && currentProfile ? (
+          <motion.div
+            key={currentProfile.id}
+            animate={controls}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.x > 100) handleSwipe('right');
+              else if (info.offset.x < -100) handleSwipe('left');
+            }}
+            className="relative group"
+          >
             {/* Background glow */}
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
 
@@ -156,17 +114,16 @@ export default function DiscoverPage() {
                 className="relative min-h-96 md:min-h-[500px] cursor-pointer"
                 onClick={handleImageClick}
               >
-                {currentProfile?.photos?.length > 0 &&
-                  currentProfile.photos[currentImageIndex] && (
-                    <Image
-                      src={`${backend_url}${currentProfile.photos[currentImageIndex].photo_url}`}
-                      alt={currentProfile.username}
-                      fill
-                      className={`object-cover transition-all duration-500 ${
-                        showDetails ? 'brightness-50' : ''
-                      }`}
-                    />
-                  )}
+                {currentProfile.photos[currentImageIndex] && (
+                  <Image
+                    src={`${backend_url}${currentProfile.photos[currentImageIndex].photo_url}`}
+                    alt={currentProfile.username}
+                    fill
+                    className={`object-cover transition-all duration-500 ${
+                      showDetails ? 'brightness-50' : ''
+                    }`}
+                  />
+                )}
               </div>
 
               {/* Details overlay */}
@@ -206,28 +163,32 @@ export default function DiscoverPage() {
                 <Info className="w-5 h-5 text-white" />
               </motion.button>
             </div>
+          </motion.div>
+        ) : (
+          <div className="flex items-center justify-center min-h-96 md:min-h-[500px] bg-gray-500/50 rounded-2xl text-white/20 text-md">
+            No suggestions available
           </div>
-          {/* Action Buttons */}
-          <div className="flex gap-4 mt-8 justify-center [@media(hover:none)]:hidden">
-            <motion.button
-              onClick={() => handleSwipe('left')}
-              className="w-16 h-16 rounded-full bg-white/10 border-2 border-white/30 flex items-center justify-center hover:bg-white/20 transition-all"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <X className="w-8 h-8 text-white" />
-            </motion.button>
-            <motion.button
-              onClick={() => handleSwipe('right')}
-              className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center hover:shadow-lg hover:shadow-purple-500/50 transition-all"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Heart className="w-8 h-8 text-white fill-white" />
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
+        )}
+        {/* Action Buttons */}
+        <div className="flex gap-4 mt-8 justify-center [@media(hover:none)]:hidden">
+          <motion.button
+            onClick={() => handleSwipe('left')}
+            className="w-16 h-16 rounded-full bg-white/10 border-2 border-white/30 flex items-center justify-center hover:bg-white/20 transition-all"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <X className="w-8 h-8 text-white" />
+          </motion.button>
+          <motion.button
+            onClick={() => handleSwipe('right')}
+            className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center hover:shadow-lg hover:shadow-purple-500/50 transition-all"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Heart className="w-8 h-8 text-white fill-white" />
+          </motion.button>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }

@@ -7,9 +7,10 @@ import cors from 'cors';
 import { googleOauthRoute } from './src/routes/oauthRoutes.js';
 import { googleCallbackController } from './src/controllers/oauthController.js';
 import path from 'path';
-import { SuggestionsRout } from './src/routes/MatchRoutes.js';
+import { SuggestionsRout } from './src/routes/matchRoutes.js';
 import { LikestionsRout } from './src/routes/likesRoutes.js';
 import { errorHandler } from './src/middlewares/errorMiddleware.js';
+import { NotificationsRouts } from './src/routes/notificationRoutes.js';
 
 
 // Load environment variables
@@ -64,6 +65,7 @@ app.use('/api/oauth', googleOauthRoute);
 app.use('/google/callback', googleCallbackController);
 app.use('/api', SuggestionsRout);
 app.use('/api', LikestionsRout);
+app.use('/api/notifications', NotificationsRouts);
 
 // not found
 app.use((req, res) => res.send("not found"));
