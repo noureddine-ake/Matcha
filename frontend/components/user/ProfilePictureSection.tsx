@@ -1,7 +1,8 @@
 // Profile Picture Display + Upload
+import { Photo } from '@/types/profile';
 import Image from 'next/image';
-const ProfilePictureSection = ({ photos, backendUrl }: { photos: any[]; backendUrl: string }) => {
-    const profilePhoto = photos.find((p: any) => p.is_profile_picture);
+const ProfilePictureSection = ({ photos, backendUrl }: { photos: Photo[]; backendUrl: string }) => {
+    const profilePhoto = photos.find((p: Photo) => p.is_profile_picture);
     const size = 192;
   
     return (

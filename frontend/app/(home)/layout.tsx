@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Heart, MessageCircle, User, Flame } from 'lucide-react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useEffect, useState } from "react"
+import { motion } from "framer-motion"
+import { Heart, MessageCircle, Search, User, Flame } from "lucide-react"
+import { useRouter, usePathname } from "next/navigation";
+import api from "@/lib/api";
 import FilterPopup from '@/components/FilterPopup';
 import { DiscoverProvider } from '@/contexts/discover-context';
 import NotificationPopup from '@/components/NotificationPopup';
@@ -21,6 +22,43 @@ export default function HomeLayout({
   useEffect(() => {
     setActiveTab(pathname.slice(1));
   }, [pathname]);
+  useEffect(() => {
+    const stored = localStorage.getItem("user_location");
+  
+    // already stored successfully
+    if (stored && stored !== "denied") return;
+  
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          // ✅ Format to 6 decimal places to match DECIMAL(9,6)
+          const latitude = parseFloat(pos.coords.latitude.toFixed(6));
+          const longitude = parseFloat(pos.coords.longitude.toFixed(6));
+  
+          localStorage.setItem(
+            "user_location",
+            JSON.stringify({ latitude, longitude })
+          );
+  
+          try {
+            // send location to backend
+            await api.put("/profile/update-location", { latitude, longitude });
+            console.log("✅ Location synced with backend");
+          } catch (err) {
+            console.error("❌ Failed to send location:", err);
+          }
+        },
+        (err) => {
+          console.warn("⚠️ Location access denied:", err);
+          localStorage.setItem("user_location", "denied");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    } else {
+      console.warn("❌ Geolocation not supported by this browser");
+    }
+  }, []);
+  
 
   return (
     <DiscoverProvider>

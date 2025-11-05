@@ -11,6 +11,7 @@ import {
   createProfile,
   checkExistedProfiles,
   getProfileByUserId,
+  updateUserLocation
 } from '../models/profileModel.js';
 import {
   createTag,
@@ -699,3 +700,24 @@ export const getAvailableTags = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+// // =============================================================================
+// // LOCATION MANAGEMENT ROUTES
+// // =============================================================================
+export const updateLocation = async (req, res) => {
+  const { latitude, longitude } = req.body;
+  const userId = req.user.data.id;;
+
+  if (latitude == null || longitude == null) {
+    return res.status(400).json({ message: 'Latitude and longitude are required' });
+  }
+
+  try {
+    console.log(`USER ID: ${userId}, LATITUDE: ${latitude}, LONGITUDE: ${longitude}`);
+    const updatedUser = await updateUserLocation(userId, latitude, longitude);
+    res.status(200).json({ message: 'Location updated successfully', user: updatedUser });
+  } catch (error) {
+    console.error('Error updating location:', error);
+    res.status(500).json({ message: 'Error updating location', error: error.message });
+  }
+}
