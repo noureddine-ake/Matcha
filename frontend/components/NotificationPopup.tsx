@@ -23,6 +23,7 @@ const NotificationPopup = () => {
 
   // ✅ Fetch notifications from your API
   const fetchNotifications = async () => {
+    
     try {
       setLoading(true);
       const res = await api.post('/notifications');

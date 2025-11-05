@@ -7,4 +7,4 @@ export const SuggestionsRout = express.Router();
 
 SuggestionsRout.post('/suggestions', JWT.verifyAndDecodeToken, getSuggestions);
 SuggestionsRout.get('/matches', JWT.verifyAndDecodeToken, getMatches);
-SuggestionsRout.post('/like/:useerId', JWT.verifyAndDecodeToken, likeUser);
+SuggestionsRout.post('/like/:userId', JWT.verifyAndDecodeToken, likeUser);

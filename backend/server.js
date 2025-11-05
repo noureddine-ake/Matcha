@@ -13,6 +13,8 @@ import { errorHandler } from './src/middlewares/errorMiddleware.js';
 import { NotificationsRouts } from './src/routes/notificationRoutes.js';
 import chatRoutes  from './src/routes/chatRoutes.js';
 import { swaggerUi, swaggerSpec } from "./swagger.js";
+import { setupWebSocket } from './src/config/websocket.js';
+import http from 'http';
 
 
 // Load environment variables
@@ -76,11 +78,14 @@ app.use("/api/chat", chatRoutes);
 // not found
 app.use((req, res) => res.send("not found"));
 
+const server = http.createServer(app);
+
+setupWebSocket(server);
+
 // Error handling middleware
 app.use(errorHandler);
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 Server + WebSocket running on port ${PORT}`);
 });
-
