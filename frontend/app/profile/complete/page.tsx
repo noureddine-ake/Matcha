@@ -19,6 +19,7 @@ type SexualPreference = "men" | "women" | "both"
 interface ProfileData {
   gender: Gender | ""
   sexualPreference: SexualPreference | ""
+  birthDate: string
   biography: string
   interests: string[]
   photos: File[]
@@ -46,6 +47,7 @@ export default function ProfileCompletePage() {
   const [profileData, setProfileData] = useState<ProfileData>({
     gender: "",
     sexualPreference: "",
+    birthDate: "",
     biography: "",
     interests: [],
     photos: [],
@@ -56,7 +58,7 @@ export default function ProfileCompletePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const totalSteps = 5
+  const totalSteps = 6
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -141,6 +143,7 @@ export default function ProfileCompletePage() {
       const formData = new FormData()
       formData.append("gender", profileData.gender)
       formData.append("sexualPreference", profileData.sexualPreference)
+      formData.append("birth_date", profileData.birthDate)
       formData.append("biography", profileData.biography)
       formData.append("interests", JSON.stringify(profileData.interests))
       formData.append("profilePhotoIndex", profileData.profilePhotoIndex.toString())
@@ -156,7 +159,7 @@ export default function ProfileCompletePage() {
           // Let the browser set Content-Type for FormData
           "Content-Type": "multipart/form-data",
         },
-      });      
+      });
       console.log(response);
 
       router.push("/profile")
@@ -174,10 +177,12 @@ export default function ProfileCompletePage() {
       case 2:
         return profileData.sexualPreference !== ""
       case 3:
-        return profileData.biography.trim().length >= 50
+        return profileData.birthDate !== ""
       case 4:
-        return profileData.interests.length >= 3
+        return profileData.biography.trim().length >= 50
       case 5:
+        return profileData.interests.length >= 3
+      case 6:
         return profileData.photos.length >= 1
       default:
         return false
@@ -215,9 +220,8 @@ export default function ProfileCompletePage() {
             {[1, 2, 3, 4, 5].map((step) => (
               <div
                 key={step}
-                className={`w-full h-2 mx-1 rounded-full transition-all duration-300 ${
-                  step <= currentStep ? "bg-gradient-to-r from-purple-500 to-pink-500" : "bg-white/20"
-                }`}
+                className={`w-full h-2 mx-1 rounded-full transition-all duration-300 ${step <= currentStep ? "bg-gradient-to-r from-purple-500 to-pink-500" : "bg-white/20"
+                  }`}
               />
             ))}
           </div>
@@ -249,15 +253,46 @@ export default function ProfileCompletePage() {
                     <button
                       key={gender}
                       onClick={() => handleGenderSelect(gender)}
-                      className={`p-6 rounded-2xl border-2 transition-all duration-200 ${
-                        profileData.gender === gender
-                          ? "border-purple-400 bg-purple-400/20 shadow-lg shadow-purple-500/20"
-                          : "border-white/20 bg-white/5 hover:border-purple-400/50 hover:bg-white/10"
-                      }`}
+                      className={`p-6 rounded-2xl border-2 transition-all duration-200 ${profileData.gender === gender
+                        ? "border-purple-400 bg-purple-400/20 shadow-lg shadow-purple-500/20"
+                        : "border-white/20 bg-white/5 hover:border-purple-400/50 hover:bg-white/10"
+                        }`}
                     >
                       <span className="text-white text-lg capitalize font-medium">{gender}</span>
                     </button>
                   ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 3: Birth Date */}
+            {currentStep === 3 && (
+              <motion.div
+                key="step3-birthdate"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
+                <div className="text-center mb-8">
+                  <UserIcon className="w-12 h-12 text-purple-300 mx-auto mb-4" />
+                  <h2 className="text-3xl font-bold text-white mb-2">{"What's your birth date?"}</h2>
+                  <p className="text-purple-200">This helps us match you better</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="birth_date" className="text-white text-base font-medium">
+                    Birth Date
+                  </Label>
+                  <Input
+                    id="birth_date"
+                    name="birth_date"
+                    type="date"
+                    value={profileData.birthDate}
+                    onChange={(e) => setProfileData({ ...profileData, birthDate: e.target.value })}
+                    required
+                    className="h-14 bg-white/10 border-0 text-white placeholder:text-white/50 rounded-2xl pl-4 pr-6 focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-0 text-lg"
+                  />
                 </div>
               </motion.div>
             )}
@@ -282,11 +317,10 @@ export default function ProfileCompletePage() {
                     <button
                       key={preference}
                       onClick={() => handlePreferenceSelect(preference)}
-                      className={`p-6 rounded-2xl border-2 transition-all duration-200 ${
-                        profileData.sexualPreference === preference
-                          ? "border-purple-400 bg-purple-400/20 shadow-lg shadow-purple-500/20"
-                          : "border-white/20 bg-white/5 hover:border-purple-400/50 hover:bg-white/10"
-                      }`}
+                      className={`p-6 rounded-2xl border-2 transition-all duration-200 ${profileData.sexualPreference === preference
+                        ? "border-purple-400 bg-purple-400/20 shadow-lg shadow-purple-500/20"
+                        : "border-white/20 bg-white/5 hover:border-purple-400/50 hover:bg-white/10"
+                        }`}
                     >
                       <span className="text-white text-lg capitalize font-medium">{preference}</span>
                     </button>
@@ -295,10 +329,10 @@ export default function ProfileCompletePage() {
               </motion.div>
             )}
 
-            {/* Step 3: Biography */}
-            {currentStep === 3 && (
+            {/* Step 4: Biography */}
+            {currentStep === 4 && (
               <motion.div
-                key="step3"
+                key="step4"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -329,7 +363,7 @@ export default function ProfileCompletePage() {
             )}
 
             {/* Step 4: Interests */}
-            {currentStep === 4 && (
+            {currentStep === 5 && (
               <motion.div
                 key="step4"
                 initial={{ opacity: 0, x: 20 }}
@@ -399,11 +433,10 @@ export default function ProfileCompletePage() {
                         key={interest}
                         onClick={() => handleAddInterest(interest)}
                         disabled={profileData.interests.includes(interest)}
-                        className={`px-4 py-2 rounded-full border transition-all duration-200 ${
-                          profileData.interests.includes(interest)
-                            ? "border-purple-400 bg-purple-400/20 text-white/50 cursor-not-allowed"
-                            : "border-white/20 bg-white/5 text-white hover:border-purple-400 hover:bg-purple-400/10"
-                        }`}
+                        className={`px-4 py-2 rounded-full border transition-all duration-200 ${profileData.interests.includes(interest)
+                          ? "border-purple-400 bg-purple-400/20 text-white/50 cursor-not-allowed"
+                          : "border-white/20 bg-white/5 text-white hover:border-purple-400 hover:bg-purple-400/10"
+                          }`}
                       >
                         {interest}
                       </button>
@@ -414,7 +447,7 @@ export default function ProfileCompletePage() {
             )}
 
             {/* Step 5: Photos */}
-            {currentStep === 5 && (
+            {currentStep === 6 && (
               <motion.div
                 key="step5"
                 initial={{ opacity: 0, x: 20 }}
@@ -436,11 +469,10 @@ export default function ProfileCompletePage() {
                       <Image
                         src={preview || "/placeholder.svg"}
                         alt={`Photo ${index + 1}`}
-                        className={`w-full h-full object-cover rounded-2xl cursor-pointer transition-all duration-200 ${
-                          profileData.profilePhotoIndex === index
-                            ? "ring-4 ring-purple-400 shadow-lg shadow-purple-500/50"
-                            : "hover:ring-2 hover:ring-purple-400/50"
-                        }`}
+                        className={`w-full h-full object-cover rounded-2xl cursor-pointer transition-all duration-200 ${profileData.profilePhotoIndex === index
+                          ? "ring-4 ring-purple-400 shadow-lg shadow-purple-500/50"
+                          : "hover:ring-2 hover:ring-purple-400/50"
+                          }`}
                         onClick={() => handleSetProfilePhoto(index)}
                         width={200}
                         height={200}

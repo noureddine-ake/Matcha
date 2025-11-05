@@ -1,17 +1,10 @@
 "use client"
 
 import { Loader2 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useChatState } from '@/hooks/useChat.hooks';
 import { webSocketService } from '@/services/chat.services';
-import {
-  ChatLayout,
-  ChatSidebar,
-  ChatHeader,
-  ChatMessages,
-  ChatInput,
-  ChatEmptyState,
-} from '@/components/chat.components';
+import { ChatLayout } from '@/components/chat.components';
+import { ChatHeader, ChatEmptyState, ChatMessages, ChatSidebar, ChatInput } from '@/components/chat/exports';
 
 export default function ChatPage() {
   const {
@@ -20,12 +13,12 @@ export default function ChatPage() {
     actions,
     refs,
   } = useChatState();
-  
+
   const selectedUser = state.users.find(user => user.id === state.selectedUserId);
-  
+
   if (state.loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
+      <div className="h-ahto flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 text-white animate-spin" />
           <div className="text-white text-xl">Loading chat...</div>
@@ -33,7 +26,7 @@ export default function ChatPage() {
       </div>
     );
   }
-  
+
   return (
     <ChatLayout
       sidebar={
@@ -50,21 +43,19 @@ export default function ChatPage() {
           onSearchChange={(term) => setState(prev => ({ ...prev, searchTerm: term }))}
         />
       }
-      header={
-        <ChatHeader
-          user={selectedUser}
-          isConnected={webSocketService.isConnected()}
-          totalMessages={state.totalMessages}
-          typingUsers={state.typingUsers}
-          isMobile={state.isMobile}
-          soundEnabled={state.soundEnabled}
-          onToggleSound={() => setState(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }))}
-          onToggleSidebar={() => setState(prev => ({ ...prev, sidebarOpen: !prev.sidebarOpen }))}
-        />
-      }
       content={
         selectedUser ? (
           <>
+            <ChatHeader
+              user={selectedUser || null}
+              isConnected={webSocketService.isConnected()}
+              totalMessages={state.totalMessages}
+              typingUsers={state.typingUsers}
+              isMobile={state.isMobile}
+              soundEnabled={state.soundEnabled}
+              onToggleSound={() => setState(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }))}
+              onToggleSidebar={() => setState(prev => ({ ...prev, sidebarOpen: !prev.sidebarOpen }))}
+            />
             <ChatMessages
               messages={state.messages}
               currentUserId={state.currentUserId}
