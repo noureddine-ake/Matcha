@@ -62,6 +62,10 @@ export default function WebSocketProvider({ children }: { children: React.ReactN
 // const token = cookies.get('token')?.value;
   useEffect(() => {
         connectWebSocket();
+
+        return () => {
+            closeSocket();
+        };
     }, []);
 
   return <>{children}</>;
