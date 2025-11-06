@@ -17,7 +17,8 @@ import {
   updateUserTags,
   getAvailableTags,
   getProfileUser,
-  updateLocation
+  updateLocation,
+  getWhoViewedYou
 } from '../controllers/profileContreoller.js';
 
 import {updateUserLocation} from '../models/profileModel.js';
@@ -196,3 +197,6 @@ profileRoute.put('/update-location', JWT.verifyAndDecodeToken, updateLocation);
  * @access Protected (JWT authentication required)
  */
 profileRoute.post('/logout', JWT.verifyAndDecodeToken, logoutController);
+
+
+profileRoute.get('/views', JWT.verifyAndDecodeToken, getWhoViewedYou);

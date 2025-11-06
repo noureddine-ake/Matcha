@@ -25,6 +25,7 @@ import { pool } from '../config/config.js';
 import fs from 'fs';
 import path from 'path';
 import JWT from '../middlewares/authMiddleware.js';
+import { recordProfileView, getProfileViewCount ,getAllUniqueProfileViewers} from '../models/profileViewModel.js'; // ✅ Add this
 
 /**
  * Retrieves the complete user profile including personal information, photos, and tags
@@ -92,9 +93,11 @@ export const getProfile = async (req, res) => {
  * @route GET /profile/:username
  * @access Protected (or Public, depending on your policy)
  */
+
 export const getProfileUser = async (req, res) => {
   try {
     const { username } = req.params;
+    const viewerId = req.user?.data?.id; // logged-in user ID
 
     if (!username) {
       return res.status(400).json({ error: 'Username is required' });
@@ -105,26 +108,27 @@ export const getProfileUser = async (req, res) => {
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
+
     const user = userResult.rows[0];
-    const userId = user.id;
-    // check if logged in user is trying to access their own profile
-    // if (req.user.data.id === userId) {
-    //   return res.status(400).json({ error: 'Use /profile to get your own profile' });
-    // }
-   
+    const viewedId = user.id;
 
+    // 2. Prevent recording view if user visits their own profile
+    if (viewerId && viewerId !== viewedId) {
+      await recordProfileView(viewerId, viewedId); // ✅ Record the view
+    }
 
-    // 2. Get profile
-    const profile = await getProfileByUserId(userId);
+    // 3. Get profile
+    const profile = await getProfileByUserId(viewedId);
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
     }
 
-    // 3. Get tags and photos
-    const tags = await getUserTags(userId);
-    const photos = await getPhotosByUserId(userId);
+    // 4. Get tags, photos, and total views
+    const tags = await getUserTags(viewedId);
+    const photos = await getPhotosByUserId(viewedId);
+    const totalViews = await getProfileViewCount(viewedId); // ✅ Add total views
 
-    // 4. Return full profile (same structure as getProfile)
+    // 5. Return full profile
     res.status(200).json({
       id: user.id,
       first_name: user.first_name,
@@ -141,12 +145,15 @@ export const getProfileUser = async (req, res) => {
       latitude: profile.latitude,
       longitude: profile.longitude,
       sexual_preference:
-        profile.sexual_preference === 'male' ? 'men' :
-        profile.sexual_preference === 'female' ? 'women' : 'both',
-      tags: tags,
-      photos: photos,
+        profile.sexual_preference === 'male'
+          ? 'men'
+          : profile.sexual_preference === 'female'
+          ? 'women'
+          : 'both',
+      tags,
+      photos,
       stats: {
-        views: profile.views || 0,
+        // views: totalViews, // ✅ dynamic
         likes: profile.likes || 0,
         matches: profile.matches || 0,
         messages: profile.messages || 0,
@@ -157,7 +164,31 @@ export const getProfileUser = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+// get lsit of ppl who viwed u
 
+export const getWhoViewedYou = async (req, res) => {
+  try {
+    const userId = req.user.data.id;
+
+    // Fetch all unique viewers
+    const viewers = await getAllUniqueProfileViewers(userId);
+
+    res.status(200).json({
+      totalViewers: viewers.length,
+      viewers: viewers.map(v => ({
+        id: v.id,
+        username: v.username,
+        first_name: v.first_name,
+        last_name: v.last_name,
+        completed_profile: v.completed_profile,
+        viewed_at: v.viewed_at
+      }))
+    });
+  } catch (err) {
+    console.error('Error fetching profile viewers:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
 
 /**
  * Updates user profile information including personal details, photos, and tags
