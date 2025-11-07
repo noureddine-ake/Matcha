@@ -181,6 +181,7 @@ export const getWhoViewedYou = async (req, res) => {
         first_name: v.first_name,
         last_name: v.last_name,
         completed_profile: v.completed_profile,
+        picture : v.profile_picture,
         viewed_at: v.viewed_at
       }))
     });

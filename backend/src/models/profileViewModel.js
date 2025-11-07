@@ -23,16 +23,27 @@ export const getProfileViewCount = async (userId) => {
 
 
 // Fetch all unique viewers (latest view per viewer)
+// Fetch all unique viewers (latest view per viewer) + profile picture
+// import { pool } from '../config/config.js';
+
+// Fetch all unique viewers (latest view per viewer) + profile picture
 export const getAllUniqueProfileViewers = async (userId) => {
   const query = `
     SELECT DISTINCT ON (pv.viewer_user_id)
-           u.id, u.username, u.first_name, u.last_name,
-           u.completed_profile, pv.viewed_at
+           u.id,
+           u.username,
+           u.first_name,
+           u.last_name,
+           u.completed_profile,
+           p.photo_url AS profile_picture,
+           pv.viewed_at
     FROM profile_views pv
     JOIN users u ON pv.viewer_user_id = u.id
+    LEFT JOIN photos p ON p.user_id = u.id AND p.is_profile_picture = TRUE
     WHERE pv.viewed_user_id = $1
     ORDER BY pv.viewer_user_id, pv.viewed_at DESC
   `;
+
   const result = await pool.query(query, [userId]);
   return result.rows;
 };

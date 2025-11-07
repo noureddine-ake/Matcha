@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, User, XCircle, Loader } from "lucide-react";
+import { Eye, XCircle, Loader } from "lucide-react";
 import { useGlobal } from "@/contexts/globalcontext";
 import api from "@/lib/api";
 import { useRouter } from "next/navigation";
-import { BACKEND_URL } from "@/lib/constants/env";
-
+// import { BACKEND_URL } from "@/lib/constants/env";
+const BACKEND_URL = "http://localhost:5000";
 interface Viewer {
   id: number;
   username: string;
@@ -36,11 +36,15 @@ export default function ProfileViewsPage() {
           },
         });
 
-        const data = res.data?.viewers;
-        if (!Array.isArray(data)) {
-          setViewers([]);
-        } else {
+        const data = res.data?.viewers || res.data;
+
+        // Handle both array and single-object responses
+        if (Array.isArray(data)) {
           setViewers(data);
+        } else if (data && typeof data === "object") {
+          setViewers([data]);
+        } else {
+          setViewers([]);
         }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Unknown error");
@@ -112,25 +116,21 @@ export default function ProfileViewsPage() {
             >
               {/* Profile Picture */}
               <img
-                src={
-                  v.profile_picture
-                    ? `${BACKEND_URL}/${v.profile_picture}`
-                    : "/default-avatar.png"
-                }
+                src={`${v.picture ? BACKEND_URL +  v.picture : '/default_profile_picture.png'}`}
                 alt={`${v.first_name} ${v.last_name}`}
                 className="w-12 h-12 rounded-full object-cover border border-white/20"
               />
 
               {/* Viewer Info */}
               <div className="flex-1">
-                <p
-                  className="font-semibold text-white cursor-pointer hover:underline"
+                <button
                   onClick={() => router.push(`/users/${v.username}`)}
+                  className="font-semibold text-white hover:underline hover:text-purple-400 transition-colors"
                 >
                   {v.first_name} {v.last_name} @{v.username}
-                </p>
+                </button>
                 <p className="text-gray-400 text-sm">
-                  {v.city && v.country ? `• ${v.city}, ${v.country}` : ""}
+                  {v.city && v.country ? `${v.city}, ${v.country}` : ""}
                 </p>
                 {v.viewed_at && (
                   <p className="text-gray-500 text-xs">
