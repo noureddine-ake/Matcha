@@ -12,6 +12,8 @@ import PhotosGallery from '@/components/photosGallery';
 import UserTags from "@/components/UserTags";
 import api from "@/lib/api";
 import fetchFlag from "@/lib/fetchflag";
+import { useRouter } from "next/navigation";
+
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || 'http://backend:5000';
 
@@ -19,6 +21,7 @@ export default function ProfilePage() {
   const {fetchProfile, user, loading, error, } = useGlobal()
   const [isEditing, setIsEditing] = useState(false);
   const [flagUrl, setFlagUrl] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     fetchProfile();
@@ -159,27 +162,69 @@ export default function ProfilePage() {
               </p>
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-3 gap-4 mt-6">
-                {[
-                  { icon: Eye, label: 'Profile Views', value: user.stats?.views || 0 },
-                  { icon: Heart, label: 'Likes Received', value: user.stats?.likes || 0 },
-                  { icon: Star, label: 'Matches', value: user.stats?.matches || 0 },
-                ].map((stat, index) => (
-                  <motion.div
-                    key={stat.label}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl p-4 text-center border border-white/20 hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-300"
-                  >
-                    <stat.icon className="w-8 h-8 mx-auto mb-2 text-purple-300" />
-                    <div className="text-2xl font-bold text-white">
-                      {stat.value}
-                    </div>
-                    <div className="text-sm text-gray-300">{stat.label}</div>
-                  </motion.div>
-                ))}
-              </div>
+ <div className="grid grid-cols-3 gap-4 mt-6">
+  {[
+    {
+      icon: Eye,
+      label: "Profile Views",
+      value: user.stats?.views || 0,
+      special: true,
+      onClick: () => router.push("/views"),
+    },
+    {
+      icon: Heart,
+      label: "Likes Received",
+      value: user.stats?.likes || 0,
+    },
+    {
+      icon: Star,
+      label: "Matches",
+      value: user.stats?.matches || 0,
+    },
+  ].map((stat, index) => (
+    <motion.div
+      key={stat.label}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: index * 0.1 }}
+      whileHover={stat.special ? { scale: 1.07, y: -4 } : { scale: 1.03 }}
+      onClick={stat.onClick}
+      className={`relative group rounded-2xl p-4 text-center border transition-all duration-300 ${
+        stat.special
+          ? "bg-gradient-to-br from-purple-600/30 to-pink-600/20 border-purple-400/40 hover:border-purple-400/70 cursor-pointer"
+          : "bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border-white/20"
+      }`}
+    >
+      {/* glowing border effect for special card */}
+      {stat.special && (
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-0 group-hover:opacity-30 blur-lg transition-opacity duration-500" />
+      )}
+
+      <div className="relative z-10">
+        <stat.icon
+          className={`w-8 h-8 mx-auto mb-2 ${
+            stat.special ? "text-purple-300 group-hover:text-pink-300" : "text-purple-300"
+          }`}
+        />
+        <div className="text-2xl font-bold text-white">{stat.value}</div>
+        <div className="text-sm text-gray-300">{stat.label}</div>
+
+        {/* CTA for Profile Views */}
+        {stat.special && (
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            className="mt-3 px-4 py-2 text-sm font-semibold bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white shadow-md hover:shadow-lg hover:from-pink-500 hover:to-purple-500 transition-all"
+            onClick={stat.onClick}
+          >
+            View Who Viewed You
+          </motion.button>
+        )}
+      </div>
+    </motion.div>
+  ))}
+</div>
+
+
             </div>
           </motion.div>
         </div>
