@@ -1,5 +1,14 @@
 import { pool } from '../config/config.js';
 import { searchSuggestions2, getProfileDataforMatches, getAllMatches } from '../models/matchModel.js';
+import { createAndSendNotification } from '../utils/notificationHelper.js';
+
+export const notificationTypes = {
+  LIKE: 'like',
+  MATCH: 'match',
+  UNLIKE: 'unlike',
+  VIEW: 'view',
+  MESSAGE: 'message'
+};
 
 // suggestions list
 export const getSuggestions = async (req, res) => {
@@ -85,18 +94,19 @@ export const getSuggestions = async (req, res) => {
   }
 };
 
-// like a user
+// ================================================================================================================================================================================================================================================================================================================================================
+
 export const likeUser = async (req, res) => {  
   try {
     const likerId = req.user.data.id;
-    const likedId = parseInt(req.params.useerId)
-
+    const likedId = parseInt(req.params.userId);
+    console.log("likedId=======",req.params.userId, likedId);
     // Validation
     if (likerId === likedId) {
       return res.status(400).json({ error: 'Cannot like yourself' });
     }
 
-    // Check if liker has profile picture (requirement from subject)
+    // Check if liker has profile picture
     const likerCheck = await pool.query(
       'SELECT EXISTS(SELECT 1 FROM photos WHERE user_id = $1 AND is_profile_picture = TRUE) as has_pic',
       [likerId]
@@ -149,24 +159,24 @@ export const likeUser = async (req, res) => {
     const isMatch = mutualLike.rowCount > 0;
 
     // Create notification for the liked user
-    await pool.query(
-      `INSERT INTO notifications (user_id, type, from_user_id, is_read) 
-       VALUES ($1, $2, $3, FALSE)`,
-      [likedId, 'like', likerId]
+    await createAndSendNotification(
+      likedId, 
+      notificationTypes.LIKE, 
+      likerId
     );
 
-    // If it's a match, create match notification for both users
+    // If it's a match, create match notifications for both users
     if (isMatch) {
-      await pool.query(
-        `INSERT INTO notifications (user_id, type, from_user_id, is_read) 
-         VALUES ($1, 'match', $2, FALSE)`,
-        [likerId, likedId]
+      await createAndSendNotification(
+        likerId,
+        notificationTypes.MATCH,
+        likedId
       );
-      
-      await pool.query(
-        `INSERT INTO notifications (user_id, type, from_user_id, is_read) 
-         VALUES ($1, 'match', $2, FALSE)`,
-        [likedId, likerId]
+
+      await createAndSendNotification(
+        likedId,
+        notificationTypes.MATCH,
+        likerId
       );
     }
 
@@ -199,7 +209,7 @@ export const likeUser = async (req, res) => {
     console.error('Like user error:', error);
     res.status(500).json({ error: 'Failed to like user' });
   }
-}
+};
 
 // unlike a user 
 // export const unlikeUser = async (req, res) => {
