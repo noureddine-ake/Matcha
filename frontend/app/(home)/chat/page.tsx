@@ -3,8 +3,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import MatchesCarousel from '@/components/matchesList';
+import { useRouter } from 'next/navigation';
 
 export default function ChatPage() {
+  const router = useRouter()
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -16,11 +18,12 @@ export default function ChatPage() {
 
       <div className="space-y-3 max-w-2xl mx-auto">
         {[1, 2, 3, 4, 5].map((i) => (
-          <motion.div
+          <motion.button
             key={i}
             initial={{ opacity: 0, x: -100 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, delay: i * 0.2 }}
+            onClick={router.push(`/chat/${i}`)}
             className="p-4 bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 hover:border-purple-400/50 hover:bg-white/15 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-4">
@@ -36,7 +39,7 @@ export default function ChatPage() {
                 <div className="w-2 h-2 bg-purple-400 rounded-full mt-1"></div>
               </div>
             </div>
-          </motion.div>
+          </motion.button>
         ))}
       </div>
     </motion.div>

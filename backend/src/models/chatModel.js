@@ -1,10 +1,11 @@
 import { pool } from "../config/config.js";
 
-
 // ✅ MODEL — Chat-related DB functions
 const ChatModel = {
   async userExists(userId) {
-    const { rows } = await pool.query("SELECT id FROM users WHERE id = $1", [userId]);
+    const { rows } = await pool.query("SELECT id FROM users WHERE id = $1", [
+      userId,
+    ]);
     return rows.length > 0;
   },
 
