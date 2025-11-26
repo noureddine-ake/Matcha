@@ -4,6 +4,9 @@ import jwtHelper from '../middlewares/authMiddleware.js';
 // Store connected clients: userId -> WebSocket connection
 const clients = new Map();
 
+// Chat-specific handlers
+const chatHandlers = new Map();
+
 export const setupWebSocket = (server) => {
   const wss = new WebSocketServer({ 
     server,
@@ -12,8 +15,6 @@ export const setupWebSocket = (server) => {
 
   wss.on('connection', (ws, req) => {
     console.log('🔌 New WebSocket connection attempt');
-    
-    
     
     const token = jwtHelper.getTokeFromCookies(req);
 
@@ -46,7 +47,7 @@ export const setupWebSocket = (server) => {
         userId
       }));
 
-      // Handle client messages (optional - for ping/pong)
+      // Handle client messages
       ws.on('message', (message) => {
         try {
           const data = JSON.parse(message);
@@ -54,6 +55,13 @@ export const setupWebSocket = (server) => {
           // Handle ping
           if (data.type === 'ping') {
             ws.send(JSON.stringify({ type: 'pong' }));
+          }
+          // Handle chat messages
+          else if (data.type === 'chat_message' || 
+                   data.type === 'typing_start' || 
+                   data.type === 'typing_stop' ||
+                   data.type === 'mark_read') {
+            handleChatMessage(userId, data);
           }
         } catch (error) {
           console.error('Error parsing message:', error);
@@ -78,9 +86,45 @@ export const setupWebSocket = (server) => {
     }
   });
 
-  console.log('🚀 WebSocket server initialized');
+  console.log('🚀 WebSocket server initialized with chat support');
 
   return wss;
+};
+
+// Handle chat-specific messages
+// In your websocket.js file, update the handleChatMessage function:
+
+// Handle chat-specific messages
+async function handleChatMessage(senderId, data) {
+  console.log("🟡 WebSocket chat message:", data.type, "from:", senderId);
+  
+  const handler = chatHandlers.get(data.type);
+  if (handler) {
+    await handler(senderId, data);
+  } else {
+    console.log(`Unknown chat message type: ${data.type}`);
+  }
+}
+
+// Add this function to send real-time messages
+export const sendRealTimeMessage = (receiverId, messageData) => {
+  const client = clients.get(receiverId);
+  
+  if (client && client.readyState === 1) {
+    client.send(JSON.stringify({
+      type: 'chat_message',
+      data: messageData
+    }));
+    console.log(`💬 Real-time message sent to user ${receiverId}`);
+    return true;
+  }
+  
+  console.log(`⚠️  User ${receiverId} not connected for real-time message`);
+  return false;
+};
+// Register chat message handlers
+export const registerChatHandler = (messageType, handler) => {
+  chatHandlers.set(messageType, handler);
 };
 
 // Send notification to specific user
@@ -110,6 +154,37 @@ export const sendMessageToUser = (userId, message) => {
       data: message
     }));
     console.log(`💬 Sent message to user ${userId}`);
+    return true;
+  }
+  
+  return false;
+};
+
+// Send chat message to specific user
+export const sendChatMessageToUser = (userId, chatData) => {
+  const client = clients.get(userId);
+  
+  if (client && client.readyState === 1) {
+    client.send(JSON.stringify({
+      type: 'chat_message',
+      data: chatData
+    }));
+    console.log(`💬 Sent chat message to user ${userId}`);
+    return true;
+  }
+  
+  return false;
+};
+
+// Send typing indicator
+export const sendTypingIndicator = (userId, typingData) => {
+  const client = clients.get(userId);
+  
+  if (client && client.readyState === 1) {
+    client.send(JSON.stringify({
+      type: typingData.isTyping ? 'typing_start' : 'typing_stop',
+      data: typingData
+    }));
     return true;
   }
   

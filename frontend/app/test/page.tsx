@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Send, Users, Search, Clock, CheckCheck, Volume2, VolumeX, Menu, X, ArrowLeft, Loader2 } from "lucide-react"
+import { Send, Users, Search, Clock, CheckCheck, Volume2, VolumeX, Menu, X, ArrowLeft } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import api from "@/lib/api"
 
@@ -26,21 +26,6 @@ interface Message {
   isSending?: boolean
 }
 
-interface MessagesResponse {
-  messages: Message[]
-  currentUserId: string
-  realTime: {
-    senderOnline: boolean
-    receiverOnline: boolean
-    supportsWebSocket: boolean
-  }
-  pagination?: {
-    hasMore: boolean
-    nextCursor?: string
-    totalMessages: number
-  }
-}
-
 export default function ChatPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -52,12 +37,6 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [loading, setLoading] = useState(true)
-  
-  // Pagination state
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [hasMoreMessages, setHasMoreMessages] = useState(false)
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const [totalMessages, setTotalMessages] = useState(0)
   
   // UI state
   const [sending, setSending] = useState(false)
@@ -79,8 +58,6 @@ export default function ChatPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
-  const observerRef = useRef<IntersectionObserver | null>(null)
-  const loadMoreTriggerRef = useRef<HTMLDivElement>(null)
 
   // Get selected user details
   const selectedUser = users.find(user => user.id === selectedUserId)
@@ -99,31 +76,6 @@ export default function ChatPage() {
     
     return () => window.removeEventListener('resize', checkScreenSize)
   }, [])
-
-  // ✅ Initialize Intersection Observer for lazy loading
-  useEffect(() => {
-    if (!loadMoreTriggerRef.current || !hasMoreMessages) return
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !loadingMore && hasMoreMessages) {
-          loadMoreMessages()
-        }
-      },
-      { 
-        threshold: 0.1,
-        rootMargin: '100px' // Start loading when 100px away from viewport
-      }
-    )
-
-    observerRef.current.observe(loadMoreTriggerRef.current)
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect()
-      }
-    }
-  }, [hasMoreMessages, loadingMore, selectedUserId])
 
   // ✅ Initialize and validate URL query on first render
   useEffect(() => {
@@ -236,11 +188,6 @@ export default function ChatPage() {
   // ✅ Update URL when selected user changes
   const updateSelectedUser = (userId: string) => {
     setSelectedUserId(userId)
-    // Reset messages and pagination when switching users
-    setMessages([])
-    setHasMoreMessages(false)
-    setNextCursor(null)
-    setTotalMessages(0)
     
     const params = new URLSearchParams(searchParams.toString())
     if (userId) {
@@ -296,53 +243,21 @@ export default function ChatPage() {
     }
   }
 
-  // ✅ Get messages for selected user with pagination
-  const fetchMessages = async (cursor: string | null = null, isLoadMore: boolean = false) => {
+  // ✅ Get messages for selected user
+  const fetchMessages = async () => {
     if (!selectedUserId) return
     
     try {
-      if (isLoadMore) {
-        setLoadingMore(true)
-      }
-
-      const url = cursor 
-        ? `/chat/${selectedUserId}?cursor=${cursor}&limit=20`
-        : `/chat/${selectedUserId}?limit=20`
-
-      const response = await api.get(url)
-      const data: MessagesResponse = response.data
+      const response = await api.get(`/chat/${selectedUserId}`)
+      setMessages(response.data.messages || [])
       
-      if (isLoadMore) {
-        // Prepend older messages for load more
-        setMessages(prev => [...data.messages, ...prev])
-      } else {
-        // Replace messages for initial load
-        setMessages(data.messages || [])
-      }
-      
-      // Update pagination state
-      setHasMoreMessages(data.pagination?.hasMore || false)
-      setNextCursor(data.pagination?.nextCursor || null)
-      setTotalMessages(data.pagination?.totalMessages || 0)
-      
-      if (!isLoadMore && data.messages?.length > 0) {
+      if (response.data.messages?.length > 0) {
         await api.post(`/chat/${selectedUserId}/read`)
       }
     } catch (error) {
       console.error("Failed to fetch messages:", error)
-    } finally {
-      if (isLoadMore) {
-        setLoadingMore(false)
-      }
     }
   }
-
-  // ✅ Load more messages (lazy loading)
-  const loadMoreMessages = useCallback(() => {
-    if (nextCursor && !loadingMore && hasMoreMessages) {
-      fetchMessages(nextCursor, true)
-    }
-  }, [nextCursor, loadingMore, hasMoreMessages, selectedUserId])
 
   // ✅ WebSocket connection
   const connectWebSocket = () => {
@@ -484,7 +399,7 @@ export default function ChatPage() {
     }))
   }
 
-  // ✅ Scroll to bottom for new messages
+  // ✅ Scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -523,19 +438,14 @@ export default function ChatPage() {
   // ✅ Fetch messages when user selected
   useEffect(() => {
     if (selectedUserId && currentUserId) {
-      fetchMessages() // Initial load without cursor
+      fetchMessages()
     }
   }, [selectedUserId, currentUserId])
 
-  // ✅ Auto-scroll only for new messages (not when loading more)
+  // ✅ Auto-scroll
   useEffect(() => {
-    if (messages.length > 0 && !loadingMore) {
-      const lastMessage = messages[messages.length - 1]
-      if (!lastMessage.isSending) {
-        scrollToBottom()
-      }
-    }
-  }, [messages.length, loadingMore])
+    scrollToBottom()
+  }, [messages])
 
   if (loading) {
     return (
@@ -750,40 +660,18 @@ export default function ChatPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-white/60 text-sm">
-                    {totalMessages > 0 && `${totalMessages} messages`}
-                  </div>
                 </div>
               )}
 
-              {/* Messages with Lazy Loading */}
+              {/* Messages with FIXED BUBBLE SIZING */}
               <div 
                 ref={messagesContainerRef}
                 className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4"
               >
-                {/* Load More Trigger */}
-                {hasMoreMessages && (
-                  <div ref={loadMoreTriggerRef} className="flex justify-center py-4">
-                    {loadingMore ? (
-                      <div className="flex items-center gap-2 text-white/60">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Loading older messages...</span>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={loadMoreMessages}
-                        className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm"
-                      >
-                        Load older messages
-                      </button>
-                    )}
-                  </div>
-                )}
-
                 <AnimatePresence mode="popLayout">
-                  {messages.map((message,idx) => (
+                  {messages.map((message) => (
                     <motion.div
-                      key={idx}
+                      key={message.id}
                       layout
                       initial={{ opacity: 0, y: 20, scale: 0.8 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -791,6 +679,7 @@ export default function ChatPage() {
                       transition={{ type: "spring", stiffness: 500, damping: 30 }}
                       className={`flex ${message.senderId === currentUserId ? 'justify-end' : 'justify-start'}`}
                     >
+                      {/* FIXED: Properly constrained message bubble */}
                       <motion.div
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -843,7 +732,7 @@ export default function ChatPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Message Input */}
+              {/* Message Input with Auto-resize Textarea */}
               <div className="p-4 md:p-6 border-t border-white/20">
                 <div className="flex gap-2 items-end">
                   <textarea
