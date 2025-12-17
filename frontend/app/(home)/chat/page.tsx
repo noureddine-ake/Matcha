@@ -312,13 +312,30 @@ export default function ChatPage() {
       const response = await api.get(url)
       const data: MessagesResponse = response.data
       
-      if (isLoadMore) {
-        // Prepend older messages for load more
-        setMessages(prev => [...data.messages, ...prev])
-      } else {
-        // Replace messages for initial load
-        setMessages(data.messages || [])
-      }
+     const normalized = (data.messages || []).map(m => ({
+  ...m,
+  id: String(m.id),
+  senderId: String(m.senderId),
+  receiverId: String(m.receiverId),
+}))
+
+if (isLoadMore) {
+  setMessages(prev => {
+    const merged = [...normalized, ...prev]
+    merged.sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    )
+    return merged
+  })
+} else {
+  normalized.sort(
+    (a, b) =>
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  )
+  setMessages(normalized)
+}
+
       
       // Update pagination state
       setHasMoreMessages(data.pagination?.hasMore || false)
