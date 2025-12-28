@@ -11,7 +11,7 @@ import {
   createNotification,
   getMessagesPaginated
 } from "../models/chatModel.js";
-
+import {getProfilePictureByUserId} from "../models/photosModal.js";
 // ✅ Get current user info
 async function getCurrentUser(req, res) {
   try {
@@ -53,6 +53,7 @@ async function getCurrentUser(req, res) {
 }
 
 // ✅ Get all users that current user can chat with
+// ✅ Get all users that current user can chat with
 async function getChatUsers(req, res) {
   try {
     const currentUserId = extractUserIdFromJWT(req.user);
@@ -66,22 +67,73 @@ async function getChatUsers(req, res) {
 
     const users = await getAllUsersExcept(currentUserId);
     
-    const formattedUsers = users.map(user => ({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      profile_photo: null,
-      last_seen: null,
-      is_online: isUserOnline(user.id),
-      last_message: null,
-      unread_count: 0,
-      is_connected: false
-    }));
+    // Get profile pictures for all users in parallel
+    const usersWithPhotos = await Promise.all(
+      users.map(async (user) => {
+        try {
+          // Get profile picture for this user
+          const profilePicResult = await getProfilePictureByUserId(user.id);
+          
+          let profile_photo = null;
+          
+          // Check if user has a profile picture
+          if (profilePicResult && profilePicResult.rows && profilePicResult.rows.length > 0) {
+            const photoUrl = profilePicResult.rows[0].photo_url;
+            
+            // Convert to absolute URL if needed
+            if (photoUrl) {
+              // If it's already an absolute URL, use as-is
+              if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+                profile_photo = photoUrl;
+              } 
+              // If it's a relative path starting with /
+              else if (photoUrl.startsWith('/')) {
+                // Get base URL from environment or request
+                const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`;
+                profile_photo = `${baseUrl}${photoUrl}`;
+              }
+              // If it's just a filename
+              else {
+                const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`;
+                profile_photo = `${baseUrl}/uploads/${photoUrl}`;
+              }
+            }
+          }
+          
+          return {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            profile_photo: profile_photo, // Now with actual photo URL or null
+            last_seen: null, // You might want to get this from profiles table
+            is_online: isUserOnline(user.id),
+            last_message: null,
+            unread_count: 0,
+            is_connected: false
+          };
+          
+        } catch (photoError) {
+          console.error(`Error fetching profile picture for user ${user.id}:`, photoError);
+          // Return user without profile photo on error
+          return {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            profile_photo: null,
+            last_seen: null,
+            is_online: isUserOnline(user.id),
+            last_message: null,
+            unread_count: 0,
+            is_connected: false
+          };
+        }
+      })
+    );
     
     res.json({ 
       success: true,
-      users: formattedUsers,
-      currentUserId // ✅ FIXED: Send current user ID with users response
+      users: usersWithPhotos,
+      currentUserId
     });
     
   } catch (error) {
