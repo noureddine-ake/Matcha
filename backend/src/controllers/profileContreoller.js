@@ -5,14 +5,15 @@ import {
   getProfilePictureByUserId,
   deleteProfilePictureByUserId,
   getGalleryPhotoById,
-  deletePhotoById
+  deletePhotoById,
 } from '../models/photosModal.js';
 import {
   createProfile,
   checkExistedProfiles,
   getProfileByUserId,
-  updateUserLocation
+  updateUserLocation,
 } from '../models/profileModel.js';
+import { reverseGeocode } from '../utils/geocode.js';
 import {
   createTag,
   createUserTag,
@@ -25,8 +26,16 @@ import { pool } from '../config/config.js';
 import fs from 'fs';
 import path from 'path';
 import JWT from '../middlewares/authMiddleware.js';
-import { recordProfileView, getProfileViewCount ,getAllUniqueProfileViewers} from '../models/profileViewModel.js'; // ✅ Add this
-
+import {
+  recordProfileView,
+  getProfileViewCount,
+  getAllUniqueProfileViewers,
+  getProfileTotalViews
+} from '../models/profileViewModel.js'; 
+import {getUserLikesCount} from '../models/likesModel.js'; 
+import {getMatchesCount} from '../models/matchModel.js'; 
+import { createAndSendNotification } from '../utils/notificationHelper.js';
+import { notificationTypes } from './matchingController.js';
 /**
  * Retrieves the complete user profile including personal information, photos, and tags
  * @param {Object} req - Express request object containing user authentication data
@@ -52,7 +61,9 @@ export const getProfile = async (req, res) => {
     // Fetch basic user account information
     const userResult = await getUserAttr('id', userId);
     const user = userResult.rows[0];
-
+    const views = await getProfileTotalViews(userId);
+    const likes = await getUserLikesCount(userId);
+    const matches = await getMatchesCount(userId)
     // Send comprehensive profile response
     res.status(200).json({
       id: user.id,
@@ -71,14 +82,18 @@ export const getProfile = async (req, res) => {
       latitude: profile.latitude,
       longitude: profile.longitude,
       // Map database sexual preference values to user-friendly format
-      sexual_preference: profile.sexual_preference === 'male' ? 'men' : 
-                       profile.sexual_preference === 'female' ? 'women' : 'both',
+      sexual_preference:
+        profile.sexual_preference === 'male'
+          ? 'men'
+          : profile.sexual_preference === 'female'
+            ? 'women'
+            : 'both',
       tags: tags,
       photos: photos,
       stats: {
-        views: 128,
-        likes: 42,
-        matches: 8,
+        views,
+        likes,
+        matches,
         messages: 5,
       },
     });
@@ -114,6 +129,8 @@ export const getProfileUser = async (req, res) => {
 
     // 2. Prevent recording view if user visits their own profile
     if (viewerId && viewerId !== viewedId) {
+      // send notif
+      await createAndSendNotification(viewedId,notificationTypes.VIEW, viewerId);
       await recordProfileView(viewerId, viewedId); // ✅ Record the view
     }
 
@@ -127,7 +144,10 @@ export const getProfileUser = async (req, res) => {
     const tags = await getUserTags(viewedId);
     const photos = await getPhotosByUserId(viewedId);
     const totalViews = await getProfileViewCount(viewedId); // ✅ Add total views
-
+    // 
+     const views = await getProfileTotalViews(viewedId);
+    const likes = await getUserLikesCount(viewedId);
+    const matches = await getMatchesCount(viewedId)
     // 5. Return full profile
     res.status(200).json({
       id: user.id,
@@ -148,15 +168,15 @@ export const getProfileUser = async (req, res) => {
         profile.sexual_preference === 'male'
           ? 'men'
           : profile.sexual_preference === 'female'
-          ? 'women'
-          : 'both',
+            ? 'women'
+            : 'both',
       tags,
       photos,
       stats: {
         // views: totalViews, // ✅ dynamic
-        likes: profile.likes || 0,
-        matches: profile.matches || 0,
-        messages: profile.messages || 0,
+        likes,
+        matches,
+        // messages: profile.messages || 0,
       },
     });
   } catch (err) {
@@ -175,15 +195,15 @@ export const getWhoViewedYou = async (req, res) => {
 
     res.status(200).json({
       totalViewers: viewers.length,
-      viewers: viewers.map(v => ({
+      viewers: viewers.map((v) => ({
         id: v.id,
         username: v.username,
         first_name: v.first_name,
         last_name: v.last_name,
         completed_profile: v.completed_profile,
-        picture : v.profile_picture,
-        viewed_at: v.viewed_at
-      }))
+        picture: v.profile_picture,
+        viewed_at: v.viewed_at,
+      })),
     });
   } catch (err) {
     console.error('Error fetching profile viewers:', err);
@@ -211,7 +231,7 @@ export const updateProfile = async (req, res) => {
     const userUpdates = {};
     if (req.body.first_name) userUpdates.first_name = req.body.first_name;
     if (req.body.last_name) userUpdates.last_name = req.body.last_name;
-    
+
     // Validate and update email if provided
     if (req.body.email) {
       const emailResult = await getUserAttr('email', req.body.email);
@@ -220,11 +240,14 @@ export const updateProfile = async (req, res) => {
       }
       userUpdates.email = req.body.email;
     }
-    
+
     // Validate and update username if provided
     if (req.body.username) {
       const usernameResult = await getUserAttr('username', req.body.username);
-      if (usernameResult.rows.length > 0 && usernameResult.rows[0].id !== userId) {
+      if (
+        usernameResult.rows.length > 0 &&
+        usernameResult.rows[0].id !== userId
+      ) {
         return res.status(400).json({ error: 'Username already taken' });
       }
       userUpdates.username = req.body.username;
@@ -238,23 +261,25 @@ export const updateProfile = async (req, res) => {
     // Prepare updates for profile-specific information
     const profileUpdates = {};
     if (req.body.gender) profileUpdates.gender = req.body.gender;
-    
+
     // Map user-friendly sexual preference values to database format
     if (req.body.sexual_preference) {
-      profileUpdates.sexual_preference = 
-        req.body.sexual_preference === 'men' ? 'male' : 
-        req.body.sexual_preference === 'women' ? 'female' : 'both';
+      profileUpdates.sexual_preference =
+        req.body.sexual_preference === 'men'
+          ? 'male'
+          : req.body.sexual_preference === 'women'
+            ? 'female'
+            : 'both';
     }
-    
-    if (req.body.biography) profileUpdates.biography = req.body.biography;
+    if (req.body.biography && req.body.biography.length < 150) profileUpdates.biography = req.body.biography;
     if (req.body.latitude) profileUpdates.latitude = req.body.latitude;
     if (req.body.longitude) profileUpdates.longitude = req.body.longitude;
-    
+
     // Validate and update birth date if provided
     if (req.body.birth_date && !isNaN(Date.parse(req.body.birth_date))) {
       profileUpdates.birth_date = req.body.birth_date;
     }
-    
+
     if (req.body.city) profileUpdates.city = req.body.city;
     if (req.body.country) profileUpdates.country = req.body.country;
 
@@ -296,13 +321,14 @@ export const updateProfile = async (req, res) => {
         const photoPath = `/uploads/${file.filename}`;
         const photoIndex = parseInt(file.fieldname.replace('photo', ''));
         const existedPhoto = await isPhotoExisted(photoPath);
-        
+
         // Only create new photo if it doesn't already exist
         if (!existedPhoto) {
           await createPhoto({
             user_id: userId,
             photo_url: photoPath,
-            is_profile_picture: photoIndex === parseInt(req.body.profilePhotoIndex),
+            is_profile_picture:
+              photoIndex === parseInt(req.body.profilePhotoIndex),
           });
         }
       }
@@ -323,8 +349,12 @@ export const updateProfile = async (req, res) => {
       email: user.email,
       gender: updatedProfile.gender,
       // Map database values back to user-friendly format
-      sexual_preference: updatedProfile.sexual_preference === 'male' ? 'men' : 
-                        updatedProfile.sexual_preference === 'female' ? 'women' : 'both',
+      sexual_preference:
+        updatedProfile.sexual_preference === 'male'
+          ? 'men'
+          : updatedProfile.sexual_preference === 'female'
+            ? 'women'
+            : 'both',
       biography: updatedProfile.biography,
       birth_date: updatedProfile.birth_date,
       city: 'ifrane', // Note: This seems hardcoded - consider using updatedProfile.city
@@ -357,7 +387,7 @@ export const updateProfile = async (req, res) => {
 export const updateProfilePicture = async (req, res) => {
   try {
     const userId = req.user.data.id;
-    
+
     // Validate that a file was uploaded
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -370,13 +400,16 @@ export const updateProfilePicture = async (req, res) => {
     if (existedPhoto) {
       return res.status(400).json({ error: 'Photo already exists' });
     }
-    
+
     // Retrieve current profile picture to clean up old file
     const oldProfile = await getProfilePictureByUserId(userId);
-    
+
     if (oldProfile.rows.length > 0) {
-      const oldPhotoPath = path.join(process.cwd(), oldProfile.rows[0].photo_url);
-      
+      const oldPhotoPath = path.join(
+        process.cwd(),
+        oldProfile.rows[0].photo_url
+      );
+
       // Remove old profile picture file from server
       if (fs.existsSync(oldPhotoPath)) {
         fs.unlinkSync(oldPhotoPath);
@@ -385,7 +418,7 @@ export const updateProfilePicture = async (req, res) => {
 
     // Remove old profile picture from database
     await deleteProfilePictureByUserId(userId);
-    
+
     // Create new profile picture record
     await createPhoto({
       user_id: userId,
@@ -409,23 +442,23 @@ export const updateProfilePicture = async (req, res) => {
 export const deleteProfilePicture = async (req, res) => {
   try {
     const userId = req.user.data.id;
-    
+
     // Retrieve current profile picture
     const oldProfile = await getProfilePictureByUserId(userId);
     if (oldProfile.rows.length === 0) {
       return res.status(404).json({ error: 'No profile picture to delete' });
     }
-    
+
     const oldPhotoPath = path.join(process.cwd(), oldProfile.rows[0].photo_url);
-    
+
     // Remove profile picture file from server
     if (fs.existsSync(oldPhotoPath)) {
       fs.unlinkSync(oldPhotoPath);
     }
-    
+
     // Remove profile picture record from database
     await deleteProfilePictureByUserId(userId);
-  
+
     res.status(200).json({ message: 'Profile picture deleted successfully' });
   } catch (err) {
     console.error('Error deleting profile picture:', err);
@@ -442,7 +475,7 @@ export const deleteProfilePicture = async (req, res) => {
 export const addGalleryPicture = async (req, res) => {
   try {
     const userId = req.user.data.id;
-    
+
     // Validate that a file was uploaded
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -480,7 +513,7 @@ export const deleteGalleryPicture = async (req, res) => {
   try {
     const userId = req.user.data.id;
     const photoId = req.params.pictureId;
-   
+
     // Retrieve the photo to verify ownership and existence
     const photoResult = await getGalleryPhotoById(photoId, userId);
     if (!photoResult) {
@@ -496,7 +529,7 @@ export const deleteGalleryPicture = async (req, res) => {
 
     // Remove photo record from database
     await deletePhotoById(photoId);
-    
+
     res.status(200).json({ message: 'Gallery picture deleted successfully' });
   } catch (err) {
     console.error('Error deleting gallery picture:', err);
@@ -539,13 +572,15 @@ export const completeProfile = async (req, res) => {
         error: 'Profile already created',
       });
     }
-    
+
     // Create initial profile record
     await createProfile({
       user_id: userTokenData.id,
       gender: req.body.gender,
-      sexual_preference: req.body.sexualPreference === 'men' ? 'male' : 'female',
+      sexual_preference:
+        req.body.sexualPreference === 'men' ? 'male' : 'female',
       biography: req.body.biography,
+      birth_date: req.body.birth_date,
     });
 
     // Process and create user interest tags
@@ -553,8 +588,8 @@ export const completeProfile = async (req, res) => {
     for (const tag of interests) {
       let existingTag = await getTagByName(tag);
       const now = new Date(Date.now());
-      
-      console.log("existingTag", existingTag);
+
+      console.log('existingTag', existingTag);
       // Create new tag if it doesn't exist
       if (!existingTag) {
         existingTag = await createTag({ name: tag, create_at: now });
@@ -563,10 +598,13 @@ export const completeProfile = async (req, res) => {
       const UserTagExisted = await isUserTagExisted({
         user_id: userTokenData.id,
         tag_id: existingTag.id,
-      });      
+      });
       // Create user-tag association if it doesn't exist
       if (!UserTagExisted) {
-        await createUserTag({ user_id: userTokenData.id, tag_id: existingTag.id });
+        await createUserTag({
+          user_id: userTokenData.id,
+          tag_id: existingTag.id,
+        });
       }
     }
 
@@ -575,13 +613,14 @@ export const completeProfile = async (req, res) => {
       for (const file of req.files) {
         const photoPath = `/uploads/${file.filename}`;
         const photoIndex = parseInt(file.fieldname.replace('photo', ''));
-        
+
         const existedPhoto = await isPhotoExisted(photoPath);
         if (!existedPhoto) {
           await createPhoto({
             user_id: userTokenData.id,
             photo_url: photoPath,
-            is_profile_picture: photoIndex === parseInt(req.body.profilePhotoIndex),
+            is_profile_picture:
+              photoIndex === parseInt(req.body.profilePhotoIndex),
           });
         }
       }
@@ -591,10 +630,13 @@ export const completeProfile = async (req, res) => {
     await updateUser(userTokenData.id, { completed_profile: true });
     userTokenData.completed_profile = true;
 
-    const token = JWT.createJWToken({ sessionData: userTokenData, maxAge: '2 days' });
+    const token = JWT.createJWToken({
+      sessionData: userTokenData,
+      maxAge: '2 days',
+    });
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
     });
 
@@ -625,7 +667,9 @@ export const addUserTag = async (req, res) => {
     if (typeof tagName !== 'string' || tagName.trim() === '')
       return res.status(400).json({ error: 'Invalid tag name' });
     if (tagName.length > 30)
-      return res.status(400).json({ error: 'Tag name too long (max 30 characters)' });
+      return res
+        .status(400)
+        .json({ error: 'Tag name too long (max 30 characters)' });
     tagName = tagName.trim();
     // Check if tag already exists
     let tag = await getTagByName(tagName);
@@ -637,7 +681,10 @@ export const addUserTag = async (req, res) => {
     }
 
     // Check if user already has this tag
-    const userTagExists = await isUserTagExisted({ user_id: userId, tag_id: tag.id });
+    const userTagExists = await isUserTagExisted({
+      user_id: userId,
+      tag_id: tag.id,
+    });
     if (userTagExists) {
       return res.status(400).json({ error: 'User already has this tag' });
     }
@@ -664,7 +711,7 @@ export const removeUserTag = async (req, res) => {
 
     // Verify tag exists and belongs to user
     const userTags = await getUserTags(userId);
-    const tagExists = userTags.some(tag => tag.id == tagId);
+    const tagExists = userTags.some((tag) => tag.id == tagId);
 
     if (!tagExists) {
       return res.status(404).json({ error: 'Tag not found in user profile' });
@@ -711,7 +758,9 @@ export const updateUserTags = async (req, res) => {
 
     // Return updated tags
     const updatedTags = await getUserTags(userId);
-    res.status(200).json({ message: 'Tags updated successfully', tags: updatedTags });
+    res
+      .status(200)
+      .json({ message: 'Tags updated successfully', tags: updatedTags });
   } catch (err) {
     console.error('Error updating tags:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -736,20 +785,52 @@ export const getAvailableTags = async (req, res) => {
 // // =============================================================================
 // // LOCATION MANAGEMENT ROUTES
 // // =============================================================================
+
+/**
+ * Updates the user's location (latitude, longitude) and reverse geocodes to get city and country
+ * @route PUT /profile/location
+ * @access Protected
+ */
 export const updateLocation = async (req, res) => {
   const { latitude, longitude } = req.body;
-  const userId = req.user.data.id;;
+  const userId = req.user.data.id;
+
+  console.log(
+    '[updateLocation] userId:',
+    userId,
+    'latitude:',
+    latitude,
+    'longitude:',
+    longitude
+  );
 
   if (latitude == null || longitude == null) {
-    return res.status(400).json({ message: 'Latitude and longitude are required' });
+    return res
+      .status(400)
+      .json({ message: 'Latitude and longitude are required' });
   }
 
   try {
-    console.log(`USER ID: ${userId}, LATITUDE: ${latitude}, LONGITUDE: ${longitude}`);
-    const updatedUser = await updateUserLocation(userId, latitude, longitude);
-    res.status(200).json({ message: 'Location updated successfully', user: updatedUser });
+    // Reverse geocode to get city and country
+    const { city, country } = await reverseGeocode(latitude, longitude);
+    console.log('[updateLocation] reverseGeocode result:', { city, country });
+    // Update all fields in profile
+    const updatedUser = await updateUserLocation(
+      userId,
+      latitude,
+      longitude,
+      city,
+      country
+    );
+    
+    console.log('[updateLocation] updatedUser:', updatedUser);
+    res
+      .status(200)
+      .json({ message: 'Location updated successfully', user: updatedUser });
   } catch (error) {
     console.error('Error updating location:', error);
-    res.status(500).json({ message: 'Error updating location', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Error updating location', error: error.message });
   }
-}
+};

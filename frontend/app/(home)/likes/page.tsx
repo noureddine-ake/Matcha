@@ -75,7 +75,7 @@ export default function LikesPage() {
                 height={100}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+              <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent flex items-end p-4">
                 <div>
                   <p className="text-white font-bold text-lg">{like.username}</p>
                   <p className="text-white/80 text-sm">Liked you {}</p>

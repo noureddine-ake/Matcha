@@ -5,26 +5,11 @@ type Location = {
   
   const fetchFlag = async (location?: Location): Promise<string | null> => {
     try {
-      let latitude: number | string | undefined;
-      let longitude: number | string | undefined;
-
-      if (location?.latitude && location?.longitude) {
-        // Use provided props
-        latitude = location.latitude;
-        longitude = location.longitude;
-      } else {
-        // Fallback to localStorage
-        const userLocation = JSON.parse(
-          window.localStorage.getItem("user_location") || "{}"
-        );
-        latitude = userLocation.latitude;
-        longitude = userLocation.longitude;
-      }
   
-      if (!latitude || !longitude) return null;
+      if (!location || !location.latitude || !location.longitude) return null;
   
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+        `https://nominatim.openstreetmap.org/reverse?lat=${location.latitude}&lon=${location.longitude}&format=json`
       );
       const data = await res.json();
   

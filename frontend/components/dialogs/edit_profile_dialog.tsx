@@ -44,6 +44,10 @@ export default function EditProfileDialog({ setIsEditing }: EditProfileDialogPro
       setLocalError("First name is required")
       return
     }
+    if (formData.biography.length > 150) {
+      setLocalError("Bio too long , must be less tehn 150 characters")
+      return
+    }
     if (!formData.last_name?.trim()) {
       setLocalError("Last name is required")
       return
@@ -200,7 +204,11 @@ export default function EditProfileDialog({ setIsEditing }: EditProfileDialogPro
 
             {/* City and Country */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div>Discover
+              Swipe or tap to explore profiles
+              
+              
+              
                 <label className="block text-sm font-medium text-white mb-2">City</label>
                 <input
                   type="text"

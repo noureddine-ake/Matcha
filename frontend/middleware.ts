@@ -74,9 +74,6 @@ export function middleware(req: NextRequest) {
 
   const { is_verified, completed_profile } = userData.data || {};
 
-  // 3️⃣ Redirect unverified users (except on verification page)
-  console.log("is_verified, completed_profile", is_verified, completed_profile, "==============");
-  
   if (!is_verified && !pathname.startsWith('/auth/verify-email')) {
     url.pathname = '/auth/verify-email';
     return NextResponse.redirect(url);

@@ -1,9 +1,8 @@
-// ```jsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Camera, Heart, Eye, Edit3, MapPin, Star, Calendar, Hash, Loader, User, Mail, HeartHandshake } from "lucide-react";
+import { Heart, Eye, Edit3, MapPin, Star, Calendar, Loader, User, Mail, HeartHandshake } from "lucide-react";
 import { useGlobal } from "@/contexts/globalcontext"
 import Image from "next/image";
 import EditProfileDialog from "@/components/dialogs/edit_profile_dialog";
@@ -17,24 +16,44 @@ import { useRouter } from "next/navigation";
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || 'http://backend:5000';
 
+// Helper to update location in backend
+async function updateLocationAllFields(lat: number, lng: number) {
+  try {
+    console.log('[updateLocationAllFields] Calling /profile/location with:', { latitude: lat, longitude: lng });
+    await api.put('/profile/update-location', { latitude: lat, longitude: lng });
+    console.log('[updateLocationAllFields] Successfully called /profile/location');
+  } catch (err) {
+    console.error('[updateLocationAllFields] Error calling /profile/location:', err);
+  }
+}
+
 export default function ProfilePage() {
-  const {fetchProfile, user, loading, error, } = useGlobal()
+  const { fetchProfile, user, loading, error, } = useGlobal()
   const [isEditing, setIsEditing] = useState(false);
   const [flagUrl, setFlagUrl] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
+    console.log('[ProfilePage useEffect] useEffect triggered');
     fetchProfile();
+    const userLocation = JSON.parse(
+      window.localStorage.getItem("user_location") || "{}"
+    );
+    const latitude = userLocation.latitude;
+    const longitude = userLocation.longitude;
     const getFlag = async () => {
-      const url = await fetchFlag();
+      const url = await fetchFlag({latitude, longitude});
       setFlagUrl(url || null);
     };
     getFlag();
-  }, [fetchProfile]);
+
+    updateLocationAllFields(latitude, longitude);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-4">
+      <div className="min-h-screen bg-linear-to-br from-gray-900 via-purple-900 to-gray-900 p-4">
         <div className="max-w-6xl mx-auto">
           <div className="animate-pulse space-y-6">
             <div className="h-32 bg-gray-800 rounded-xl"></div>
@@ -54,9 +73,9 @@ export default function ProfilePage() {
 
   const logout = () => {
     try {
-        api.post('/profile/logout').then(() => {
-          window.location.href = '/';
-        }
+      api.post('/profile/logout').then(() => {
+        window.location.href = '/';
+      }
       );
     }
     catch (err) {
@@ -65,14 +84,14 @@ export default function ProfilePage() {
   }
 
   if (!user) {
-    return <div><Loader className=" animate-spin"/></div>
+    return <div><Loader className=" animate-spin" /></div>
   }
 
   return (
-    <div className="min-h-full ">
+    <div className="h-full overflow-scroll no-scrollbar">
       {/* Profile Header */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-800/30 to-pink-800/30"></div>
+        <div className="absolute inset-0"></div>
         <div className="relative max-w-6xl mx-auto px-4 py-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -84,7 +103,7 @@ export default function ProfilePage() {
               <ProfilePicture photos={user.photos} backendUrl={BACKEND_URL} size={192} />
               <button
                 onClick={toggleEdit}
-                className="absolute -bottom-3 -right-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 border border-white/20"
+                className="absolute -bottom-3 -right-3 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 border border-white/20"
               >
                 <Edit3 className="w-5 h-5" />
               </button>
@@ -95,10 +114,10 @@ export default function ProfilePage() {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
+                    <h1 className="text-4xl font-bold bg-linear-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
                       {user?.first_name} {user?.last_name}
                     </h1>
-                    <span className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    <span className="bg-linear-to-r from-blue-500 to-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full">
                       Verified
                     </span>
                   </div>
@@ -139,7 +158,7 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
-              
+
               {/* Birthday */}
               {user.birth_date && (
                 <div className="text-gray-300 mb-4 flex items-center gap-2 bg-white/5 p-3 rounded-xl backdrop-blur-sm border border-white/10">
@@ -151,7 +170,7 @@ export default function ProfilePage() {
               {/* Logout Button */}
               <button
                 onClick={logout}
-                className="mt-2 px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl shadow-lg transition-all duration-300 border border-white/20 font-semibold"
+                className="mt-2 px-6 py-3 bg-linear-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl shadow-lg transition-all duration-300 border border-white/20 font-semibold"
               >
                 Logout
               </button>
@@ -162,67 +181,65 @@ export default function ProfilePage() {
               </p>
 
               {/* Stats Cards */}
- <div className="grid grid-cols-3 gap-4 mt-6">
-  {[
-    {
-      icon: Eye,
-      label: "Profile Views",
-      value: user.stats?.views || 0,
-      special: true,
-      onClick: () => router.push("/views"),
-    },
-    {
-      icon: Heart,
-      label: "Likes Received",
-      value: user.stats?.likes || 0,
-    },
-    {
-      icon: Star,
-      label: "Matches",
-      value: user.stats?.matches || 0,
-    },
-  ].map((stat, index) => (
-    <motion.div
-      key={stat.label}
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: index * 0.1 }}
-      whileHover={stat.special ? { scale: 1.07, y: -4 } : { scale: 1.03 }}
-      onClick={stat.onClick}
-      className={`relative group rounded-2xl p-4 text-center border transition-all duration-300 ${
-        stat.special
-          ? "bg-gradient-to-br from-purple-600/30 to-pink-600/20 border-purple-400/40 hover:border-purple-400/70 cursor-pointer"
-          : "bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border-white/20"
-      }`}
-    >
-      {/* glowing border effect for special card */}
-      {stat.special && (
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-0 group-hover:opacity-30 blur-lg transition-opacity duration-500" />
-      )}
+              <div className="grid grid-cols-3 gap-4 mt-6">
+                {[
+                  {
+                    icon: Eye,
+                    label: "Profile Views",
+                    value: user.stats?.views || 0,
+                    special: true,
+                    onClick: () => router.push("/views"),
+                  },
+                  {
+                    icon: Heart,
+                    label: "Likes Received",
+                    value: user.stats?.likes || 0,
+                  },
+                  {
+                    icon: Star,
+                    label: "Matches",
+                    value: user.stats?.matches || 0,
+                  },
+                ].map((stat, index) => (
+                  <motion.div
+                    key={stat.label}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={stat.special ? { scale: 1.07, y: -4 } : { scale: 1.03 }}
+                    onClick={stat.onClick}
+                    className={`relative group rounded-2xl p-4 text-center border transition-all duration-300 ${stat.special
+                      ? "bg-linear-to-br from-purple-600/30 to-pink-600/20 border-purple-400/40 hover:border-purple-400/70 cursor-pointer"
+                      : "bg-linear-to-br from-white/10 to-white/5 backdrop-blur-sm border-white/20"
+                      }`}
+                  >
+                    {/* glowing border effect for special card */}
+                    {stat.special && (
+                      <div className="absolute inset-0 rounded-2xl bg-linear-to-r from-pink-500 via-purple-500 to-blue-500 opacity-0 group-hover:opacity-30 blur-lg transition-opacity duration-500" />
+                    )}
 
-      <div className="relative z-10">
-        <stat.icon
-          className={`w-8 h-8 mx-auto mb-2 ${
-            stat.special ? "text-purple-300 group-hover:text-pink-300" : "text-purple-300"
-          }`}
-        />
-        <div className="text-2xl font-bold text-white">{stat.value}</div>
-        <div className="text-sm text-gray-300">{stat.label}</div>
+                    <div className="relative z-10">
+                      <stat.icon
+                        className={`w-8 h-8 mx-auto mb-2 ${stat.special ? "text-purple-300 group-hover:text-pink-300" : "text-purple-300"
+                          }`}
+                      />
+                      <div className="text-2xl font-bold text-white">{stat.value}</div>
+                      <div className="text-sm text-gray-300">{stat.label}</div>
 
-        {/* CTA for Profile Views */}
-        {stat.special && (
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            className="mt-3 px-4 py-2 text-sm font-semibold bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white shadow-md hover:shadow-lg hover:from-pink-500 hover:to-purple-500 transition-all"
-            onClick={stat.onClick}
-          >
-            View Who Viewed You
-          </motion.button>
-        )}
-      </div>
-    </motion.div>
-  ))}
-</div>
+                      {/* CTA for Profile Views */}
+                      {stat.special && (
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          className="mt-3 px-4 py-2 text-sm font-semibold bg-linear-to-r from-purple-500 to-pink-500 rounded-full text-white shadow-md hover:shadow-lg hover:from-pink-500 hover:to-purple-500 transition-all"
+                          onClick={stat.onClick}
+                        >
+                          View Who Viewed You
+                        </motion.button>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
 
 
             </div>
@@ -247,12 +264,11 @@ export default function ProfilePage() {
 
           {/* Edit Modal */}
           {isEditing && (
-              <EditProfileDialog setIsEditing={setIsEditing} />
+            <EditProfileDialog setIsEditing={setIsEditing} />
           )}
-          
+
         </div>
       </div>
     </div>
   );
 }
-// ```

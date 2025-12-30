@@ -92,18 +92,22 @@ export async function getAllUsersExcept(currentUserId) {
   try {
     const query = `
       SELECT 
-        id, 
-        username, 
-        email,
-        created_at
-      FROM users 
-      WHERE id != $1 
-      ORDER BY username ASC
+        u.id,
+        u.username,
+        u.email,
+        u.created_at
+      FROM users u
+      JOIN likes l1 
+        ON l1.liker_user_id = $1 AND l1.liked_user_id = u.id
+      JOIN likes l2 
+        ON l2.liker_user_id = u.id AND l2.liked_user_id = $1
+      ORDER BY u.username ASC
     `;
+
     const result = await pool.query(query, [currentUserId]);
     return result.rows;
   } catch (error) {
-    console.error("❌ Error in getAllUsersExcept:", error);
+    console.error("❌ Error in getMatchedUsers:", error);
     throw error;
   }
 }
