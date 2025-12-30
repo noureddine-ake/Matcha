@@ -214,7 +214,7 @@ export const likeUser = async (req, res) => {
 // unlike a user 
 // export const unlikeUser = async (req, res) => {
 //   const client = await db.connect();
-  
+
 //   try {
 //     const unlikerId = req.user.id;
 //     const unlikedId = parseInt(req.params.userId);
@@ -292,7 +292,6 @@ export const getMatches = async (req, res) => {
     res.json({
       matches: result.rows,
       count: result.rowCount,
-      // total: parseInt(countResult.rows[0].total),
       limit: parseInt(limit),
       offset: parseInt(offset)
     });

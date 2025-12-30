@@ -21,7 +21,6 @@ import {
   getWhoViewedYou
 } from '../controllers/profileContreoller.js';
 
-import {updateUserLocation} from '../models/profileModel.js';
 // Initialize router for profile-related endpoints
 export const profileRoute = express.Router();
 

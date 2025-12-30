@@ -1,5 +1,5 @@
 // ======================================================
-// this file contains all the models about profiles Table 
+// this file contains all the models about profiles Table
 // ======================================================
 
 import { pool } from '../config/config.js';
@@ -23,7 +23,7 @@ export const createProfile = async (profile) => {
     profile.city || null,
     profile.country || null,
     profile.is_online || false,
-    profile.last_seen || null
+    profile.last_seen || null,
   ];
   const { rows } = await pool.query(query, values);
   return rows[0];
@@ -41,8 +41,7 @@ export const getProfileByUserId = async (user_id) => {
   const query = `SELECT * FROM profiles WHERE user_id = $1`;
   const { rows } = await pool.query(query, [user_id]);
 
-  if (!rows.length)
-    return null;
+  if (!rows.length) return null;
   return rows[0];
 };
 
@@ -77,7 +76,7 @@ export const updateProfile = async (user_id, profile) => {
     profile.country || null,
     profile.is_online || false,
     profile.last_seen || null,
-    user_id
+    user_id,
   ];
   const { rows } = await pool.query(query, values);
   return rows[0];
@@ -103,36 +102,43 @@ export const setOnlineStatus = async (user_id, is_online) => {
   return rows[0];
 };
 
-
 // update latitude and longitude of a user profile
-export const updateUserLocation = async (user_id, latitude, longitude) => {
-  const client = await pool.connect();
-  try {
-    // Try updating first
-    const updateResult = await client.query(
-      `UPDATE profiles
-       SET latitude = $2,
-           longitude = $3,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE user_id = $1
-       RETURNING *;`,
-      [user_id, latitude, longitude]
-    );
-
-    if (updateResult.rowCount > 0) return updateResult.rows[0];
-
-    // If not exists, insert
-    const insertResult = await client.query(
-      `INSERT INTO profiles (user_id, latitude, longitude)
-       VALUES ($1, $2, $3)
-       RETURNING *;`,
-      [user_id, latitude, longitude]
-    );
-
-    return insertResult.rows[0];
-  } finally {
-    client.release();
-  }
+export const updateUserLocation = async (
+  user_id,
+  latitude,
+  longitude,
+  city,
+  country
+) => {
+  const query = `
+    UPDATE profiles
+    SET latitude = $2,
+        longitude = $3,
+        city = $4,
+        country = $5,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE user_id = $1
+    RETURNING *;
+  `;
+  console.log(
+    '[updateUserLocation] user_id:',
+    user_id,
+    'latitude:',
+    latitude,
+    'longitude:',
+    longitude,
+    'city:',
+    city,
+    'country:',
+    country
+  );
+  const { rows } = await pool.query(query, [
+    user_id,
+    latitude,
+    longitude,
+    city,
+    country,
+  ]);
+  console.log('[updateUserLocation] query result:', rows);
+  return rows[0];
 };
-
-
