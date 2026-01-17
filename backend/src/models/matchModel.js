@@ -270,3 +270,23 @@ export const getUserLikes = async (userId) => {
   const current = await pool.query(query, values);
   return current;
 };
+
+
+/**
+ * Get total number of matches for a user
+ * @param {number} userId - ID of the user
+ * @returns {Promise<number>} Number of matches
+ */
+export const getMatchesCount = async (userId) => {
+  const query = `
+    SELECT COUNT(*)::int AS total_matches
+    FROM likes l1
+    JOIN likes l2 
+      ON l1.liker_user_id = l2.liked_user_id
+      AND l1.liked_user_id = l2.liker_user_id
+    WHERE l1.liker_user_id = $1
+  `;
+
+  const result = await pool.query(query, [userId]);
+  return result.rows[0].total_matches;
+};

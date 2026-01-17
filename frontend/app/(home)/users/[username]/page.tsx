@@ -244,7 +244,7 @@ export default function PublicUserProfile() {
                 className="grid grid-cols-2 sm:grid-cols-4 gap-3"
               >
                 {[
-                  { icon: Eye, label: "Profile Views", value: profile.stats?.views || 0 },
+                  // { icon: Eye, label: "Profile Views", value: profile.stats?.views || 0 },
                   { icon: Heart, label: "Likes Received", value: profile.stats?.likes || 0 },
                   { icon: Star, label: "Matches", value: profile.stats?.matches || 0 },
                   { icon: ImageIcon, label: "Photos", value: profile.photos?.length || 0 },

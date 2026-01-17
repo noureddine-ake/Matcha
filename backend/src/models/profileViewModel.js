@@ -2,12 +2,30 @@ import { pool } from '../config/config.js';
 
 // Record a profile view (viewer_id → viewed_id)
 export const recordProfileView = async (viewerId, viewedId) => {
-  const query = `
+  // prevent self-view
+  if (viewerId === viewedId) return;
+
+  const checkQuery = `
+    SELECT viewed_at
+    FROM profile_views
+    WHERE viewer_user_id = $1
+      AND viewed_user_id = $2
+      AND viewed_at > NOW() - INTERVAL '24 hours'
+    LIMIT 1
+  `;
+
+  const { rowCount } = await pool.query(checkQuery, [viewerId, viewedId]);
+
+  if (rowCount > 0) return; // already viewed recently
+
+  const insertQuery = `
     INSERT INTO profile_views (viewer_user_id, viewed_user_id, viewed_at)
     VALUES ($1, $2, NOW())
   `;
-  await pool.query(query, [viewerId, viewedId]);
+
+  await pool.query(insertQuery, [viewerId, viewedId]);
 };
+
 
 // Optional: count how many times a profile was viewed
 export const getProfileViewCount = async (userId) => {
@@ -46,4 +64,18 @@ export const getAllUniqueProfileViewers = async (userId) => {
 
   const result = await pool.query(query, [userId]);
   return result.rows;
+};
+
+
+// Get total number of profile views (how many times profile was viewed)
+
+export const getProfileTotalViews = async (userId) => {
+  const query = `
+    SELECT COUNT(*)::int AS total_views
+    FROM profile_views
+    WHERE viewed_user_id = $1
+  `;
+
+  const result = await pool.query(query, [userId]);
+  return result.rows[0].total_views;
 };

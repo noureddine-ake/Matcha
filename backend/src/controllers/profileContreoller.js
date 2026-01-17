@@ -30,8 +30,12 @@ import {
   recordProfileView,
   getProfileViewCount,
   getAllUniqueProfileViewers,
-} from '../models/profileViewModel.js'; // ✅ Add this
-
+  getProfileTotalViews
+} from '../models/profileViewModel.js'; 
+import {getUserLikesCount} from '../models/likesModel.js'; 
+import {getMatchesCount} from '../models/matchModel.js'; 
+import { createAndSendNotification } from '../utils/notificationHelper.js';
+import { notificationTypes } from './matchingController.js';
 /**
  * Retrieves the complete user profile including personal information, photos, and tags
  * @param {Object} req - Express request object containing user authentication data
@@ -57,7 +61,9 @@ export const getProfile = async (req, res) => {
     // Fetch basic user account information
     const userResult = await getUserAttr('id', userId);
     const user = userResult.rows[0];
-
+    const views = await getProfileTotalViews(userId);
+    const likes = await getUserLikesCount(userId);
+    const matches = await getMatchesCount(userId)
     // Send comprehensive profile response
     res.status(200).json({
       id: user.id,
@@ -85,9 +91,9 @@ export const getProfile = async (req, res) => {
       tags: tags,
       photos: photos,
       stats: {
-        views: 128,
-        likes: 42,
-        matches: 8,
+        views,
+        likes,
+        matches,
         messages: 5,
       },
     });
@@ -123,6 +129,8 @@ export const getProfileUser = async (req, res) => {
 
     // 2. Prevent recording view if user visits their own profile
     if (viewerId && viewerId !== viewedId) {
+      // send notif
+      await createAndSendNotification(viewedId,notificationTypes.VIEW, viewerId);
       await recordProfileView(viewerId, viewedId); // ✅ Record the view
     }
 
@@ -136,7 +144,10 @@ export const getProfileUser = async (req, res) => {
     const tags = await getUserTags(viewedId);
     const photos = await getPhotosByUserId(viewedId);
     const totalViews = await getProfileViewCount(viewedId); // ✅ Add total views
-
+    // 
+     const views = await getProfileTotalViews(viewedId);
+    const likes = await getUserLikesCount(viewedId);
+    const matches = await getMatchesCount(viewedId)
     // 5. Return full profile
     res.status(200).json({
       id: user.id,
@@ -163,9 +174,9 @@ export const getProfileUser = async (req, res) => {
       photos,
       stats: {
         // views: totalViews, // ✅ dynamic
-        likes: profile.likes || 0,
-        matches: profile.matches || 0,
-        messages: profile.messages || 0,
+        likes,
+        matches,
+        // messages: profile.messages || 0,
       },
     });
   } catch (err) {
@@ -260,8 +271,7 @@ export const updateProfile = async (req, res) => {
             ? 'female'
             : 'both';
     }
-
-    if (req.body.biography) profileUpdates.biography = req.body.biography;
+    if (req.body.biography && req.body.biography.length < 150) profileUpdates.biography = req.body.biography;
     if (req.body.latitude) profileUpdates.latitude = req.body.latitude;
     if (req.body.longitude) profileUpdates.longitude = req.body.longitude;
 
