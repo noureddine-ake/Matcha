@@ -642,6 +642,7 @@ export const completeProfile = async (req, res) => {
 
     res.status(200).json({
       message: 'profile completed',
+      username: userTokenData.username,
     });
   } catch (err) {
     res.status(500).json({

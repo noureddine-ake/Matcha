@@ -35,8 +35,8 @@ export default function DiscoverPage() {
       });
 
       if (direction === 'right' && discover?.suggestions?.length > 0) {
-        const likedUserId = discover.suggestions[0].id;
-        const res = await api.post(`/like/${likedUserId}`);
+        const likedUserUsername = discover.suggestions[0].username;
+        const res = await api.post(`/like/${likedUserUsername}`);
         if (res.data.isMatch) {
           setMatchData(res.data.likedUser);
         }
@@ -138,7 +138,7 @@ export default function DiscoverPage() {
                 <h2 className="text-3xl font-bold">
                   {currentProfile.username}
                 </h2>
-                <p className="text-purple-200 mt-1">
+                <p className="text-purple-200 mt-1 max-w-full wrap-break-word">
                   {currentProfile.biography}
                 </p>
                 <div className="flex flex-wrap gap-2 mt-3">

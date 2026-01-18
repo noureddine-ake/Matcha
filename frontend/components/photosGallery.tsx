@@ -17,11 +17,13 @@ interface Photo {
 interface PhotosGalleryProps {
   photos: Photo[];
   backendUrl: string;
+  editable?: boolean;
 }
 
 export default function PhotosGallery({
   photos,
   backendUrl,
+  editable = true,
 }: PhotosGalleryProps) {
   const { fetchProfile } = useGlobal();
   const [uploading, setUploading] = useState(false);
@@ -503,37 +505,39 @@ export default function PhotosGallery({
             Photos
           </motion.h2>
 
-          <motion.label
-            layout
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
-            className={`flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl cursor-pointer transition-all shadow-lg hover:shadow-purple-500/30 ${
-              uploading ? "opacity-80 pointer-events-none" : "hover:opacity-95"
-            }`}
-          >
-            {uploading ? (
-              <>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-4 h-4 border-t-2 border-white rounded-full"
-                />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4" />
-                Add Photo
-              </>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </motion.label>
+          {editable && (
+            <motion.label
+              layout
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className={`flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl cursor-pointer transition-all shadow-lg hover:shadow-purple-500/30 ${
+                uploading ? "opacity-80 pointer-events-none" : "hover:opacity-95"
+              }`}
+            >
+              {uploading ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-4 h-4 border-t-2 border-white rounded-full"
+                  />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Add Photo
+                </>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </motion.label>
+          )}
         </div>
 
         {/* Drag hint */}
@@ -612,8 +616,8 @@ export default function PhotosGallery({
                     )}
                   </div>
 
-                  {/* Delete Button */}
-                  {!photo.is_profile_picture && (
+                  {/* Delete Button - only show if editable */}
+                  {editable && !photo.is_profile_picture && (
                     <motion.button
                       layout
                       onClick={(e) => {

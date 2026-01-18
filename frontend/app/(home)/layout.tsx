@@ -4,7 +4,9 @@ import FilterPopup from "@/components/FilterPopup";
 import NotificationPopup from "@/components/NotificationPopup";
 import WebSocketProvider from "@/contexts/WebsocketProvider";
 import { DiscoverProvider } from "@/contexts/discover-context";
+import { useGlobal } from "@/contexts/globalcontext";
 import { NotificationsProvider } from "@/contexts/notifications-provider";
+import { useChatState } from "@/hooks/useChat.hooks";
 import api from "@/lib/api";
 import { motion } from "framer-motion";
 import { Flame, Heart, MessageCircle, User } from "lucide-react";
@@ -18,15 +20,16 @@ export default function HomeLayout({
 }>) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("discover");
-
+  const {user, fetchProfile} = useGlobal();
   const pathname = usePathname();
+  useChatState();
 
   useEffect(() => {
     setActiveTab(pathname.slice(1));
   }, [pathname]);
   useEffect(() => {
     const stored = localStorage.getItem("user_location");
-
+      // Fetch logged-in user on mount
     // already stored successfully
     if (stored && stored !== "denied") return;
 
@@ -59,6 +62,11 @@ export default function HomeLayout({
     } else {
       console.warn("❌ Geolocation not supported by this browser");
     }
+  }, []);
+
+  useEffect(() => {
+    fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -123,7 +131,7 @@ export default function HomeLayout({
                     { id: "likes", icon: Heart, label: "Likes" },
                     { id: "chat", icon: MessageCircle, label: "Chat" },
                     // { id: "search", icon: Search, label: "Search" },
-                    { id: "profile", icon: User, label: "Profile" },
+                    { id: `profile/${user?.username}`, icon: User, label: "Profile" },
                   ].map((tab) => (
                     <motion.button
                       key={tab.id}

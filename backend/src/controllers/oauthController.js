@@ -84,7 +84,7 @@ export const googleCallbackController = async (req, res) => {
       sameSite: 'lax',
     });
 
-    const redirectUrl  = user.completed_profile ? "http://localhost:3000/profile" : 'http://localhost:3000/profile/complete'
+    const redirectUrl  = user.completed_profile ? `http://localhost:3000/profile/${user.username}` : 'http://localhost:3000/profile/complete'
     res.redirect(redirectUrl);
   } catch (err) {
     console.error(err);

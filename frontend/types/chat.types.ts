@@ -53,6 +53,15 @@ export interface WebSocketMessage {
   receiverId?: string;
 }
 
+export interface ConversationMeta {
+  unreadCount: number;
+  lastMessage: {
+    content: string;
+    timestamp: string;
+    senderId: string;
+  } | null;
+}
+
 export interface ChatState {
   users: User[];
   currentUserId: string;
@@ -73,6 +82,8 @@ export interface ChatState {
   isMobile: boolean;
   error: string | null;
   connectionStatus: 'disconnected' | 'connecting' | 'connected';
+  conversationMeta: Record<string, ConversationMeta>; // { [userId]: { unreadCount, lastMessage } }
+  totalUnread: number;
 }
 
 export interface ConversationCache {

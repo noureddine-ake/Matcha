@@ -27,6 +27,9 @@ export const useChatState = () => {
     isMobile: false,
     error: null,
     connectionStatus: 'disconnected',
+    // New: conversation metadata
+    conversationMeta: {},
+    totalUnread: 0,
   });
   
   // Refs
@@ -168,12 +171,36 @@ export const useChatState = () => {
     }
   }, []);
   
-  // Fetch users
+  // Fetch users - also fetch unread counts and last messages
   const fetchUsers = useCallback(async () => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       const response = await chatService.getUsers();
-      setState(prev => ({ ...prev, users: response.users, error: null }));
+      
+      // Build conversation meta from users data (if backend provides it)
+      // Otherwise initialize empty and update as messages are fetched
+      const conversationMeta: Record<string, any> = {};
+      let totalUnread = 0;
+      
+      for (const user of response.users) {
+        // If backend returns unreadCount and lastMessage on user object, use them
+        const unreadCount = user.unreadCount || 0;
+        const lastMessage = user.lastMessage || null;
+        
+        conversationMeta[user.id] = {
+          unreadCount,
+          lastMessage,
+        };
+        totalUnread += unreadCount;
+      }
+      
+      setState(prev => ({ 
+        ...prev, 
+        users: response.users, 
+        conversationMeta,
+        totalUnread,
+        error: null 
+      }));
     } catch (error) {
       console.error('Failed to fetch users:', error);
       setState(prev => ({ 
@@ -184,7 +211,7 @@ export const useChatState = () => {
       setState(prev => ({ ...prev, loading: false }));
     }
   }, []);
-  
+
   // Process message queue to prevent duplicates
   const processMessageQueue = useCallback(() => {
     if (processingQueueRef.current || messageQueueRef.current.length === 0) return;
@@ -257,6 +284,22 @@ export const useChatState = () => {
           totalMessages: data.pagination?.totalMessages || 0,
         };
         
+        // Update conversation meta with last message
+        const lastMsg = newMessages[newMessages.length - 1];
+        const newConversationMeta = { ...prev.conversationMeta };
+        
+        if (!newConversationMeta[userId]) {
+          newConversationMeta[userId] = { unreadCount: 0, lastMessage: null };
+        }
+        
+        if (lastMsg) {
+          newConversationMeta[userId].lastMessage = {
+            content: lastMsg.content,
+            timestamp: lastMsg.timestamp,
+            senderId: lastMsg.senderId,
+          };
+        }
+        
         return {
           ...prev,
           messages: newMessages,
@@ -265,13 +308,30 @@ export const useChatState = () => {
           hasMoreMessages: data.pagination?.hasMore || false,
           nextCursor: data.pagination?.nextCursor || null,
           totalMessages: data.pagination?.totalMessages || 0,
+          conversationMeta: newConversationMeta,
           error: null,
         };
       });
       
-      // Mark as read if we have messages
+      // Mark as read if we have messages - clear unread count
       if (!isLoadMore && normalized.length > 0) {
         await chatService.markAsRead(userId);
+        
+        // Clear unread count for this conversation
+        setState(prev => {
+          const newConversationMeta = { ...prev.conversationMeta };
+          const prevUnread = newConversationMeta[userId]?.unreadCount || 0;
+          
+          if (newConversationMeta[userId]) {
+            newConversationMeta[userId].unreadCount = 0;
+          }
+          
+          return {
+            ...prev,
+            conversationMeta: newConversationMeta,
+            totalUnread: Math.max(0, prev.totalUnread - prevUnread),
+          };
+        });
       }
       
     } catch (error: any) {
@@ -284,7 +344,7 @@ export const useChatState = () => {
       }));
     }
   }, [state.currentUserId]);
-  
+
   // Select user with instant cache support
   const selectUser = useCallback(async (userId: string) => {
     if (userId === state.selectedUserId) return;
@@ -424,22 +484,55 @@ export const useChatState = () => {
   const handleWebSocketMessage = useCallback((data: any) => {
     if (data.type === 'chat_message') {
       const messageData = data.data?.data || data.data || data;
-      
+
       if (!messageData.senderId || !messageData.content) return;
-      
+
       const { currentUserId, selectedUserId } = currentStateRef.current;
       const senderId = messageData.senderId.toString();
+      const receiverId = (messageData.receiverId || '').toString();
+      
+      // Determine which conversation this message belongs to
+      const conversationUserId = senderId === currentUserId ? receiverId : senderId;
       
       // Check if message is relevant to current conversation
       const isRelevant = selectedUserId && 
         (Number(senderId) === Number(selectedUserId) || 
          Number(messageData.receiverId) === Number(selectedUserId));
       
+      // Update conversation meta (unread count and last message)
+      setState(prev => {
+        const newConversationMeta = { ...prev.conversationMeta };
+        
+        if (!newConversationMeta[conversationUserId]) {
+          newConversationMeta[conversationUserId] = { unreadCount: 0, lastMessage: null };
+        }
+        
+        // Update last message
+        newConversationMeta[conversationUserId].lastMessage = {
+          content: messageData.content,
+          timestamp: messageData.timestamp || new Date().toISOString(),
+          senderId: senderId,
+        };
+        
+        // Increment unread if message is from someone else AND not viewing their conversation
+        let newTotalUnread = prev.totalUnread;
+        if (senderId !== currentUserId && conversationUserId !== selectedUserId) {
+          newConversationMeta[conversationUserId].unreadCount += 1;
+          newTotalUnread += 1;
+        }
+        
+        return {
+          ...prev,
+          conversationMeta: newConversationMeta,
+          totalUnread: newTotalUnread,
+        };
+      });
+      
       if (isRelevant) {
         const newMessage: Message = {
           id: messageData.messageId || `msg_${Date.now()}`,
           senderId: senderId,
-          receiverId: (messageData.receiverId || '').toString(),
+          receiverId: receiverId,
           content: messageData.content,
           timestamp: messageData.timestamp || new Date().toISOString(),
           read: messageData.read || false,
@@ -454,13 +547,23 @@ export const useChatState = () => {
         if (senderId !== currentUserId) {
           const { soundEnabled, users } = currentStateRef.current;
           notificationService.playSound(soundEnabled);
-          
+
           const sender = users.find(u => u.id === senderId);
           notificationService.showBrowserNotification(
             'New Message',
             `${sender?.username || 'Someone'}: ${messageData.content}`
           );
         }
+      } else if (senderId !== currentUserId) {
+        // Message from another conversation - play sound and show notification
+        const { soundEnabled, users } = currentStateRef.current;
+        notificationService.playSound(soundEnabled);
+        
+        const sender = users.find(u => u.id === senderId);
+        notificationService.showBrowserNotification(
+          'New Message',
+          `${sender?.username || 'Someone'}: ${messageData.content}`
+        );
       }
     } else if (data.type === 'typing_start') {
       const { senderId } = data;
@@ -521,8 +624,8 @@ export const useChatState = () => {
       } catch (error) {
         console.error('Failed to initialize app:', error);
         if (mounted) {
-          setState(prev => ({ 
-            ...prev, 
+          setState(prev => ({
+            ...prev,
             error: 'Failed to initialize. Please refresh the page.',
             loading: false,
           }));
@@ -627,6 +730,25 @@ export const useChatState = () => {
       toggleSound: () => setState(prev => ({ ...prev, soundEnabled: !prev.soundEnabled })),
       toggleSidebar: () => setState(prev => ({ ...prev, sidebarOpen: !prev.sidebarOpen })),
       setSearchTerm: (term: string) => setState(prev => ({ ...prev, searchTerm: term })),
+      // Helpers for unread counts
+      getUnreadCount: (userId: string) => state.conversationMeta[userId]?.unreadCount || 0,
+      getLastMessage: (userId: string) => state.conversationMeta[userId]?.lastMessage || null,
+      clearUnreadCount: (userId: string) => {
+        setState(prev => {
+          const newConversationMeta = { ...prev.conversationMeta };
+          const prevUnread = newConversationMeta[userId]?.unreadCount || 0;
+          
+          if (newConversationMeta[userId]) {
+            newConversationMeta[userId].unreadCount = 0;
+          }
+          
+          return {
+            ...prev,
+            conversationMeta: newConversationMeta,
+            totalUnread: Math.max(0, prev.totalUnread - prevUnread),
+          };
+        });
+      },
     },
     refs: {
       messagesContainerRef,

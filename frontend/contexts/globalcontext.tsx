@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useCallback,
   ReactNode,
+  useEffect,
 } from 'react';
 import api from '@/lib/api';
 
@@ -22,6 +23,8 @@ export interface User {
   sexual_preference: string;
   biography: string;
   birth_date?: string;
+  latitude: number;
+  longitude: number;
   city?: string;
   country?: string;
   photos: Photo[];
@@ -70,6 +73,7 @@ interface GlobalContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
+  profile: User | null;
 
   // Functions
   fetchProfile: () => Promise<void>;
@@ -85,6 +89,7 @@ const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,6 +127,12 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [])
 
+    // Fetch logged-in user on mount
+  // useEffect(() => {
+  //   fetchProfile();
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, []);
+
    // ====updateprofilePicture ====
 
   // const updateprofilePicture = useCallback(
@@ -154,13 +165,19 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     async (username: string): Promise<User | null> => {
       try {
         const res = await api.get<User>(`/profile/user/${username}`);
+        const userProfile = res.data;
+        if (userProfile) {
+          setProfile(userProfile as User);
+
+          console.log("profile :", profile);
+        }
         return res.data;
       } catch (err) {
         console.error('Failed to fetch user profile:', err);
         return null;
       }
     },
-    []
+    [profile]
   );
 
   // ==== Memoized value ====
@@ -169,11 +186,12 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
       user,
       loading,
       error,
+      profile,
       fetchProfile,
       updateProfile,
       fetchUserProfile,
     }),
-    [user, loading, error, fetchProfile, updateProfile, fetchUserProfile]
+    [user, loading, profile, error, fetchProfile, updateProfile, fetchUserProfile]
   );
 
   return (

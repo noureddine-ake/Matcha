@@ -44,7 +44,7 @@ export default function EditProfileDialog({ setIsEditing }: EditProfileDialogPro
       setLocalError("First name is required")
       return
     }
-    if (formData.biography.length > 150) {
+    if (formData.biography && formData.biography.length > 150) {
       setLocalError("Bio too long , must be less tehn 150 characters")
       return
     }
@@ -61,6 +61,7 @@ export default function EditProfileDialog({ setIsEditing }: EditProfileDialogPro
       await updateProfile(formData)
       setIsEditing(false)
     } catch (err) {
+      console.log(err);
       setLocalError("Failed to update profile")
     }
   }
@@ -79,10 +80,10 @@ export default function EditProfileDialog({ setIsEditing }: EditProfileDialogPro
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          className="bg-linear-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         >
           {/* Header */}
-          <div className="sticky top-0 flex items-center justify-between p-6 border-b border-white/10 bg-gradient-to-r from-white/5 to-transparent">
+          <div className="sticky top-0 flex items-center justify-between p-6 border-b border-white/10 bg-linear-to-r from-white/5 to-transparent">
             <h2 className="text-2xl font-bold text-white">Edit Profile</h2>
             <button
               onClick={() => setIsEditing(false)}
@@ -257,7 +258,7 @@ export default function EditProfileDialog({ setIsEditing }: EditProfileDialogPro
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg text-white font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg text-white font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>

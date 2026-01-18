@@ -1,5 +1,5 @@
 import api from '@/lib/api';
-import { Message, MessagesResponse, User } from '@/types/chat.types';
+import { MessagesResponse, User } from '@/types/chat.types';
 
 export class ChatService {
   private static instance: ChatService;
@@ -24,7 +24,7 @@ export class ChatService {
     if (cached && (now - cached.timestamp) < this.CACHE_TTL) {
       return cached.data;
     }
-    
+
     try {
       const data = await requestFn();
       this.requestCache.set(key, { data, timestamp: now });
@@ -46,7 +46,7 @@ export class ChatService {
       return response.data;
     });
   }
-  
+
   async getUsers(): Promise<{ users: User[]; currentUserId: string }> {
     const key = this.getCacheKey('users');
     return this.cachedRequest(key, async () => {
@@ -54,7 +54,7 @@ export class ChatService {
       return response.data;
     });
   }
-  
+
   async getMessages(userId: string, cursor?: string, limit = 20): Promise<MessagesResponse> {
     const params = cursor ? { cursor, limit } : { limit };
     const key = this.getCacheKey(`messages:${userId}`, params);
