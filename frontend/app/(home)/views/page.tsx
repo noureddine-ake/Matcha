@@ -15,7 +15,7 @@ interface Viewer {
   last_name: string;
   completed_profile: boolean;
   viewed_at?: string;
-  profile_picture?: string | null;
+  picture?: string | null;
   city?: string;
   country?: string;
 }

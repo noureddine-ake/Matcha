@@ -6,7 +6,6 @@ import WebSocketProvider from "@/contexts/WebsocketProvider";
 import { DiscoverProvider } from "@/contexts/discover-context";
 import { useGlobal } from "@/contexts/globalcontext";
 import { NotificationsProvider } from "@/contexts/notifications-provider";
-import { useChatState } from "@/hooks/useChat.hooks";
 import api from "@/lib/api";
 import { motion } from "framer-motion";
 import { Flame, Heart, MessageCircle, User } from "lucide-react";
@@ -22,7 +21,6 @@ export default function HomeLayout({
   const [activeTab, setActiveTab] = useState("discover");
   const {user, fetchProfile} = useGlobal();
   const pathname = usePathname();
-  useChatState();
 
   useEffect(() => {
     setActiveTab(pathname.slice(1));

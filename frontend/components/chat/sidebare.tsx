@@ -1,12 +1,9 @@
 
-import React, { memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
 import {
-  Users, Search, Clock, CheckCheck, Volume2, VolumeX,
-  Menu, X, Send, Loader2
+  Search, Volume2, VolumeX, X
 } from 'lucide-react';
-import { User, Message } from '@/types/chat.types';
-import Image from 'next/image';
+import { User } from '@/types/chat.types';
 import { UserList } from './user-list';
 
 

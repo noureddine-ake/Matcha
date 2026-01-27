@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { MapPin, Star, User as UserIcon, HeartHandshake, Mail, Calendar, VenusAndMars, Heart, MessageCircleHeart } from "lucide-react";
+import { MapPin, Mail, Calendar, VenusAndMars, Heart, MessageCircleHeart } from "lucide-react";
 import { User } from "@/contexts/globalcontext";
 
 interface ProfileInfoProps {
