@@ -1,18 +1,26 @@
 "use client"
 
 import { Loader2 } from 'lucide-react';
-import { useChatState } from '@/hooks/useChat.hooks';
-import { webSocketService } from '@/services/chat.services';
+import { useChat } from '@/contexts/ChatContext';
+import { useWebSocket } from '@/contexts/WebSocketContext';
 import { ChatLayout } from '@/components/chat.components';
 import { ChatHeader, ChatEmptyState, ChatMessages, ChatSidebar, ChatInput } from '@/components/chat/exports';
 
 export default function ChatPage() {
   const {
     state,
-    setState,
-    actions,
+    selectUser,
+    sendMessage,
+    loadMoreMessages,
+    handleTyping,
+    toggleSound,
+    toggleSidebar,
+    setSearchTerm,
+    setNewMessage,
     refs,
-  } = useChatState();
+  } = useChat();
+
+  const { isConnected } = useWebSocket();
 
   const selectedUser = state.users.find(user => user.id === state.selectedUserId);
 
@@ -27,6 +35,14 @@ export default function ChatPage() {
     );
   }
 
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
   return (
     <ChatLayout
       sidebar={
@@ -37,10 +53,10 @@ export default function ChatPage() {
           searchTerm={state.searchTerm}
           soundEnabled={state.soundEnabled}
           isMobile={state.isMobile}
-          onSelectUser={actions.selectUser}
-          onToggleSound={() => setState(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }))}
-          onCloseSidebar={() => setState(prev => ({ ...prev, sidebarOpen: false }))}
-          onSearchChange={(term) => setState(prev => ({ ...prev, searchTerm: term }))}
+          onSelectUser={selectUser}
+          onToggleSound={toggleSound}
+          onCloseSidebar={toggleSidebar}
+          onSearchChange={setSearchTerm}
         />
       }
       content={
@@ -48,29 +64,29 @@ export default function ChatPage() {
           <>
             <ChatHeader
               user={selectedUser || null}
-              isConnected={webSocketService.isConnected()}
+              isConnected={isConnected}
               totalMessages={state.totalMessages}
               typingUsers={state.typingUsers}
               isMobile={state.isMobile}
               soundEnabled={state.soundEnabled}
-              onToggleSound={() => setState(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }))}
-              onToggleSidebar={() => setState(prev => ({ ...prev, sidebarOpen: !prev.sidebarOpen }))}
+              onToggleSound={toggleSound}
+              onToggleSidebar={toggleSidebar}
             />
             <ChatMessages
               messages={state.messages}
               currentUserId={state.currentUserId}
               loadingMore={state.loadingMore}
               hasMoreMessages={state.hasMoreMessages}
-              onLoadMore={actions.loadMoreMessages}
+              onLoadMore={loadMoreMessages}
               loadMoreTriggerRef={refs.loadMoreTriggerRef}
               messagesEndRef={refs.messagesEndRef}
             />
             <ChatInput
               value={state.newMessage}
-              onChange={(value) => setState(prev => ({ ...prev, newMessage: value }))}
-              onSend={actions.sendMessage}
-              onTyping={actions.handleTyping}
-              onKeyDown={actions.handleKeyDown}
+              onChange={setNewMessage}
+              onSend={sendMessage}
+              onTyping={handleTyping}
+              onKeyDown={handleKeyDown}
               disabled={!selectedUser || state.sending}
               sending={state.sending}
               textareaRef={refs.textareaRef}
@@ -81,13 +97,13 @@ export default function ChatPage() {
             isMobile={state.isMobile}
             sidebarOpen={state.sidebarOpen}
             currentUserId={state.currentUserId}
-            onOpenSidebar={() => setState(prev => ({ ...prev, sidebarOpen: true }))}
+            onOpenSidebar={toggleSidebar}
           />
         )
       }
       isMobile={state.isMobile}
       sidebarOpen={state.sidebarOpen}
-      onToggleSidebar={() => setState(prev => ({ ...prev, sidebarOpen: !prev.sidebarOpen }))}
+      onToggleSidebar={toggleSidebar}
     />
   );
 }

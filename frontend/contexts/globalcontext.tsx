@@ -127,39 +127,6 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [])
 
-    // Fetch logged-in user on mount
-  // useEffect(() => {
-  //   fetchProfile();
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, []);
-
-   // ====updateprofilePicture ====
-
-  // const updateprofilePicture = useCallback(
-  //   async (photoIndex: number) => {
-  //     try {
-  //       setLoading(true);
-  //       setError('');
-
-  //       const { data } = await api.put('/profile/update-profile-picture', {
-  //         profilePhotoIndex: photoIndex,
-  //       });
-
-  //       // Refresh profile
-  //       await fetchProfile();
-
-  //       console.log('Profile picture updated successfully:', data.message);
-  //     } catch (err: unknown) {
-  //       console.error('Failed to update profile picture:', err);
-  //       if (err instanceof AxiosError)
-  //         setError(err.response?.data?.error || 'Failed to update profile picture');
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   },
-  //   [fetchProfile]
-  // );
-  
   // ==== Fetch user profile by username ====
   const fetchUserProfile = useCallback(
     async (username: string): Promise<User | null> => {

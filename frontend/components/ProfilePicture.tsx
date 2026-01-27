@@ -1,7 +1,6 @@
-// ```jsx
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { Camera, Trash2, Upload, X, Check, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import api from '@/lib/api';
@@ -432,4 +431,3 @@ const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
 };
 
 export default ProfilePictureUploader;
-// ```
