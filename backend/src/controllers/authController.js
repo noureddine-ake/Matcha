@@ -18,13 +18,15 @@ export const registrationControler = async (req, res) => {
       return res.status(400).json({ error: 'Email already exists' });
     }
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    console.log(req.body);
     const newUser = {
       email: req.body.email,
       username: req.body.username,
-      first_name: req.body.first_name,
-      last_name: req.body.last_name,
+      first_name: req.body.firstName,
+      last_name: req.body.lastName,
       password_hash: hashedPassword,
     };
+    console.log(newUser);
     const user = await createUser(newUser);
     const token = JWT.createJWToken({
       sessionData: {

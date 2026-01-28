@@ -156,13 +156,18 @@ export default function ProfileCompletePage() {
 
       const response = await api.post("/profile/complete", formData, {
         headers: {
-          // Let the browser set Content-Type for FormData
           "Content-Type": "multipart/form-data",
         },
       });
       console.log(response);
 
-      router.push("/profile")
+      // Redirect using username from response
+      const username = response.data?.username;
+      if (username) {
+        router.push(`/profile/${username}`);
+      } else {
+        router.push("/discover");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {

@@ -1,34 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-// import { jwtDecode } from "jwt-decode";
-
-// const protectedRoutes = [
-//   '/dashboard',
-//   '/profile',
-//   '/settings',
-//   '/discover',
-//   '/chat',
-//   '/search',
-//   '/likes',
-//   '/auth/verify-email',
-// ];
-
-// const noneTokenRoutes = [
-//   '/dashboard',
-//   '/profile',
-//   '/settings',
-//   '/discover',
-//   '/chat',
-//   '/search',
-//   '/likes',
-//   '/auth/verify-email',
-// ];
 
 const protectedRoutes = ['/profile', '/dashboard', '/settings', '/auth/verify-email'];
 const authRoutes = ['/auth/login', '/auth/registration'];
 const completionRoutes = ['/profile/complete', '/auth/verify-email'];
-
-
 
 function decodeJwt(token: string) {
   try {
@@ -87,7 +62,7 @@ export function middleware(req: NextRequest) {
 
   // 5️⃣ Prevent verified users from visiting login/signup/verify pages
   if (is_verified &&  completed_profile && (authRoutes.some((route) => pathname.startsWith(route)) || completionRoutes.some((route) => pathname.startsWith(route)))) {
-    url.pathname = '/profile';
+    url.pathname = `/profile/${userData.data.username}`;
     return NextResponse.redirect(url);
   }
 

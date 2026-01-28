@@ -13,9 +13,10 @@ interface Tag {
 
 interface UserTagsProps {
   tags: Tag[]; // initial tags from parent (e.g., from SSR or parent state)
+  editable?: boolean; // whether the user can add/remove tags
 }
 
-export default function UserTags({ tags: initialTags }: UserTagsProps) {
+export default function UserTags({ tags: initialTags, editable = true }: UserTagsProps) {
   const [userTags, setUserTags] = useState<Tag[]>(initialTags);
   const [newTag, setNewTag] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -91,24 +92,26 @@ export default function UserTags({ tags: initialTags }: UserTagsProps) {
         Interests
       </h2>
 
-      {/* Add new tag form */}
-      <form onSubmit={handleAddTag} className="mb-4 flex gap-2">
-        <input
-          type="text"
-          value={newTag}
-          onChange={(e) => setNewTag(e.target.value)}
-          placeholder="Add an interest..."
-          className="flex-1 px-3 py-2 bg-white/10 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          disabled={loading}
-        />
-        <button
-          type="submit"
-          disabled={loading || !newTag.trim()}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition"
-        >
-          Add
-        </button>
-      </form>
+      {/* Add new tag form - only show if editable */}
+      {editable && (
+        <form onSubmit={handleAddTag} className="mb-4 flex gap-2">
+          <input
+            type="text"
+            value={newTag}
+            onChange={(e) => setNewTag(e.target.value)}
+            placeholder="Add an interest..."
+            className="flex-1 px-3 py-2 bg-white/10 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            disabled={loading}
+          />
+          <button
+            type="submit"
+            disabled={loading || !newTag.trim()}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition"
+          >
+            Add
+          </button>
+        </form>
+      )}
 
       {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
 
@@ -124,14 +127,16 @@ export default function UserTags({ tags: initialTags }: UserTagsProps) {
                 className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full text-sm font-medium cursor-default hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300 border border-white/20 flex items-center gap-1"
               >
                 {tag.name}
-                <button
-                  onClick={() => handleRemoveTag(tag.id)}
-                  disabled={loading}
-                  className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-red-200"
-                  aria-label="Remove tag"
-                >
-                  <X className="w-3 h-3" />
-                </button>
+                {editable && (
+                  <button
+                    onClick={() => handleRemoveTag(tag.id)}
+                    disabled={loading}
+                    className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-red-200"
+                    aria-label="Remove tag"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
               </motion.span>
             </motion.div>
           ))

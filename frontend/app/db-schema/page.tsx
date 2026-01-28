@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Database, GitBranch, Users, MessageSquare, Heart, Bell, Eye, MapPin } from 'lucide-react';
+import { Database, GitBranch } from 'lucide-react';
 
 const MatchaDiagrams = () => {
   const [activeTab, setActiveTab] = useState('class');
@@ -190,7 +190,7 @@ const MatchaDiagrams = () => {
 
   const DatabaseSchema = () => (
     <div className="space-y-4">
-      <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-lg">
+      <div className="bg-linear-to-r from-blue-500 to-purple-500 text-white p-4 rounded-lg">
         <h2 className="text-2xl font-bold mb-2">PostgreSQL Database Schema</h2>
         <p className="text-sm">Optimized for Express.js without ORM - Manual Queries</p>
       </div>
@@ -460,7 +460,7 @@ CREATE INDEX idx_reports_reported ON reports(reported_user_id);
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 p-6">
+    <div className="min-h-screen bg-linear-to-br from-pink-50 via-purple-50 to-blue-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Matcha Project</h1>

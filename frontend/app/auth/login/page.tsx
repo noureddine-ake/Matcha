@@ -31,7 +31,7 @@ export default function LoginPage() {
         username: formData.username,
         password: formData.password,
       })
-      router.push(`/profile`) // Redirect after login
+      router.push(`/profile/${formData.username}`) // Redirect after login
     } catch (err) {
       if (err instanceof AxiosError && err.response) {
         setError(err.response?.data?.error || "Login failed")

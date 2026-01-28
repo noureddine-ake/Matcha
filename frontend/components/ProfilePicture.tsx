@@ -1,7 +1,6 @@
-// ```jsx
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { Camera, Trash2, Upload, X, Check, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import api from '@/lib/api';
@@ -17,6 +16,7 @@ interface ProfilePictureUploaderProps {
   backendUrl: string;
   size?: number;
   onUpdated?: () => void;
+  editable?: boolean;
 }
 
 const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
@@ -24,6 +24,7 @@ const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
   backendUrl,
   size = 192,
   onUpdated,
+  editable = true,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -302,29 +303,31 @@ const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
               className="w-full h-full object-cover"
             />
             
-            {/* Action Controls for existing profile photo */}
-            <div className={`absolute inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center gap-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-              <button
-                onClick={triggerFileInput}
-                className="w-12 h-12 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white transition-all duration-200 hover:scale-110 shadow-lg"
-                aria-label="Update profile picture"
-              >
-                <Upload className="w-5 h-5" />
-              </button>
-              
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="w-12 h-12 flex items-center justify-center bg-red-500/80 backdrop-blur-sm rounded-full text-white hover:bg-red-600 transition-all duration-200 hover:scale-110 shadow-lg disabled:opacity-50"
-                aria-label="Delete profile picture"
-              >
-                {isDeleting ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Trash2 className="w-5 h-5" />
-                )}
-              </button>
-            </div>
+            {/* Action Controls for existing profile photo - only show if editable */}
+            {editable && (
+              <div className={`absolute inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center gap-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+                <button
+                  onClick={triggerFileInput}
+                  className="w-12 h-12 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white transition-all duration-200 hover:scale-110 shadow-lg"
+                  aria-label="Update profile picture"
+                >
+                  <Upload className="w-5 h-5" />
+                </button>
+                
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="w-12 h-12 flex items-center justify-center bg-red-500/80 backdrop-blur-sm rounded-full text-white hover:bg-red-600 transition-all duration-200 hover:scale-110 shadow-lg disabled:opacity-50"
+                  aria-label="Delete profile picture"
+                >
+                  {isDeleting ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Trash2 className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600 to-pink-600">
@@ -356,28 +359,29 @@ const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
         onChange={handleFileChange}
       />
 
-      {/* Upload Controls */}
-      <div className="flex flex-col items-center gap-4 w-full max-w-xs">
-        <button
-          onClick={triggerFileInput}
-          className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] font-medium"
-          aria-label="Choose image"
-        >
-          <Upload className="w-5 h-5" />
-          <span>Choose Image</span>
-        </button>
-
-        <div className="flex gap-3 w-full">
+      {/* Upload Controls - only show if editable */}
+      {editable && (
+        <div className="flex flex-col items-center gap-4 w-full max-w-xs">
           <button
-            onClick={handleUpload}
-            disabled={isUploading || !selectedFile}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl shadow-md transition-all duration-300 font-medium ${
-              isUploading || !selectedFile
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white transform hover:scale-[1.02] active:scale-[0.98]'
-            }`}
-            aria-label="Upload profile picture"
+            onClick={triggerFileInput}
+            className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] font-medium"
+            aria-label="Choose image"
           >
+            <Upload className="w-5 h-5" />
+            <span>Choose Image</span>
+          </button>
+
+          <div className="flex gap-3 w-full">
+            <button
+              onClick={handleUpload}
+              disabled={isUploading || !selectedFile}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl shadow-md transition-all duration-300 font-medium ${
+                isUploading || !selectedFile
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white transform hover:scale-[1.02] active:scale-[0.98]'
+              }`}
+              aria-label="Upload profile picture"
+            >
             {isUploading ? (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
@@ -392,7 +396,7 @@ const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl shadow-md transition-all duration-300 font-medium ${
               isDeleting || !profilePhoto
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white transform hover:scale-[1.02] active:scale-[0.98]'
+                : 'bg-linear-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white transform hover:scale-[1.02] active:scale-[0.98]'
             }`}
             aria-label="Delete profile picture"
           >
@@ -420,10 +424,10 @@ const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
         <p className="text-xs text-gray-500 text-center mt-2">
           Drag & drop an image here or click to browse • JPG, PNG, WEBP
         </p>
-      </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default ProfilePictureUploader;
-// ```

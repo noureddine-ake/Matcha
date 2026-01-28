@@ -36,7 +36,7 @@ export interface MessagesResponse {
   };
 }
 
-export type WebSocketEvent = 
+export type WebSocketEvent =
   | 'chat_message'
   | 'typing_start'
   | 'typing_stop'
@@ -51,6 +51,15 @@ export interface WebSocketMessage {
   timestamp: string;
   senderId?: string;
   receiverId?: string;
+}
+
+export interface ConversationMeta {
+  unreadCount: number;
+  lastMessage: {
+    content: string;
+    timestamp: string;
+    senderId: string;
+  } | null;
 }
 
 export interface ChatState {
@@ -72,7 +81,9 @@ export interface ChatState {
   sidebarOpen: boolean;
   isMobile: boolean;
   error: string | null;
-  connectionStatus: 'disconnected' | 'connecting' | 'connected';
+  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+  conversationMeta: Record<string, ConversationMeta>; // { [userId]: { unreadCount, lastMessage } }
+  totalUnread: number;
 }
 
 export interface ConversationCache {

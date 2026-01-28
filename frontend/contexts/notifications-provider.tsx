@@ -4,11 +4,14 @@ import api from "@/lib/api";
 import React, {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
+import { useWebSocket } from "./WebSocketContext";
+import { NotificationWrapper } from "@/types/websocket.types";
 
 // ==== Types ====
 
@@ -52,6 +55,34 @@ export const NotificationsProvider = ({
   const [error, setError] = useState<string>("");
   const [showPopup, setShowPopup] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  // Get WebSocket context for registering handlers
+  const { registerHandler } = useWebSocket();
+
+  // ✅ Handle incoming notification from WebSocket
+  const handleNotification = useCallback((message: NotificationWrapper) => {
+    console.log("🔔 Notification received:", message);
+
+    const newNotification: Notification = {
+      id: message.data.id,
+      type: message.data.type,
+      is_read: message.data.is_read,
+      created_at: new Date().toISOString(),
+      from_username: message.data.from_user.username,
+      from_user_id: message.data.from_user.id,
+      message: message.data.type === "like" ? "Someone liked you!" : "You have a new match!",
+    };
+
+    setNotifications((prev) => [newNotification, ...prev]);
+  }, []);
+
+  // ✅ Register WebSocket handler for notifications
+  useEffect(() => {
+    const unsubscribe = registerHandler("notification", handleNotification);
+    return () => {
+      unsubscribe();
+    };
+  }, [registerHandler, handleNotification]);
 
   // ✅ Fetch notifications from your API
   const fetchNotifications = async () => {

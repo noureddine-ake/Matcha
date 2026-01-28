@@ -77,6 +77,8 @@ const NotificationPopup = () => {
                               ? `You got a new match with ${n.from_username}`
                               : n.type === 'message'
                               ? `You received a new message from ${n.from_username}`
+                              : n.type === 'view'
+                              ? `You received a new view from ${n.from_username}`
                               : 'New notification')}
                         </p>
                         <p className="text-xs text-purple-300/60 mt-1">

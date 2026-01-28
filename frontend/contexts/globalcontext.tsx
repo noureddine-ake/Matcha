@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useCallback,
   ReactNode,
+  useEffect,
 } from 'react';
 import api from '@/lib/api';
 
@@ -22,6 +23,8 @@ export interface User {
   sexual_preference: string;
   biography: string;
   birth_date?: string;
+  latitude: number;
+  longitude: number;
   city?: string;
   country?: string;
   photos: Photo[];
@@ -70,6 +73,7 @@ interface GlobalContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
+  profile: User | null;
 
   // Functions
   fetchProfile: () => Promise<void>;
@@ -85,6 +89,7 @@ const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,45 +127,24 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [])
 
-   // ====updateprofilePicture ====
-
-  // const updateprofilePicture = useCallback(
-  //   async (photoIndex: number) => {
-  //     try {
-  //       setLoading(true);
-  //       setError('');
-
-  //       const { data } = await api.put('/profile/update-profile-picture', {
-  //         profilePhotoIndex: photoIndex,
-  //       });
-
-  //       // Refresh profile
-  //       await fetchProfile();
-
-  //       console.log('Profile picture updated successfully:', data.message);
-  //     } catch (err: unknown) {
-  //       console.error('Failed to update profile picture:', err);
-  //       if (err instanceof AxiosError)
-  //         setError(err.response?.data?.error || 'Failed to update profile picture');
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   },
-  //   [fetchProfile]
-  // );
-  
   // ==== Fetch user profile by username ====
   const fetchUserProfile = useCallback(
     async (username: string): Promise<User | null> => {
       try {
         const res = await api.get<User>(`/profile/user/${username}`);
+        const userProfile = res.data;
+        if (userProfile) {
+          setProfile(userProfile as User);
+
+          console.log("profile :", profile);
+        }
         return res.data;
       } catch (err) {
         console.error('Failed to fetch user profile:', err);
         return null;
       }
     },
-    []
+    [profile]
   );
 
   // ==== Memoized value ====
@@ -169,11 +153,12 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
       user,
       loading,
       error,
+      profile,
       fetchProfile,
       updateProfile,
       fetchUserProfile,
     }),
-    [user, loading, error, fetchProfile, updateProfile, fetchUserProfile]
+    [user, loading, profile, error, fetchProfile, updateProfile, fetchUserProfile]
   );
 
   return (
