@@ -13,6 +13,7 @@ import { Flame, Heart, MessageCircle, User } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { Toaster } from "sonner"; // <-- ADD THIS IMPORT
 
 // Loading fallback for Suspense
 const ChatProviderFallback = () => (
@@ -80,6 +81,26 @@ export default function HomeLayout({
     <DiscoverProvider>
       <WebSocketProvider>
         <NotificationsProvider>
+          {/* ADD TOASTER HERE - Outside Suspense */}
+          <Toaster 
+            position="top-right"
+            richColors
+            closeButton
+            expand={false}
+            visibleToasts={3}
+            theme="dark"
+            className="z-[9999]"
+            toastOptions={{
+              classNames: {
+                toast: "bg-gray-900 border border-gray-800 text-white",
+                title: "text-white",
+                description: "text-gray-300",
+                actionButton: "bg-blue-600 text-white",
+                cancelButton: "bg-gray-700 text-gray-300",
+              },
+            }}
+          />
+          
           <Suspense fallback={<ChatProviderFallback />}>
             <ChatProvider>
               <div className="h-screen bg-linear-to-br from-indigo-900 via-purple-900 to-pink-800 pb-24 overflow-hidden flex items-center">

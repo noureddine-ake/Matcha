@@ -142,6 +142,7 @@
                 <ProfileActions
                   isCurrentUser={isCurrentUser}
                   username={username}
+                  userId = {currentProfile.id}
                 />
 
                 {/* Biography */}

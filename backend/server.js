@@ -12,6 +12,8 @@ import { LikestionsRout } from './src/routes/likesRoutes.js';
 import { errorHandler } from './src/middlewares/errorMiddleware.js';
 import { NotificationsRouts } from './src/routes/notificationRoutes.js';
 import chatRoutes  from './src/routes/chatRoutes.js';
+import reportRoutes from './src/routes/reportRoutes.js';
+
 import { swaggerUi, swaggerSpec } from "./swagger.js";
 import { setupWebSocket } from './src/config/websocket.js';
 import http from 'http';
@@ -74,6 +76,7 @@ app.use('/api', SuggestionsRout);
 app.use('/api', LikestionsRout);
 app.use('/api/notifications', NotificationsRouts);
 app.use("/api/chat", chatRoutes);
+app.use("/api/reports", reportRoutes);
 
 // not found
 app.use((req, res) => res.send("not found"));
