@@ -22,12 +22,14 @@ export const getSuggestions = async (req, res) => {
       limit = 20,
       offset = 0,
       sortBy = 'distance',
-      maxDistance = 100,
+      maxDistance = 500,
       minAge,
       maxAge,
       minFame,
       maxFame,
     } = req.query;
+
+    console.log('[getSuggestions] Request params:', { userId, limit, offset, sortBy, maxDistance, minAge, maxAge, minFame, maxFame });
 
     const currentUserQuery = await getProfileDataforMatches(userId);
     if (!currentUserQuery.rowCount) {
@@ -35,6 +37,7 @@ export const getSuggestions = async (req, res) => {
     }
 
     const currentUser = currentUserQuery.rows[0];
+    console.log('[getSuggestions] Current user profile:', currentUser);
 
     // Build gender filter
     let genderFilter = '';
@@ -84,6 +87,9 @@ export const getSuggestions = async (req, res) => {
       limit,
       offset,
     });
+
+    console.log('[getSuggestions] result rowCount:', result.rowCount);
+    console.log('[getSuggestions] suggestions:', JSON.stringify(result.rows, null, 2));
 
     res.json({
       suggestions: result.rows,

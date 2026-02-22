@@ -1,6 +1,6 @@
   "use client";
 
-  import { useEffect, useState } from "react";
+  import { useEffect, useState, useCallback } from "react";
   import { motion } from "framer-motion";
   import { useGlobal, User } from "@/contexts/globalcontext";
   import api from "@/lib/api";
@@ -21,20 +21,6 @@
   const BACKEND_URL =
     process.env.NEXT_PUBLIC_BACKEND_URL || "http://backend:5000";
 
-  // Helper to update location in backend
-  async function updateLocationAllFields(lat: number, lng: number) {
-    try {
-      console.log("[updateLocationAllFields] Calling /profile/location with:", {
-        latitude: lat,
-        longitude: lng,
-      });
-      await api.put("/profile/update-location", { latitude: lat, longitude: lng });
-      console.log("[updateLocationAllFields] Successfully called /profile/location");
-    } catch (err) {
-      console.error("[updateLocationAllFields] Error calling /profile/location:", err);
-    }
-  }
-
   export default function ProfilePage() {
     const { username } = useParams<{ username: string }>();
     const { user, profile, loading, error, fetchUserProfile } = useGlobal();
@@ -42,26 +28,30 @@
     const [flagUrl, setFlagUrl] = useState<string | null>(null);
     const [currentProfile, setCurrentProfile] = useState<User | null>(null);
 
+    const updateLocationAllFields = useCallback(async (lat: number, lng: number) => {
+      try {
+        await api.put("/profile/update-location", { latitude: lat, longitude: lng });
+        const res = await api.get('/profile');
+        setCurrentProfile(res.data);
+      } catch (err) {
+        console.error("[updateLocationAllFields] Error:", err);
+      }
+    }, []);
+
     // Compare with logged-in user to determine if it's their own profile
     const isCurrentUser = Boolean(user && user.username === decodeURIComponent(username));
-
-    // Fetch logged-in user on mount
-    // useEffect(() => {
-    //   fetchProfile();
-    //   // eslint-disable-next-line react-hooks/exhaustive-deps
-    // }, []);
 
     // Update currentProfile when user or profile changes
     useEffect(() => {
       if (!user) return;
 
-      if (user.username === username) {
+      const decodedUsername = decodeURIComponent(username);
+      if (user.username === decodedUsername) {
         setCurrentProfile(user);
       } else {
         fetchUserProfile?.(username);
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, username]);
+    }, [user, username, fetchUserProfile]);
 
     // Update currentProfile when profile (other user) is fetched
     useEffect(() => {
@@ -87,21 +77,11 @@
       if (isCurrentUser) {
         updateLocationAllFields(latitude, longitude);
       }
-    }, [isCurrentUser]);
+    }, [isCurrentUser, updateLocationAllFields]);
 
     // Loading state
-    if (loading) {
-      return <ProfileLoading variant="skeleton" />;
-    }
-
-    // Error state
-    if (error) {
-      return <p className="text-red-500 text-center py-10">{error}</p>;
-    }
-
-    // Waiting for profile data
-    if (!currentProfile) {
-      return <ProfileLoading variant="spinner" />;
+    if (loading || !currentProfile) {
+      return <ProfileLoading variant={loading ? "skeleton" : "spinner"} />;
     }
 
     const toggleEdit = () => setIsEditing(!isEditing);
@@ -142,7 +122,7 @@
                 <ProfileActions
                   isCurrentUser={isCurrentUser}
                   username={username}
-                  userId = {currentProfile.id}
+                  userId = {currentProfile.id.toString()}
                 />
 
                 {/* Biography */}

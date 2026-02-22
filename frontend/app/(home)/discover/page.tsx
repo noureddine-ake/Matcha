@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { motion, useAnimation } from 'framer-motion';
-import { Heart, Info, Loader, X } from 'lucide-react';
+import { motion, useAnimation, AnimatePresence } from 'framer-motion';
+import { Heart, Info, Loader, X, MapPin, Award, Clock, User, Globe } from 'lucide-react';
 import Image from 'next/image';
 import api from '@/lib/api';
 import { Suggestions, useDiscover } from '@/contexts/discover-context';
 import MatchPopup, { MatchData } from '@/components/matchPopup';
 
+const BASE_URL = process.env.BACKEND_URL || 'http://backend:5000';
+
 export default function DiscoverPage() {
-  const backend_url = process.env.BACKEND_URL || 'http://backend:5000';
   const discover = useDiscover();
   const [matchData, setMatchData] = useState<MatchData | null>(null);
 
@@ -20,7 +21,7 @@ export default function DiscoverPage() {
   }, []);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [showDetails, setShowDetails] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   const controls = useAnimation();
   const currentProfile: Suggestions | undefined = discover?.suggestions?.[0];
@@ -42,7 +43,7 @@ export default function DiscoverPage() {
         }
       }
 
-      setShowDetails(false);
+      setShowSidebar(false);
       setCurrentImageIndex(0);
       discover.setSuggestions((prev) => [...prev.slice(1)]);
       controls.set({ x: 0, opacity: 1 });
@@ -53,11 +54,12 @@ export default function DiscoverPage() {
 
   // Handle image click to go to next image
   const handleImageClick = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % currentProfile.photos.length);
+    if (currentProfile) {
+      setCurrentImageIndex((prev) => (prev + 1) % currentProfile.photos.length);
+    }
   };
 
-  // Toggle showing more details
-  const handleToggleDetails = () => setShowDetails((prev) => !prev);
+  const handleToggleSidebar = () => setShowSidebar((prev) => !prev);
 
   if (discover.loading) {
     return (
@@ -105,7 +107,7 @@ export default function DiscoverPage() {
             className="relative group"
           >
             {/* Background glow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
+            <div className="absolute inset-0 bg-linear-to-r from-purple-500 to-pink-500 rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
 
             {/* Card */}
             <div className="relative bg-white/10 backdrop-blur-lg rounded-3xl overflow-hidden border border-white/20 shadow-2xl">
@@ -116,52 +118,31 @@ export default function DiscoverPage() {
               >
                 {currentProfile.photos[currentImageIndex] && (
                   <Image
-                    src={`${backend_url}${currentProfile.photos[currentImageIndex].photo_url}`}
+                    src={`${BASE_URL}${currentProfile.photos[currentImageIndex].photo_url}`}
                     alt={currentProfile.username}
                     fill
                     className={`object-cover transition-all duration-500 ${
-                      showDetails ? 'brightness-50' : ''
+                      showSidebar ? 'brightness-50' : ''
                     }`}
                   />
                 )}
               </div>
 
-              {/* Details overlay */}
-              <motion.div
-                initial={{ y: 100, opacity: 0 }}
-                animate={
-                  showDetails ? { y: 0, opacity: 1 } : { y: 100, opacity: 0 }
-                }
-                transition={{ duration: 0.4 }}
-                className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6 text-white"
-              >
-                <h2 className="text-3xl font-bold">
-                  {currentProfile.username}
-                </h2>
-                <p className="text-purple-200 mt-1 max-w-full wrap-break-word">
-                  {currentProfile.biography}
-                </p>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {currentProfile.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-3 py-1 bg-purple-400/20 border border-purple-400 text-purple-200 rounded-full text-sm font-medium"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </motion.div>
-
               {/* Info Toggle Button */}
               <motion.button
-                onClick={handleToggleDetails}
+                onClick={handleToggleSidebar}
                 className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <Info className="w-5 h-5 text-white" />
               </motion.button>
+
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6 text-white">
+                <h2 className="text-3xl font-bold">
+                  {currentProfile.username}
+                </h2>
+              </div>
             </div>
           </motion.div>
         ) : (
@@ -189,6 +170,161 @@ export default function DiscoverPage() {
           </motion.button>
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {showSidebar && currentProfile && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 z-40"
+              onClick={handleToggleSidebar}
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 h-full w-full max-w-md bg-gradient-to-b from-purple-900/95 to-pink-900/95 backdrop-blur-lg z-50 overflow-y-auto"
+            >
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-white">{currentProfile.username}'s Profile</h2>
+                  <button
+                    onClick={handleToggleSidebar}
+                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-white/10 rounded-2xl p-4 border border-white/20">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <User className="w-5 h-5" /> About
+                    </h3>
+                    <div className="space-y-3 text-white/90">
+                      <div className="flex items-center gap-3">
+                        <span className="text-purple-300 min-w-[80px]">Name:</span>
+                        <span>{currentProfile.first_name} {currentProfile.last_name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-purple-300 min-w-[80px]">Age:</span>
+                        <span>{currentProfile.age} years old</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-purple-300 min-w-[80px]">Gender:</span>
+                        <span className="capitalize">{currentProfile.gender}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/10 rounded-2xl p-4 border border-white/20">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <MapPin className="w-5 h-5" /> Location
+                    </h3>
+                    <div className="space-y-3 text-white/90">
+                      <div className="flex items-center gap-3">
+                        <Globe className="w-4 h-4 text-purple-300" />
+                        <span>{currentProfile.city}, {currentProfile.country}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-purple-300 min-w-[80px]">Distance:</span>
+                        <span>{currentProfile.distance} km away</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/10 rounded-2xl p-4 border border-white/20">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <Award className="w-5 h-5" /> Fame Rating
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 bg-white/10 rounded-full h-3 overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full"
+                          style={{ width: `${Math.min(parseFloat(currentProfile.fame_rating), 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-white font-bold">{currentProfile.fame_rating}</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/10 rounded-2xl p-4 border border-white/20">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <Clock className="w-5 h-5" /> Status
+                      </h3>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        currentProfile.is_online 
+                          ? 'bg-green-500/20 text-green-300 border border-green-400/30' 
+                          : 'bg-gray-500/20 text-gray-300 border border-gray-400/30'
+                      }`}>
+                        {currentProfile.is_online ? 'Online now' : 'Offline'}
+                      </span>
+                    </div>
+                    {currentProfile.last_seen && (
+                      <p className="text-white/60 text-sm">
+                        Last seen: {new Date(currentProfile.last_seen).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+
+                  {currentProfile.biography && (
+                    <div className="bg-white/10 rounded-2xl p-4 border border-white/20">
+                      <h3 className="text-lg font-semibold text-white mb-3">Biography</h3>
+                      <p className="text-white/80 leading-relaxed">{currentProfile.biography}</p>
+                    </div>
+                  )}
+
+                  {currentProfile.tags && currentProfile.tags.length > 0 && (
+                    <div className="bg-white/10 rounded-2xl p-4 border border-white/20">
+                      <h3 className="text-lg font-semibold text-white mb-3">Interests</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {currentProfile.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="px-3 py-1.5 bg-purple-500/20 border border-purple-400/30 text-purple-200 rounded-full text-sm font-medium"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-white/10 rounded-2xl p-4 border border-white/20">
+                    <h3 className="text-lg font-semibold text-white mb-4">Photos ({currentProfile.photos.length})</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {currentProfile.photos.map((photo, index) => (
+                        <div 
+                          key={photo.id} 
+                          className={`relative aspect-square rounded-xl overflow-hidden ${
+                            photo.is_profile_picture ? 'ring-2 ring-purple-400 ring-offset-2 ring-offset-purple-900' : ''
+                          }`}
+                        >
+                          <Image
+                            src={`${BASE_URL}${photo.photo_url}`}
+                            alt={`Photo ${index + 1}`}
+                            fill
+                            className="object-cover"
+                          />
+                          {photo.is_profile_picture && (
+                            <div className="absolute bottom-2 left-2 px-2 py-1 bg-purple-500/80 text-white text-xs rounded-md font-medium">
+                              Profile
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

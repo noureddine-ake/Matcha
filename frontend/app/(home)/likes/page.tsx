@@ -73,7 +73,7 @@ export default function LikesPage() {
                 alt={`Profile ${like.id}`}
                 width={100}
                 height={100}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                className="w-full h-full object-cover blur-md group-hover:blur-0 group-hover:scale-110 transition-all duration-300"
               />
               <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent flex items-end p-4">
                 <div>

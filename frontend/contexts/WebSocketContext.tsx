@@ -60,26 +60,36 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
 }) => {
     const [connectionStatus, setConnectionStatus] =
         useState<ConnectionStatus>("disconnected");
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    // Derived state
     const isConnected = connectionStatus === "connected";
 
-    // Connect to WebSocket
-    const connect = useCallback(() => {
-        connectWebSocket();
+    useEffect(() => {
+        const checkAuth = () => {
+            const hasToken = document.cookie.includes('token=');
+            setIsAuthenticated(hasToken);
+        };
+        
+        checkAuth();
+        
+        const interval = setInterval(checkAuth, 500);
+        return () => clearInterval(interval);
     }, []);
 
-    // Disconnect from WebSocket
+    const connect = useCallback(() => {
+        if (isAuthenticated) {
+            connectWebSocket();
+        }
+    }, [isAuthenticated]);
+
     const disconnect = useCallback(() => {
         disconnectWebSocket();
     }, []);
 
-    // Send message
     const send = useCallback((message: OutgoingWebSocketMessage): boolean => {
         return webSocketService.send(message);
     }, []);
 
-    // Register handler (memoized to prevent unnecessary re-renders)
     const registerHandler = useCallback(
         <T extends WebSocketMessage>(
             type: MessageType,
@@ -90,7 +100,12 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
         []
     );
 
-    // Subscribe to connection status changes
+    useEffect(() => {
+        if (autoConnect && isAuthenticated) {
+            connectWebSocket();
+        }
+    }, [autoConnect, isAuthenticated]);
+
     useEffect(() => {
         const unsubscribe = webSocketService.onStatusChange((status) => {
             setConnectionStatus(status);
@@ -100,17 +115,6 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
             unsubscribe();
         };
     }, []);
-
-    // Auto-connect on mount
-    useEffect(() => {
-        if (autoConnect) {
-            connect();
-        }
-
-        return () => {
-            disconnect();
-        };
-    }, [autoConnect, connect, disconnect]);
 
     // Memoized context value
     const value = useMemo(

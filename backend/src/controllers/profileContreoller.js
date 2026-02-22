@@ -357,8 +357,8 @@ export const updateProfile = async (req, res) => {
             : 'both',
       biography: updatedProfile.biography,
       birth_date: updatedProfile.birth_date,
-      city: 'ifrane', // Note: This seems hardcoded - consider using updatedProfile.city
-      country: 'morocco', // Note: This seems hardcoded - consider using updatedProfile.country
+      city: updatedProfile.city,
+      country: updatedProfile.country,
       photos: photos,
       tags: tags,
       position: {

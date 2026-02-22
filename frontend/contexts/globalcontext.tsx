@@ -135,8 +135,6 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
         const userProfile = res.data;
         if (userProfile) {
           setProfile(userProfile as User);
-
-          console.log("profile :", profile);
         }
         return res.data;
       } catch (err) {
@@ -144,7 +142,7 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
     },
-    [profile]
+    []
   );
 
   // ==== Memoized value ====

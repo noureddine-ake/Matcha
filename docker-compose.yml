@@ -9,7 +9,7 @@ services:
     container_name: matcha-postgres
     env_file: .env
     ports:
-      - "5432:5432"
+      - "5431:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/db:/docker-entrypoint-initdb.d
@@ -20,7 +20,7 @@ services:
   # ====================
   # Redis Cache
   # ====================
-  redis:
+  rediss:
     image: redis:7
     container_name: redis
     restart: always
@@ -42,7 +42,7 @@ services:
       - .env
     depends_on:
       - postgres
-      - redis
+      - rediss
     ports:
       - "5000:5000"
     volumes:

@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Heart, MessageCircle, Flag, ThumbsDown } from "lucide-react";
+import { Heart, MessageCircle, Flag, ThumbsDown, ThumbsUp } from "lucide-react";
 import api from "@/lib/api";
-import { useState } from "react";
-import { toast } from "sonner"; // or use your notification system
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 interface ProfileActionsProps {
     isCurrentUser: boolean;
@@ -16,6 +17,29 @@ export default function ProfileActions({ isCurrentUser, username, userId }: Prof
     const [isReporting, setIsReporting] = useState(false);
     const [reportReason, setReportReason] = useState("fake_account");
     const [showReportModal, setShowReportModal] = useState(false);
+    const [isBlocked, setIsBlocked] = useState(false);
+    const [isLoadingBlockStatus, setIsLoadingBlockStatus] = useState(true);
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!username || isCurrentUser) {
+            setIsLoadingBlockStatus(false);
+            return;
+        }
+
+        const checkBlockStatus = async () => {
+            try {
+                const response = await api.get(`/users/block/${username}/status`);
+                setIsBlocked(response.data.isBlocked);
+            } catch (err) {
+                console.error("Error checking block status:", err);
+            } finally {
+                setIsLoadingBlockStatus(false);
+            }
+        };
+
+        checkBlockStatus();
+    }, [username, isCurrentUser]);
 
     const handleLike = async () => {
         try {
@@ -39,9 +63,21 @@ export default function ProfileActions({ isCurrentUser, username, userId }: Prof
         try {
             await api.post(`/users/block/${username}`);
             toast.success("User blocked");
+            router.push('/discover');
         } catch (err) {
             console.error("Error blocking user:", err);
             toast.error("Failed to block user");
+        }
+    };
+
+    const handleUnblock = async () => {
+        try {
+            await api.delete(`/users/block/${username}`);
+            setIsBlocked(false);
+            toast.success("User unblocked");
+        } catch (err) {
+            console.error("Error unblocking user:", err);
+            toast.error("Failed to unblock user");
         }
     };
 
@@ -67,7 +103,6 @@ export default function ProfileActions({ isCurrentUser, username, userId }: Prof
         } catch (err: any) {
             console.error("Error reporting user:", err);
             
-            // Handle specific error cases
             if (err.response?.status === 400) {
                 toast.error(err.response.data?.message || "Cannot report this user");
             } else if (err.response?.status === 409) {
@@ -94,49 +129,71 @@ export default function ProfileActions({ isCurrentUser, username, userId }: Prof
         return null;
     }
 
+    if (isLoadingBlockStatus) {
+        return (
+            <div className="flex flex-wrap gap-3 p-4">
+                <div className="w-24 h-12 bg-gray-800 animate-pulse rounded-xl"></div>
+                <div className="w-24 h-12 bg-gray-800 animate-pulse rounded-xl"></div>
+            </div>
+        );
+    }
+
     return (
         <>
             <div className="flex flex-wrap gap-3 p-4">
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleLike}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white rounded-xl shadow-lg transition-all duration-300 font-semibold shadow-pink-900/30"
-                >
-                    <Heart className="w-5 h-5" />
-                    Like
-                </motion.button>
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleChat}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl shadow-lg transition-all duration-300 font-semibold shadow-purple-900/30"
-                >
-                    <MessageCircle className="w-5 h-5" />
-                    Chat
-                </motion.button>
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleReport}
-                    className="flex items-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-100 rounded-xl shadow-lg transition-all duration-300 border border-gray-700"
-                    disabled={isReporting}
-                >
-                    <Flag className="w-5 h-5" />
-                    {isReporting ? "Reporting..." : "Report"}
-                </motion.button>
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleBlock}
-                    className="flex items-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-100 rounded-xl shadow-lg transition-all duration-300 border border-gray-700"
-                >
-                    <ThumbsDown className="w-5 h-5" />
-                    Block
-                </motion.button>
+                {!isBlocked ? (
+                    <>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleLike}
+                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white rounded-xl shadow-lg transition-all duration-300 font-semibold shadow-pink-900/30"
+                        >
+                            <Heart className="w-5 h-5" />
+                            Like
+                        </motion.button>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleChat}
+                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl shadow-lg transition-all duration-300 font-semibold shadow-purple-900/30"
+                        >
+                            <MessageCircle className="w-5 h-5" />
+                            Chat
+                        </motion.button>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleReport}
+                            className="flex items-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-100 rounded-xl shadow-lg transition-all duration-300 border border-gray-700"
+                            disabled={isReporting}
+                        >
+                            <Flag className="w-5 h-5" />
+                            {isReporting ? "Reporting..." : "Report"}
+                        </motion.button>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleBlock}
+                            className="flex items-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-100 rounded-xl shadow-lg transition-all duration-300 border border-gray-700"
+                        >
+                            <ThumbsDown className="w-5 h-5" />
+                            Block
+                        </motion.button>
+                    </>
+                ) : (
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleUnblock}
+                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl shadow-lg transition-all duration-300 font-semibold shadow-green-900/30"
+                    >
+                        <ThumbsUp className="w-5 h-5" />
+                        Unblock
+                    </motion.button>
+                )}
             </div>
 
-            {/* Report Modal - Dark Theme */}
             {showReportModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
                     <motion.div 

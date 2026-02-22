@@ -98,7 +98,8 @@ CREATE TABLE IF NOT EXISTS blocks (
   id SERIAL PRIMARY KEY,
   blocker_user_id INT REFERENCES users(id) ON DELETE CASCADE,
   blocked_user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(blocker_user_id, blocked_user_id)
 );
 
 -- REPORT
