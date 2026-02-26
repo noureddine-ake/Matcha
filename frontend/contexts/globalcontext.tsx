@@ -30,6 +30,7 @@ export interface User {
   photos: Photo[];
   tags: Tag[];
   position: Position;
+  fame_rating?: string;
   stats: Stats;
 };
 

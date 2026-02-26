@@ -17,14 +17,15 @@
     ProfileContent,
     ProfileLoading,
   } from "@/components/profile";
+  import SettingsPanel from "@/components/profile/SettingsPanel";
 
   const BACKEND_URL =
     process.env.NEXT_PUBLIC_BACKEND_URL || "http://backend:5000";
 
   export default function ProfilePage() {
     const { username } = useParams<{ username: string }>();
-    const { user, profile, loading, error, fetchUserProfile } = useGlobal();
-    const [isEditing, setIsEditing] = useState(false);
+    const { user, profile, loading, fetchUserProfile } = useGlobal();
+    const [showSettings, setShowSettings] = useState(false);
     const [flagUrl, setFlagUrl] = useState<string | null>(null);
     const [currentProfile, setCurrentProfile] = useState<User | null>(null);
 
@@ -62,19 +63,26 @@
 
     // Fetch flag and update location
     useEffect(() => {
-      const userLocation = JSON.parse(
-        window.localStorage.getItem("user_location") || "{}"
-      );
+      let userLocation = { latitude: null, longitude: null };
+      try {
+        const stored = window.localStorage.getItem("user_location");
+        if (stored && stored !== "denied") {
+          userLocation = JSON.parse(stored);
+        }
+      } catch (e) {
+        console.warn("Invalid user_location in localStorage:", e);
+      }
       const { latitude, longitude } = userLocation;
 
       const getFlag = async () => {
-        const url = await fetchFlag({ latitude, longitude });
-        setFlagUrl(url || null);
+        if (latitude && longitude) {
+          const url = await fetchFlag({ latitude, longitude });
+          setFlagUrl(url || null);
+        }
       };
       getFlag();
 
-        console.log("isCurrentUser", isCurrentUser)
-      if (isCurrentUser) {
+      if (isCurrentUser && latitude && longitude) {
         updateLocationAllFields(latitude, longitude);
       }
     }, [isCurrentUser, updateLocationAllFields]);
@@ -83,8 +91,6 @@
     if (loading || !currentProfile) {
       return <ProfileLoading variant={loading ? "skeleton" : "spinner"} />;
     }
-
-    const toggleEdit = () => setIsEditing(!isEditing);
 
     return (
       <div className="h-full overflow-scroll no-scrollbar w-full max-w-6xl ">
@@ -102,7 +108,7 @@
                 currentProfile={currentProfile}
                 backendUrl={BACKEND_URL}
                 isCurrentUser={isCurrentUser}
-                onEditClick={toggleEdit}
+                onEditClick={() => setShowSettings(true)}
               />
 
               {/* Profile Info */}
@@ -136,6 +142,7 @@
               </div>
             </motion.div>
           </div>
+          <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
         </div>
 
         {/* Tags and Photos Section */}
@@ -143,9 +150,8 @@
           currentProfile={currentProfile}
           backendUrl={BACKEND_URL}
           isCurrentUser={isCurrentUser}
-          isEditing={isEditing}
-          setIsEditing={setIsEditing}
         />
+
       </div>
     );
   }

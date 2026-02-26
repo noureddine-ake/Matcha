@@ -2,23 +2,20 @@
 
 import PhotosGallery from "@/components/photosGallery";
 import UserTags from "@/components/UserTags";
-import EditProfileDialog from "@/components/dialogs/edit_profile_dialog";
 import { User } from "@/contexts/globalcontext";
 
 interface ProfileContentProps {
     currentProfile: User;
     backendUrl: string;
     isCurrentUser: boolean;
-    isEditing: boolean;
-    setIsEditing: (value: boolean) => void;
+    isEditing?: boolean;
+    setIsEditing?: (value: boolean) => void;
 }
 
 export default function ProfileContent({
     currentProfile,
     backendUrl,
     isCurrentUser,
-    isEditing,
-    setIsEditing,
 }: ProfileContentProps) {
     return (
         <div className="max-w-6xl mx-auto px-4 py-8">
@@ -36,11 +33,6 @@ export default function ProfileContent({
                         editable={isCurrentUser}
                     />
                 </div>
-
-                {/* Edit Modal - only for own profile */}
-                {isCurrentUser && isEditing && (
-                    <EditProfileDialog setIsEditing={setIsEditing} />
-                )}
             </div>
         </div>
     );

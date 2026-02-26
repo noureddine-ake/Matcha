@@ -100,14 +100,15 @@ export default function ProfileActions({ isCurrentUser, username, userId }: Prof
                 const errorMsg = response.data?.message || "Failed to report user";
                 toast.error(errorMsg);
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Error reporting user:", err);
             
-            if (err.response?.status === 400) {
-                toast.error(err.response.data?.message || "Cannot report this user");
-            } else if (err.response?.status === 409) {
+            const axiosErr = err as { response?: { status?: number; data?: { message?: string } } };
+            if (axiosErr.response?.status === 400) {
+                toast.error(axiosErr.response.data?.message || "Cannot report this user");
+            } else if (axiosErr.response?.status === 409) {
                 toast.error("You already reported this user");
-            } else if (err.response?.status === 401) {
+            } else if (axiosErr.response?.status === 401) {
                 toast.error("Please login to report users");
             } else {
                 toast.error("Error reporting user. Please try again.");

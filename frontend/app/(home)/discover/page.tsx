@@ -178,7 +178,7 @@ export default function DiscoverPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 z-40"
+              className="fixed inset-0 bh-green-300 bg-black/60 z-50"
               onClick={handleToggleSidebar}
             />
             <motion.div
@@ -186,11 +186,11 @@ export default function DiscoverPage() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 h-full w-full max-w-md bg-gradient-to-b from-purple-900/95 to-pink-900/95 backdrop-blur-lg z-50 overflow-y-auto"
+              className="fixed right-0 top-22.5  bottom-22.5 h- w-full max-w-md bg-linear-to-b from-black/20 to-purple-600/30 backdrop-blur-lg z-50 overflow-y-auto no-scrollbar"
             >
               <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-white">{currentProfile.username}'s Profile</h2>
+                  <h2 className="text-2xl font-bold text-white">{currentProfile.username}&apos;s Profile</h2>
                   <button
                     onClick={handleToggleSidebar}
                     className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition"

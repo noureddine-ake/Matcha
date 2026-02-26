@@ -4,9 +4,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useNotifications } from '@/contexts/notifications-provider';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bell } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 const NotificationPopup = () => {
     const ntf = useNotifications();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
   return (
     <div className="relative">
@@ -17,11 +23,10 @@ const NotificationPopup = () => {
         className="bg-white/10 border border-white/20 hover:bg-white/20 transition-all backdrop-blur-lg rounded-full relative"
         onClick={() => {
           ntf.setShowPopup(!ntf.showPopup);
-          // if (!ntf.showPopup) ntf.fetchNotifications();
         }}
       >
         <Bell className="w-5 h-5 text-white" />
-        {ntf.notifications.some((n) => !n.is_read) && (
+        {mounted && ntf.notifications.some((n) => !n.is_read) && (
           <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-pink-500 rounded-full" />
         )}
       </Button>

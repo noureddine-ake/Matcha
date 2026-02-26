@@ -17,7 +17,7 @@ const containerVariants = {
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-black overflow-hidden">
       {/* Animated background decorations */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div

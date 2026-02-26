@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit3, LogOut } from "lucide-react";
+import { Settings, LogOut } from "lucide-react";
 import ProfilePicture from "@/components/ProfilePicture";
 import { User } from "@/contexts/globalcontext";
 
@@ -19,9 +19,7 @@ export default function ProfileHeader({
 }: ProfileHeaderProps) {
     const handleLogout = () => {
         try {
-            // remove cookie named 'token' (adjust name if different)
             document.cookie = "token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;";
-            // fallback using Max-Age
             document.cookie = "token=; Path=/; Max-Age=0;";
             window.location.href = "/";
         } catch (err) {
@@ -48,8 +46,8 @@ export default function ProfileHeader({
                transition-all duration-300
                border border-white/20 font-semibold"
                     >
-                        <Edit3 className="w-5 h-5 inline mr-2" />
-                        Edite
+                        <Settings className="w-5 h-5 inline mr-2" />
+                        Settings
                     </button>
 
                     <button

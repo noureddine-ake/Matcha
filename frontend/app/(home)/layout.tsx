@@ -103,7 +103,7 @@ export default function HomeLayout({
           
           <Suspense fallback={<ChatProviderFallback />}>
             <ChatProvider>
-              <div className="h-screen bg-linear-to-br from-indigo-900 via-purple-900 to-pink-800 pb-24 overflow-hidden flex items-center">
+              <div className="h-screen bg-linear-to-br from-purple-900 via-indigo-900 to-black pb-24 overflow-hidden flex items-center">
                 {/* Background decoration */}
                 <div className="fixed inset-0 overflow-hidden pointer-events-none">
                   <motion.div
@@ -112,7 +112,7 @@ export default function HomeLayout({
                     transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY }}
                   />
                   <motion.div
-                    className="absolute bottom-20 right-10 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl"
+                    className="absolute bottom-20 right-10 w-96 h-96 bg-blue-700/20 rounded-full blur-3xl"
                     animate={{ x: [0, -50, 0], y: [0, -30, 0] }}
                     transition={{ duration: 10, repeat: Number.POSITIVE_INFINITY }}
                   />
@@ -143,7 +143,7 @@ export default function HomeLayout({
                 </motion.div>
 
                 {/* Content Area */}
-                <div className="z-10 max-w-7xl mx-auto w-full px-6 h-full pt-[90px] overflow-hidden">
+                <div className="z-10 max-w-7xl mx-auto w-full px-6 h-full pt-[90px] overflow-hidden relative">
                   {children}
                 </div>
 
