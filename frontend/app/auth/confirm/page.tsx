@@ -1,66 +1,71 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { motion } from "framer-motion";
+import { Lock, Eye, EyeOff, ArrowRight, Check, XCircle, Loader2 } from "lucide-react";
 import api from "@/lib/api";
-import { AxiosError } from 'axios';
+import { AxiosError } from "axios";
 
 const ConfirmPassword = () => {
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const router = useRouter();
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
-  const [token, setToken] = useState('');
+  const [error, setError] = useState("");
+  const [token, setToken] = useState("");
 
   useEffect(() => {
-    // Extract token from URL query parameters
     const urlParams = new URLSearchParams(window.location.search);
-    const tokenParam = urlParams.get('token');
+    const tokenParam = urlParams.get("token");
     if (tokenParam) {
       setToken(tokenParam);
     } else {
-      setError('No token provided in URL');
+      setError("No token provided in URL");
     }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
-    
+
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setError("Password must be at least 6 characters long");
       return;
     }
 
     setIsSubmitting(true);
-    setError('');
-    
+    setError("");
+
     try {
-      const response = await api.post('/auth/reset-password/confirm', {
+      const response = await api.post("/auth/reset-password/confirm", {
         token: token,
-        newPassword: newPassword
+        newPassword: newPassword,
       });
-      
+
       if (response.status === 200) {
         setSuccess(true);
         setTimeout(() => {
-          window.location.href = '/auth/login'; // Redirect to login after success
+          router.push("/auth/login");
         }, 3000);
       }
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
-        setError(err.response?.data?.message || 'Failed to reset password. Please try again.');
-        console.error('Confirm password error:', err);
+        setError(err.response?.data?.message || "Failed to reset password. Please try again.");
       } else if (err instanceof Error) {
-        // Fallback for generic errors
         setError(err.message);
-        console.error('Confirm password error:', err);
       } else {
-        setError('Failed to reset password. Please try again.');
-        console.error('Confirm password unknown error:', err);
+        setError("Failed to reset password. Please try again.");
       }
     } finally {
       setIsSubmitting(false);
@@ -69,334 +74,162 @@ const ConfirmPassword = () => {
 
   if (!token) {
     return (
-      <div 
-        className="min-h-screen flex items-center justify-center p-4"
-        style={{
-          backgroundColor: 'var(--dark)',
-          backgroundImage: `linear-gradient(135deg, rgba(162, 89, 255, 0.1) 0%, rgba(186, 186, 186, 0.1) 100%)`
-        }}
-      >
-        <style jsx>{`
-          :root {
-            --dark: #000000;
-            --light: #ffffff;
-            --purple: #a259ff;
-            --gray: #bababa;
-          }
-        `}</style>
-        
-        <div 
-          className="bg-gray-900 rounded-2xl shadow-xl p-8 border border-gray-800 text-center"
-          style={{ backgroundColor: '#111111', maxWidth: '400px' }}
+      <div className="size-full flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 text-center"
         >
-          <div className="w-16 h-16 bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg 
-              className="w-8 h-8" 
-              style={{ color: '#ef4444' }}
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24" 
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth="2" 
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-              ></path>
-            </svg>
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <XCircle className="w-8 h-8 text-red-400" />
           </div>
-          <h1 
-            className="text-2xl font-bold mb-2"
-            style={{ color: 'var(--light)' }}
-          >
-            Invalid Request
-          </h1>
-          <p 
-            className="text-gray-400"
-            style={{ color: 'var(--gray)' }}
-          >
+          <h1 className="text-2xl font-bold text-white mb-2">Invalid Request</h1>
+          <p className="text-white/60">
             No token provided in URL. Please check your reset password link.
           </p>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        backgroundColor: 'var(--dark)',
-        backgroundImage: `linear-gradient(135deg, rgba(162, 89, 255, 0.1) 0%, rgba(186, 186, 186, 0.1) 100%)`
-      }}
-    >
-      <style jsx>{`
-        :root {
-          --dark: #000000;
-          --light: #ffffff;
-          --purple: #a259ff;
-          --gray: #bababa;
-        }
-      `}</style>
-      
-      <div className="w-full max-w-md">
-        <div 
-          className="bg-gray-900 rounded-2xl shadow-xl p-8 border border-gray-800"
-          style={{ backgroundColor: '#111111' }}
-        >
-          {/* Header Section */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg 
-                className="w-8 h-8" 
-                style={{ color: 'var(--purple)' }}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24" 
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth="2" 
-                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-                ></path>
-              </svg>
-            </div>
-            <h1 
-              className="text-2xl font-bold mb-2"
-              style={{ color: 'var(--light)' }}
-            >
-              Set New Password
-            </h1>
-            <p 
-              className="text-gray-400 text-sm"
-              style={{ color: 'var(--gray)' }}
-            >
-              Enter your new password to reset your account
-            </p>
+    <div className="size-full flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-md bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20"
+      >
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-purple-400" />
           </div>
-
-          {/* Success Message */}
-          {success && (
-            <div className="mb-6 p-4 rounded-lg bg-green-900 border border-green-700">
-              <div className="flex items-center">
-                <svg 
-                  className="w-5 h-5 mr-2" 
-                  style={{ color: '#10b981' }}
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24" 
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth="2" 
-                    d="M5 13l4 4L19 7"
-                  ></path>
-                </svg>
-                <span className="text-green-200">Password reset successfully! Redirecting to login...</span>
-              </div>
-            </div>
-          )}
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-900 border border-red-700">
-              <p className="text-red-200 text-sm">{error}</p>
-            </div>
-          )}
-
-          {/* Form Section */}
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label 
-                htmlFor="newPassword" 
-                className="block text-sm font-medium mb-2"
-                style={{ color: 'var(--light)' }}
-              >
-                New Password
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  id="newPassword"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-700 focus:ring-2 focus:outline-none transition-all duration-200 bg-gray-800"
-                  style={{
-                    backgroundColor: '#1f1f1f',
-                    borderColor: 'var(--gray)',
-                    color: 'var(--light)',
-                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)'
-                  }}
-                  placeholder="Enter new password"
-                  required
-                />
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <svg 
-                    className="w-5 h-5" 
-                    style={{ color: 'var(--gray)' }}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24" 
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth="2" 
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                    ></path>
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label 
-                htmlFor="confirmPassword" 
-                className="block text-sm font-medium mb-2"
-                style={{ color: 'var(--light)' }}
-              >
-                Confirm New Password
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-700 focus:ring-2 focus:outline-none transition-all duration-200 bg-gray-800"
-                  style={{
-                    backgroundColor: '#1f1f1f',
-                    borderColor: 'var(--gray)',
-                    color: 'var(--light)',
-                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)'
-                  }}
-                  placeholder="Confirm new password"
-                  required
-                />
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <svg 
-                    className="w-5 h-5" 
-                    style={{ color: 'var(--gray)' }}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24" 
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth="2" 
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    ></path>
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting || success}
-              className="w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
-              style={{
-                backgroundColor: success ? '#10b981' : 'var(--purple)',
-                color: 'var(--light)',
-                boxShadow: '0 4px 6px rgba(162, 89, 255, 0.3)'
-              }}
-            >
-              {isSubmitting ? (
-                <>
-                  <svg 
-                    className="animate-spin w-5 h-5" 
-                    style={{ color: 'var(--light)' }}
-                    fill="none" 
-                    viewBox="0 0 24 24"
-                  >
-                    <circle 
-                      className="opacity-25" 
-                      cx="12" 
-                      cy="12" 
-                      r="10" 
-                      stroke="currentColor" 
-                      strokeWidth="4"
-                    ></circle>
-                    <path 
-                      className="opacity-75" 
-                      fill="currentColor" 
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  <span>Resetting...</span>
-                </>
-              ) : success ? (
-                <>
-                  <svg 
-                    className="w-5 h-5" 
-                    style={{ color: 'var(--light)' }}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24" 
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth="2" 
-                      d="M5 13l4 4L19 7"
-                    ></path>
-                  </svg>
-                  <span>Password Reset!</span>
-                </>
-              ) : (
-                <>
-                  <span>Reset Password</span>
-                  <svg 
-                    className="w-5 h-5" 
-                    style={{ color: 'var(--light)' }}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24" 
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth="2" 
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    ></path>
-                  </svg>
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Footer */}
-          <div className="mt-6 text-center">
-            <a 
-              href="/login" 
-              className="text-sm font-medium hover:underline transition-colors duration-200"
-              style={{ color: 'var(--purple)' }}
-            >
-              Back to Login
-            </a>
-          </div>
-        </div>
-
-        {/* Additional Info */}
-        <div className="mt-6 text-center">
-          <p 
-            className="text-xs text-gray-500"
-            style={{ color: 'var(--gray)' }}
-          >
-            Make sure your password is at least 6 characters long and includes a mix of letters, numbers, and symbols.
+          <h1 className="text-2xl font-bold text-white mb-2">Set New Password</h1>
+          <p className="text-white/60 text-sm">
+            Enter your new password to reset your account
           </p>
         </div>
-      </div>
+
+        {success && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-2xl bg-green-500/20 border border-green-500/30"
+          >
+            <div className="flex items-center gap-3">
+              <Check className="w-5 h-5 text-green-400" />
+              <span className="text-green-200 text-sm">
+                Password reset successfully! Redirecting to login...
+              </span>
+            </div>
+          </motion.div>
+        )}
+
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 p-3 rounded-2xl bg-red-500/20 border border-red-500/30"
+          >
+            <p className="text-red-200 text-sm">{error}</p>
+          </motion.div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="newPassword" className="text-white text-base font-medium">
+              New Password
+            </Label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
+              <Input
+                type={showPassword ? "text" : "password"}
+                id="newPassword"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                required
+                className="h-14 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-2xl pl-12 pr-12 focus-visible:ring-2 focus-visible:ring-purple-400"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
+              >
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword" className="text-white text-base font-medium">
+              Confirm New Password
+            </Label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
+              <Input
+                type={showPassword ? "text" : "password"}
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                required
+                className="h-14 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-2xl pl-12 pr-12 focus-visible:ring-2 focus-visible:ring-purple-400"
+              />
+              {confirmPassword && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  {newPassword === confirmPassword ? (
+                    <Check className="w-5 h-5 text-green-400" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-400" />
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            disabled={isSubmitting || success}
+            className="w-full h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-2xl font-semibold shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Resetting...
+              </>
+            ) : success ? (
+              <>
+                <Check className="w-5 h-5" />
+                Password Reset!
+              </>
+            ) : (
+              <>
+                Reset Password
+                <ArrowRight className="w-5 h-5" />
+              </>
+            )}
+          </Button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <Link
+            href="/auth/login"
+            className="text-white/60 hover:text-white text-sm font-medium transition-colors"
+          >
+            Back to Login
+          </Link>
+        </div>
+
+        <div className="mt-4 text-center">
+          <p className="text-white/40 text-xs">
+            Make sure your password is at least 6 characters long.
+          </p>
+        </div>
+      </motion.div>
     </div>
   );
 };

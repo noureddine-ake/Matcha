@@ -52,12 +52,12 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 p-4">
+    <div className="size-full flex items-center justify-center bg-trans p-4">
       {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden">
+      {/* <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-      </div>
+      </div> */}
 
       <div className="w-full max-w-6xl relative z-10 space-y-8 flex flex-col md:flex-row justify-center items-center md:space-x-16">
         {/* Left side - Branding */}
@@ -65,7 +65,7 @@ export default function RegisterPage() {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, ease: 'easeOut' }}
-          className="flex flex-col items-center justify-center lg:w-1/2 space-y-8"
+          className="hidden md:flex flex-col items-center justify-center lg:w-1/2 space-y-8"
         >
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-xl opacity-30"></div>
@@ -118,60 +118,62 @@ export default function RegisterPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* First Name */}
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.2 }}
-                className="space-y-2"
-              >
-                <Label
-                  htmlFor="firstName"
-                  className="text-white text-base font-medium"
+              <div className='flex w-full gap-4'>
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.2 }}
+                  className="space-y-2"
                 >
-                  First name
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-400 w-5 h-5" />
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    type="text"
-                    placeholder="your first name"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    required
-                    className="h-14 bg-white/10 border-0 text-white placeholder:text-white/50 rounded-2xl pl-12 pr-6 focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-0 text-lg"
-                  />
-                </div>
-              </motion.div>
+                  <Label
+                    htmlFor="firstName"
+                    className="text-white text-base font-medium"
+                  >
+                    First name
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-400 w-5 h-5" />
+                    <Input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      placeholder="your first name"
+                      value={formData.firstName}
+                      onChange={handleChange}
+                      required
+                      className="h-14 bg-white/10 border-0 text-white placeholder:text-white/50 rounded-2xl pl-12 pr-6 focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-0 text-lg"
+                    />
+                  </div>
+                </motion.div>
 
-              {/* Last Name */}
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.3 }}
-                className="space-y-2"
-              >
-                <Label
-                  htmlFor="lastName"
-                  className="text-white text-base font-medium"
+                {/* Last Name */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                  className="space-y-2"
                 >
-                  Last name
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-400 w-5 h-5" />
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    type="text"
-                    placeholder="your last name"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    required
-                    className="h-14 bg-white/10 border-0 text-white placeholder:text-white/50 rounded-2xl pl-12 pr-6 focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-0 text-lg"
-                  />
-                </div>
-              </motion.div>
+                  <Label
+                    htmlFor="lastName"
+                    className="text-white text-base font-medium"
+                  >
+                    Last name
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-400 w-5 h-5" />
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      placeholder="your last name"
+                      value={formData.lastName}
+                      onChange={handleChange}
+                      required
+                      className="h-14 bg-white/10 border-0 text-white placeholder:text-white/50 rounded-2xl pl-12 pr-6 focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-0 text-lg"
+                    />
+                  </div>
+                </motion.div>
+              </div>
 
               {/* Email */}
               <motion.div

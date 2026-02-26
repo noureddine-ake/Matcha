@@ -6,6 +6,8 @@ import { useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Loader } from "lucide-react"
 import { useGlobal, FormUpdateUser } from "@/contexts/globalcontext"
+import { AgeDatePicker } from "@/components/ui/age-date-picker"
+import { format } from "date-fns"
 
 interface EditProfileDialogProps {
   setIsEditing: (value: boolean) => void
@@ -194,22 +196,23 @@ export default function EditProfileDialog({ setIsEditing }: EditProfileDialogPro
             {/* Birth Date */}
             <div>
               <label className="block text-sm font-medium text-white mb-2">Birth Date</label>
-              <input
-                type="date"
-                name="birth_date"
-                value={formData.birth_date ? formData.birth_date.split("T")[0] : ""}
-                onChange={handleChange}
-                className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+              <AgeDatePicker
+                value={formData.birth_date ? new Date(formData.birth_date) : undefined}
+                onChange={(date) => {
+                  setFormData({
+                    ...formData,
+                    birth_date: date ? format(date, "yyyy-MM-dd") : "",
+                  });
+                }}
+                minAge={18}
+                placeholder="Select your birth date"
+                className="bg-white/10 border-white/20 rounded-lg"
               />
             </div>
 
             {/* City and Country */}
             <div className="grid grid-cols-2 gap-4">
-              <div>Discover
-              Swipe or tap to explore profiles
-              
-              
-              
+              <div>
                 <label className="block text-sm font-medium text-white mb-2">City</label>
                 <input
                   type="text"

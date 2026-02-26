@@ -1,7 +1,7 @@
 import { Message } from "@/types/chat.types";
 import { AnimatePresence } from "framer-motion";
 import { CheckCheck, Loader2 } from "lucide-react";
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
 import { memo } from "react";
 
 interface MessageBubbleProps {
@@ -19,47 +19,39 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message, curr
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -20, scale: 0.8 }}
       transition={{ type: "spring", stiffness: 500, damping: 30 }}
-      className={`flex ${isSender ? 'justify-end' : 'justify-start'} mb-2`}
+      className={`flex ${isSender ? "justify-end" : "justify-start"} mb-2`}
     >
       <motion.div
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className={`max-w-[min(85%, 500px)] px-4 py-2 rounded-2xl relative ${isSender
-          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-          : 'bg-white/10 text-white backdrop-blur-lg shadow-lg'
-          } ${message.isSending ? 'opacity-70' : ''}`}
-        style={{
-          wordWrap: 'break-word',
-          overflowWrap: 'break-word',
-          hyphens: 'auto',
-        }}
+        className={`max-w-[85%] px-4 py-3 rounded-2xl relative ${
+          isSender
+            ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25"
+            : "bg-white/10 backdrop-blur-md text-white border border-white/10"
+        } ${message.isSending ? "opacity-70" : ""}`}
       >
-        {/* Message bubble tail */}
         {isSender ? (
-          <div className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-gradient-to-r from-purple-500 to-pink-500 rotate-45 rounded-sm"></div>
+          <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-gradient-to-r from-purple-500 to-pink-500 rotate-45 rounded-sm" />
         ) : (
-          <div className="absolute -left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-white/10 backdrop-blur-lg rotate-45 rounded-sm"></div>
+          <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white/10 backdrop-blur-md rotate-45 rounded-sm" />
         )}
 
-        {/* Message content */}
         <div className="relative z-10">
-          <p className="text-sm whitespace-pre-wrap break-words min-w-0">
+          <p className="text-sm break-all whitespace-normal word-break-break-word">
             {message.content}
           </p>
 
-          {/* Timestamp and status */}
-          <div className={`flex items-center justify-end gap-1 mt-1 ${isSender ? 'text-white/80' : 'text-white/60'
-            }`}>
+          <div className={`flex items-center justify-end gap-1 mt-1.5 ${isSender ? "text-white/70" : "text-white/50"}`}>
             <span className="text-xs whitespace-nowrap">
               {new Date(message.timestamp).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit'
+                hour: "2-digit",
+                minute: "2-digit",
               })}
-              {message.isSending && ' (sending...)'}
+              {message.isSending && " (sending...)"}
             </span>
             {isSender && !message.isSending && (
               <CheckCheck
-                className={`w-3 h-3 flex-shrink-0 ${message.read ? 'text-blue-300' : 'text-white/60'}`}
+                className={`w-3.5 h-3.5 flex-shrink-0 ${message.read ? "text-blue-300" : "text-white/50"}`}
               />
             )}
           </div>
@@ -69,7 +61,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message, curr
   );
 });
 
-MessageBubble.displayName = 'MessageBubble';
+MessageBubble.displayName = "MessageBubble";
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -92,7 +84,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 }) => {
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar">
-      {/* Load More Trigger */}
       {hasMoreMessages && (
         <div ref={loadMoreTriggerRef} className="flex justify-center py-4">
           {loadingMore ? (
@@ -103,7 +94,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
           ) : (
             <button
               onClick={onLoadMore}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm"
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 text-white rounded-xl transition-colors text-sm font-medium"
             >
               Load older messages
             </button>
