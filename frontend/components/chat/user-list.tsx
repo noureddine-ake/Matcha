@@ -37,19 +37,19 @@ export const UserItem: React.FC<UserItemProps> = memo(({ user, isSelected, onSel
               user.username.charAt(0).toUpperCase()
             )}
           </div>
-          <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${user.is_online ? 'bg-green-400' : 'bg-gray-400'
-            }`} />
+          {/* <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${user.is_online ? 'bg-green-400' : 'bg-gray-400'
+            }`} /> */}
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
             <h3 className="text-white font-semibold truncate">{user.username}</h3>
-            {!user.is_online && (
+            {/* {!user.is_online && (
               <span className="text-xs text-white/60 flex items-center">
                 <Clock className="w-3 h-3 inline mr-1" />
                 Offline
               </span>
-            )}
+            )} */}
           </div>
           <p className="text-white/60 text-sm truncate">{user.email}</p>
         </div>

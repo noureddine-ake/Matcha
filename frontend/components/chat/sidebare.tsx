@@ -60,13 +60,13 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-xl md:text-2xl font-bold text-white">Messages</h1>
           <div className="flex items-center gap-2">
-            <button
+            {/* <button
               onClick={onToggleSound}
               className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
               title={soundEnabled ? "Mute notifications" : "Enable notifications"}
             >
               {soundEnabled ? <Volume2 className="w-4 h-4 md:w-5 md:h-5" /> : <VolumeX className="w-4 h-4 md:w-5 md:h-5" />}
-            </button>
+            </button> */}
             {isMobile && onCloseSidebar && (
               <button
                 onClick={onCloseSidebar}

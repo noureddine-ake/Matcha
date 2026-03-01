@@ -37,7 +37,37 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Serve uploads folder
 const uploadsDir = path.join(process.cwd(), 'uploads');
 app.use('/uploads', express.static(uploadsDir));// in future we will add cdn
-
+// Add this temporary debug route
+app.get('/api/debug/websocket', (req, res) => {
+  try {
+    const { getOnlineUsers, debugConnections } = require('./src/config/websocket.js');
+    
+    // Check cookies from request
+    const cookies = req.headers.cookie;
+    const hasToken = cookies ? cookies.includes('token=') : false;
+    
+    // Get WebSocket connections
+    const connections = debugConnections ? debugConnections() : { connectedUsers: [] };
+    
+    res.json({
+      cookies: {
+        present: hasToken,
+        raw: cookies || 'No cookies',
+        token: hasToken ? cookies.split('token=')[1]?.split(';')[0] : null
+      },
+      websocket: {
+        connectedUsers: connections.connectedUsers || [],
+        totalConnections: connections.connectedUsers?.length || 0
+      },
+      env: {
+        NODE_ENV: process.env.NODE_ENV,
+        isProduction: process.env.NODE_ENV === 'production'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 // cors policy 
 const corsOptions = {
   origin: [`${process.env.FRONTEND_URL}` || 'http://localhost:3000'],
