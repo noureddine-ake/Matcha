@@ -16,7 +16,7 @@ import {
 } from "@/lib/websocket.service";
 
 // Types
-type ConnectionStatus = "connected" | "disconnected" | "connecting" | "error";
+type ConnectionStatus = "connected" | "disconnected" | "connecting" | "reconnecting" | "error";
 
 interface UserStatus {
     userId: string;
@@ -57,14 +57,15 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
     // Initialize WebSocket service listeners
     useEffect(() => {
         // Listen for connection status changes
-        const unsubscribeStatus = webSocketService.onStatusChange((status) => {
-            setConnectionStatus(status);
-            
-            if (status === "disconnected" || status === "error") {
-                setOnlineUsers([]);
-                setUserStatuses(new Map());
-            }
-        });
+       const unsubscribeStatus = webSocketService.onStatusChange((status) => {
+    const typedStatus = status as ConnectionStatus; // tell TS this is safe
+    setConnectionStatus(typedStatus);
+
+    if (typedStatus === "disconnected" || typedStatus === "error") {
+        setOnlineUsers([]);
+        setUserStatuses(new Map());
+    }
+});
 
         // Handle initial online users list
         const unsubscribeOnlineUsers = webSocketService.registerHandler("users_online", (message: any) => {

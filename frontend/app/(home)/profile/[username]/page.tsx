@@ -25,6 +25,22 @@ import { useWebSocket } from "@/contexts/WebSocketContext";
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://backend:5000";
 
+
+type UserStatusChangeMessage = {
+  type: "user_status_change";
+  data: {
+    userId: string;
+    status: "online" | "offline";
+    lastSeen?: string;
+  };
+};
+
+type UsersOnlineMessage = {
+  type: "users_online";
+  users: {
+    userId: string;
+  }[];
+};
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const { user, profile, loading, fetchUserProfile } = useGlobal();
@@ -105,12 +121,17 @@ export default function ProfilePage() {
 
     // Check status from userStatuses map
     const status = userStatuses.get(profileId);
-    if (status && status.lastSeen) {
-      setLastSeen(status.lastSeen);
-    }
+    if (status?.lastSeen) {
+  const formatted =
+    typeof status.lastSeen === "string"
+      ? status.lastSeen
+      : status.lastSeen.toISOString();
+
+  setLastSeen(formatted);
+}
 
     // Handler for status changes - FIXED: using 'user_status_change' which is what your server sends
-    const handleStatusChange = (data: any) => {
+    const handleStatusChange = (data: UserStatusChangeMessage) => {
       console.log("Status change received:", data);
       
       if (data.data && data.data.userId === profileId) {
@@ -122,9 +143,9 @@ export default function ProfilePage() {
     };
 
     // Handler for initial users list
-    const handleUsersOnline = (data: any) => {
+    const handleUsersOnline = (data: UsersOnlineMessage) => {
       console.log("Online users received:", data);
-      const isOnline = data.users?.some((u: any) => u.userId === profileId);
+      const isOnline = data.users?.some((u) => u.userId === profileId);
       setOnlineStatus(isOnline ? "online" : "offline");
     };
 
@@ -183,7 +204,7 @@ export default function ProfilePage() {
                 currentProfile={currentProfile}
                 isCurrentUser={isCurrentUser}
                 flagUrl={flagUrl}
-                onlineStatus={onlineStatus}
+                // onlineStatus={onlineStatus}
               />
 
               {currentProfile.birth_date && (
