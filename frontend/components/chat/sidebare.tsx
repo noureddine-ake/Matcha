@@ -1,7 +1,7 @@
 
 import React from 'react';
 import {
-  Search, Volume2, VolumeX, X
+  Search, X
 } from 'lucide-react';
 import { User } from '@/types/chat.types';
 import { UserList } from './user-list';
@@ -46,10 +46,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   users,
   selectedUserId,
   searchTerm,
-  soundEnabled,
   isMobile,
   onSelectUser,
-  onToggleSound,
   onCloseSidebar,
   onSearchChange,
 }) => {

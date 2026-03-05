@@ -1,5 +1,5 @@
 import { User } from "@/types/chat.types";
-import { Clock, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import Image from "next/image";
 import { motion } from 'framer-motion';
 import { memo } from "react";

@@ -1,5 +1,5 @@
 import { User } from "@/types/chat.types";
-import { Menu, Volume2, VolumeX } from "lucide-react";
+import { Menu } from "lucide-react";
 import Image from "next/image";
 import { motion } from 'framer-motion';
 import { useUserStatus } from "@/contexts/WebSocketContext"; // Add this import
@@ -20,8 +20,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   totalMessages,
   typingUsers,
   isMobile,
-  soundEnabled,
-  onToggleSound,
   onToggleSidebar,
 }) => {
   // Get real-time online status from WebSocket
