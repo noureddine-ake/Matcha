@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  transpilePackages: ['date-fns'],
   images: {
     domains: ['localhost', 'flagcdn.com'],
     remotePatterns: [

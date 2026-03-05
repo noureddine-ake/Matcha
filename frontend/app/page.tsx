@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Heart, Sparkles, Users, Shield, Zap, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import LightPillar from '@/components/LightPillar';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -17,9 +18,11 @@ const containerVariants = {
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden no-scrollbar">
+      <LightPillar />
+
       {/* Animated background decorations */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      {/* <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
           className="absolute top-20 left-10 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl"
           animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
@@ -35,7 +38,7 @@ export default function Home() {
           animate={{ scale: [1, 1.2, 1] }}
           transition={{ duration: 7, repeat: Number.POSITIVE_INFINITY }}
         />
-      </div>
+      </div> */}
 
       {/* Navigation */}
       <motion.nav

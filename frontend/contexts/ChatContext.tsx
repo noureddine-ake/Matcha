@@ -19,6 +19,7 @@ import {
     TypingStartMessage,
     TypingStopMessage,
 } from "@/types/websocket.types";
+import { toast } from "sonner";
 
 // ==== Context Types ====
 
@@ -254,20 +255,38 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
                     notificationService.playSound(soundEnabled);
 
                     const sender = users.find((u) => u.id === senderId);
+                    const senderName = sender?.username || "Someone";
+                    
+                    // Show browser notification
                     notificationService.showBrowserNotification(
                         "New Message",
-                        `${sender?.username || "Someone"}: ${messageData.content}`
+                        `${senderName}: ${messageData.content}`
                     );
+
+                    // Show toast notification with nice styling
+                    toast.success(`New message from ${senderName}`, {
+                        description: messageData.content.substring(0, 100) + (messageData.content.length > 100 ? "..." : ""),
+                        duration: 4000,
+                    });
                 }
             } else if (senderId !== currentUserId) {
                 const { soundEnabled, users } = currentStateRef.current;
                 notificationService.playSound(soundEnabled);
 
                 const sender = users.find((u) => u.id === senderId);
+                const senderName = sender?.username || "Someone";
+                
+                // Show browser notification
                 notificationService.showBrowserNotification(
                     "New Message",
-                    `${sender?.username || "Someone"}: ${messageData.content}`
+                    `${senderName}: ${messageData.content}`
                 );
+
+                // Show toast notification with nice styling
+                toast.success(`New message from ${senderName}`, {
+                    description: messageData.content.substring(0, 100) + (messageData.content.length > 100 ? "..." : ""),
+                    duration: 4000,
+                });
             }
         },
         [processMessageQueue]

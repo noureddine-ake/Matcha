@@ -12,6 +12,9 @@ import { LikestionsRout } from './src/routes/likesRoutes.js';
 import { errorHandler } from './src/middlewares/errorMiddleware.js';
 import { NotificationsRouts } from './src/routes/notificationRoutes.js';
 import chatRoutes  from './src/routes/chatRoutes.js';
+import reportRoutes from './src/routes/reportRoutes.js';
+import { userRoutes } from './src/routes/userRoutes.js';
+
 import { swaggerUi, swaggerSpec } from "./swagger.js";
 import { setupWebSocket } from './src/config/websocket.js';
 import http from 'http';
@@ -34,7 +37,37 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Serve uploads folder
 const uploadsDir = path.join(process.cwd(), 'uploads');
 app.use('/uploads', express.static(uploadsDir));// in future we will add cdn
-
+// Add this temporary debug route
+app.get('/api/debug/websocket', (req, res) => {
+  try {
+    const { getOnlineUsers, debugConnections } = require('./src/config/websocket.js');
+    
+    // Check cookies from request
+    const cookies = req.headers.cookie;
+    const hasToken = cookies ? cookies.includes('token=') : false;
+    
+    // Get WebSocket connections
+    const connections = debugConnections ? debugConnections() : { connectedUsers: [] };
+    
+    res.json({
+      cookies: {
+        present: hasToken,
+        raw: cookies || 'No cookies',
+        token: hasToken ? cookies.split('token=')[1]?.split(';')[0] : null
+      },
+      websocket: {
+        connectedUsers: connections.connectedUsers || [],
+        totalConnections: connections.connectedUsers?.length || 0
+      },
+      env: {
+        NODE_ENV: process.env.NODE_ENV,
+        isProduction: process.env.NODE_ENV === 'production'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 // cors policy 
 const corsOptions = {
   origin: [`${process.env.FRONTEND_URL}` || 'http://localhost:3000'],
@@ -74,6 +107,8 @@ app.use('/api', SuggestionsRout);
 app.use('/api', LikestionsRout);
 app.use('/api/notifications', NotificationsRouts);
 app.use("/api/chat", chatRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/users", userRoutes);
 
 // not found
 app.use((req, res) => res.send("not found"));

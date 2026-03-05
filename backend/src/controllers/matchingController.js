@@ -22,12 +22,14 @@ export const getSuggestions = async (req, res) => {
       limit = 20,
       offset = 0,
       sortBy = 'distance',
-      maxDistance = 100,
+      maxDistance = 500,
       minAge,
       maxAge,
       minFame,
       maxFame,
     } = req.query;
+
+    console.log('[getSuggestions] Request params:', { userId, limit, offset, sortBy, maxDistance, minAge, maxAge, minFame, maxFame });
 
     const currentUserQuery = await getProfileDataforMatches(userId);
     if (!currentUserQuery.rowCount) {
@@ -35,6 +37,7 @@ export const getSuggestions = async (req, res) => {
     }
 
     const currentUser = currentUserQuery.rows[0];
+    console.log('[getSuggestions] Current user profile:', currentUser);
 
     // Build gender filter
     let genderFilter = '';
@@ -84,6 +87,9 @@ export const getSuggestions = async (req, res) => {
       limit,
       offset,
     });
+
+    console.log('[getSuggestions] result rowCount:', result.rowCount);
+    console.log('[getSuggestions] suggestions:', JSON.stringify(result.rows, null, 2));
 
     res.json({
       suggestions: result.rows,
@@ -224,76 +230,112 @@ export const likeUser = async (req, res) => {
   }
 };
 
-// unlike a user
-// export const unlikeUser = async (req, res) => {
-//   const client = await db.connect();
+export const unlikeUser = async (req, res) => {
+  try {
+    const unlikerId = req.user.data.id;
+    const username = req.params.userId;
 
-//   try {
-//     const unlikerId = req.user.id;
-//     const unlikedId = parseInt(req.params.userId);
+    const userLookup = await pool.query(
+      'SELECT id FROM users WHERE username = $1',
+      [username]
+    );
 
-//     await client.query('BEGIN');
+    if (userLookup.rowCount === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
-//     // Check if like exists
-//     const likeCheck = await client.query(
-//       'SELECT id FROM likes WHERE liker_user_id = $1 AND liked_user_id = $2',
-//       [unlikerId, unlikedId]
-//     );
+    const unlikedId = userLookup.rows[0].id;
 
-//     if (likeCheck.rows.length === 0) {
-//       await client.query('ROLLBACK');
-//       return res.status(404).json({ error: 'Like not found' });
-//     }
+    if (unlikerId === unlikedId) {
+      return res.status(400).json({ error: 'Cannot unlike yourself' });
+    }
 
-//     // Check if it was a match before unlinking
-//     const wasMatch = await client.query(
-//       'SELECT id FROM likes WHERE liker_user_id = $1 AND liked_user_id = $2',
-//       [unlikedId, unlikerId]
-//     );
+    await pool.query('BEGIN');
 
-//     // Delete the like
-//     await client.query(
-//       'DELETE FROM likes WHERE liker_user_id = $1 AND liked_user_id = $2',
-//       [unlikerId, unlikedId]
-//     );
+    const likeCheck = await pool.query(
+      'SELECT id FROM likes WHERE liker_user_id = $1 AND liked_user_id = $2',
+      [unlikerId, unlikedId]
+    );
 
-//     // If it was a match, notify the other user
-//     if (wasMatch.rows.length > 0) {
-//       await client.query(
-//         `INSERT INTO notifications (user_id, type, from_user_id, is_read)
-//          VALUES ($1, 'unlike', $2, FALSE)`,
-//         [unlikedId, unlikerId]
-//       );
-//     }
+    if (likeCheck.rowCount === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({ error: 'Like not found' });
+    }
 
-//     // Update fame rating for the unliked user
-//     await client.query(
-//       `UPDATE profiles
-//        SET fame_rating = (
-//          SELECT COUNT(*) * 0.5 +
-//                 (SELECT COUNT(DISTINCT viewer_user_id) FROM profile_views WHERE viewed_user_id = $1) * 0.1
-//          FROM likes
-//          WHERE liked_user_id = $1
-//        )
-//        WHERE user_id = $1`,
-//       [unlikedId]
-//     );
+    const wasMatch = await pool.query(
+      'SELECT id FROM likes WHERE liker_user_id = $1 AND liked_user_id = $2',
+      [unlikedId, unlikerId]
+    );
 
-//     await client.query('COMMIT');
+    await pool.query(
+      'DELETE FROM likes WHERE liker_user_id = $1 AND liked_user_id = $2',
+      [unlikerId, unlikedId]
+    );
 
-//     res.json({
-//       message: 'Successfully unliked',
-//       wasMatch: wasMatch.rows.length > 0
-//     });
+    if (wasMatch.rowCount > 0) {
+      await createAndSendNotification(unlikedId, notificationTypes.UNLIKE, unlikerId);
+    }
 
-//   } catch (error) {
-//     await client.query('ROLLBACK');
-//     console.error('Unlike user error:', error);
-//     res.status(500).json({ error: 'Failed to unlike user' });
-//   } finally {
-//     client.release();
-//   }
-// }
+    await pool.query(
+      `UPDATE profiles
+       SET fame_rating = (
+         SELECT COUNT(*) * 0.5 +
+                (SELECT COUNT(DISTINCT viewer_user_id) FROM profile_views WHERE viewed_user_id = $1) * 0.1
+         FROM likes
+         WHERE liked_user_id = $1
+       )
+       WHERE user_id = $1`,
+      [unlikedId]
+    );
+
+    await pool.query('COMMIT');
+
+    res.json({
+      message: 'Successfully unliked',
+      wasMatch: wasMatch.rowCount > 0,
+    });
+  } catch (error) {
+    await pool.query('ROLLBACK');
+    console.error('Unlike user error:', error);
+    res.status(500).json({ error: 'Failed to unlike user' });
+  }
+};
+
+export const getLikeStatus = async (req, res) => {
+  try {
+    const currentUserId = req.user.data.id;
+    const username = req.params.userId;
+
+    const userLookup = await pool.query(
+      'SELECT id FROM users WHERE username = $1',
+      [username]
+    );
+
+    if (userLookup.rowCount === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const targetId = userLookup.rows[0].id;
+
+    const result = await pool.query(
+      `SELECT
+        EXISTS(SELECT 1 FROM likes WHERE liker_user_id = $1 AND liked_user_id = $2) AS "iLiked",
+        EXISTS(SELECT 1 FROM likes WHERE liker_user_id = $2 AND liked_user_id = $1) AS "theyLiked"`,
+      [currentUserId, targetId]
+    );
+
+    const { iLiked, theyLiked } = result.rows[0];
+
+    res.json({
+      iLiked,
+      theyLiked,
+      isMatch: iLiked && theyLiked,
+    });
+  } catch (error) {
+    console.error('Get like status error:', error);
+    res.status(500).json({ error: 'Failed to get like status' });
+  }
+};
 
 export const getMatches = async (req, res) => {
   try {

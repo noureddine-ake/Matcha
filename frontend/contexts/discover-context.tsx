@@ -70,11 +70,11 @@ export const DiscoverProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string>('');
 
   const [filters, setFilters] = useState<Filters>({
-    maxDistance: 50,
+    maxDistance: 500,
     minAge: 18,
-    maxAge: 35,
+    maxAge: 100,
     minFame: 0,
-    maxFame: 5,
+    maxFame: 100,
     sortBy: 'distance',
   });
 

@@ -5,6 +5,8 @@ import { useChat } from '@/contexts/ChatContext';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 import { ChatLayout } from '@/components/chat.components';
 import { ChatHeader, ChatEmptyState, ChatMessages, ChatSidebar, ChatInput } from '@/components/chat/exports';
+import { useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function ChatPage() {
   const {
@@ -21,8 +23,19 @@ export default function ChatPage() {
   } = useChat();
 
   const { isConnected } = useWebSocket();
+  const searchParams = useSearchParams();
 
   const selectedUser = state.users.find(user => user.id === state.selectedUserId);
+
+  useEffect(() => {
+    const username = searchParams.get('username');
+    if (username && !state.loading && state.users.length > 0 && !state.selectedUserId) {
+      const user = state.users.find(u => u.username === decodeURIComponent(username));
+      if (user) {
+        selectUser(user.id.toString());
+      }
+    }
+  }, [searchParams, state.users, state.selectedUserId, state.loading, selectUser]);
 
   if (state.loading) {
     return (
@@ -35,7 +48,6 @@ export default function ChatPage() {
     );
   }
 
-  // Handle keyboard shortcuts
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();

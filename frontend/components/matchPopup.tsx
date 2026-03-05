@@ -1,11 +1,10 @@
 'use client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 export interface MatchData {
   id: number;
   username: string;
-//   first_name: string;
-//   last_name: string;
 }
 
 interface Props {
@@ -14,10 +13,12 @@ interface Props {
 }
 
 const MatchPopup = ({ matchData, setMatchData }: Props) => {
+  const router = useRouter();
+
   if (!matchData) return null;
 
   const handleSendMessage = () => {
-    window.location.href = `/chat/${matchData.id}`;
+    router.push(`/chat?id=${encodeURIComponent(matchData.id)}`);
   };
 
   return (

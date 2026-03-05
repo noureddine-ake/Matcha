@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { AgeDatePicker } from "@/components/ui/age-date-picker"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Upload, Check, Heart, UserIcon, MessageSquare, Tag, Camera } from "lucide-react"
 import Image from "next/image"
 import api from "@/lib/api"
+import { format } from "date-fns"
 
 type Gender = "male" | "female" | "non-binary" | "other"
 type SexualPreference = "men" | "women" | "both"
@@ -184,7 +186,7 @@ export default function ProfileCompletePage() {
       case 3:
         return profileData.birthDate !== ""
       case 4:
-        return profileData.biography.trim().length >= 50
+        return true // biography is optional
       case 5:
         return profileData.interests.length >= 3
       case 6:
@@ -195,30 +197,8 @@ export default function ProfileCompletePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 p-4">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-      </div>
-
+    <div className="size-full flex items-center justify-center bg-transparent p-4">
       <div className="w-full max-w-4xl relative z-10">
-        {/* Logo */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex justify-center mb-8"
-        >
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-xl opacity-30"></div>
-            <div className="relative bg-gradient-to-br from-white to-gray-100 rounded-2xl p-6 shadow-2xl">
-              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-24 h-24 flex items-center justify-center text-gray-500 text-xs">
-                Logo
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex justify-between mb-2">
@@ -283,20 +263,22 @@ export default function ProfileCompletePage() {
                 <div className="text-center mb-8">
                   <UserIcon className="w-12 h-12 text-purple-300 mx-auto mb-4" />
                   <h2 className="text-3xl font-bold text-white mb-2">{"What's your birth date?"}</h2>
-                  <p className="text-purple-200">This helps us match you better</p>
+                  <p className="text-purple-200">You must be 18 or older to join</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="birth_date" className="text-white text-base font-medium">
+                  <Label className="text-white text-base font-medium">
                     Birth Date
                   </Label>
-                  <Input
-                    id="birth_date"
-                    name="birth_date"
-                    type="date"
-                    value={profileData.birthDate}
-                    onChange={(e) => setProfileData({ ...profileData, birthDate: e.target.value })}
-                    required
-                    className="h-14 bg-white/10 border-0 text-white placeholder:text-white/50 rounded-2xl pl-4 pr-6 focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-0 text-lg"
+                  <AgeDatePicker
+                    value={profileData.birthDate ? new Date(profileData.birthDate) : undefined}
+                    onChange={(date) => {
+                      setProfileData({ 
+                        ...profileData, 
+                        birthDate: date ? format(date, "yyyy-MM-dd") : "" 
+                      });
+                    }}
+                    minAge={18}
+                    placeholder="Click to select your birth date"
                   />
                 </div>
               </motion.div>
@@ -351,17 +333,17 @@ export default function ProfileCompletePage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="biography" className="text-white text-base font-medium">
-                    Biography (minimum 50 characters)
+                    Biography (optional)
                   </Label>
                   <Textarea
                     id="biography"
                     placeholder="Share your story, interests, what makes you unique..."
                     value={profileData.biography}
-                    onChange={(e) => setProfileData({ ...profileData, biography: e.target.value })}
+                    onChange={(e) => setProfileData({ ...profileData, biography: e.target.value.slice(0, 150) })}
                     className="min-h-[200px] bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-purple-400 text-lg"
                   />
-                  <p className={`text-sm ${profileData.biography.length >= 50 ? "text-green-300" : "text-white/60"}`}>
-                    {profileData.biography.length}/50 characters minimum
+                  <p className="text-sm text-white/60 text-right">
+                    {profileData.biography.length}/150 characters
                   </p>
                 </div>
               </motion.div>

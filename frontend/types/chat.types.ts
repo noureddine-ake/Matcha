@@ -81,7 +81,12 @@ export interface ChatState {
   sidebarOpen: boolean;
   isMobile: boolean;
   error: string | null;
-  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+  connectionStatus:
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'error';
   conversationMeta: Record<string, ConversationMeta>; // { [userId]: { unreadCount, lastMessage } }
   totalUnread: number;
 }

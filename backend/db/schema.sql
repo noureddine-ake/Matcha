@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   country VARCHAR(100),
   is_online BOOLEAN DEFAULT FALSE,
   last_seen TIMESTAMP,
+  report_count INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -97,7 +98,8 @@ CREATE TABLE IF NOT EXISTS blocks (
   id SERIAL PRIMARY KEY,
   blocker_user_id INT REFERENCES users(id) ON DELETE CASCADE,
   blocked_user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(blocker_user_id, blocked_user_id)
 );
 
 -- REPORT
@@ -106,7 +108,8 @@ CREATE TABLE IF NOT EXISTS reports (
   reporter_user_id INT REFERENCES users(id) ON DELETE CASCADE,
   reported_user_id INT REFERENCES users(id) ON DELETE CASCADE,
   reason TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(reporter_user_id, reported_user_id)  -- One report per user pair
 );
 
 CREATE TABLE IF NOT EXISTS email_verifications (

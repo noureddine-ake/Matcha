@@ -14,40 +14,30 @@ import {
     connectWebSocket,
     disconnectWebSocket,
 } from "@/lib/websocket.service";
-import {
-    ConnectionStatus,
-    MessageHandler,
-    MessageType,
-    OutgoingWebSocketMessage,
-    WebSocketMessage,
-} from "@/types/websocket.types";
 
-// ==== Context Types ====
+// Types
+type ConnectionStatus = "connected" | "disconnected" | "connecting" | "reconnecting" | "error";
 
-interface WebSocketContextType {
-    // Connection state
-    connectionStatus: ConnectionStatus;
-    isConnected: boolean;
-
-    // Actions
-    connect: () => void;
-    disconnect: () => void;
-    send: (message: OutgoingWebSocketMessage) => boolean;
-
-    // Handler registration
-    registerHandler: <T extends WebSocketMessage>(
-        type: MessageType,
-        handler: MessageHandler<T>
-    ) => () => void;
+interface UserStatus {
+    userId: string;
+    status: "online" | "offline";
+    lastSeen: Date | string | null;
+    username?: string;
 }
 
-// ==== Context ====
+interface WebSocketContextType {
+    connectionStatus: ConnectionStatus;
+    isConnected: boolean;
+    onlineUsers: UserStatus[];
+    userStatuses: Map<string, UserStatus>;
+    connect: () => void;
+    disconnect: () => void;
+    send: (message: any) => boolean;
+    getUserStatus: (userId: string) => UserStatus | undefined;
+    registerHandler: (type: string, handler: (data: any) => void) => () => void;
+}
 
-const WebSocketContext = createContext<WebSocketContextType | undefined>(
-    undefined
-);
-
-// ==== Provider ====
+const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
 
 interface WebSocketProviderProps {
     children: ReactNode;
@@ -58,71 +48,150 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
     children,
     autoConnect = true,
 }) => {
-    const [connectionStatus, setConnectionStatus] =
-        useState<ConnectionStatus>("disconnected");
+    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
+    const [onlineUsers, setOnlineUsers] = useState<UserStatus[]>([]);
+    const [userStatuses, setUserStatuses] = useState<Map<string, UserStatus>>(new Map());
 
-    // Derived state
     const isConnected = connectionStatus === "connected";
 
-    // Connect to WebSocket
+    // Initialize WebSocket service listeners
+    useEffect(() => {
+        // Listen for connection status changes
+       const unsubscribeStatus = webSocketService.onStatusChange((status) => {
+    const typedStatus = status as ConnectionStatus; // tell TS this is safe
+    setConnectionStatus(typedStatus);
+
+    if (typedStatus === "disconnected" || typedStatus === "error") {
+        setOnlineUsers([]);
+        setUserStatuses(new Map());
+    }
+});
+
+        // Handle initial online users list
+        const unsubscribeOnlineUsers = webSocketService.registerHandler("users_online", (message: any) => {
+            if (message.users && Array.isArray(message.users)) {
+                setOnlineUsers(message.users);
+                
+                const newStatuses = new Map(userStatuses);
+                message.users.forEach((user: UserStatus) => {
+                    newStatuses.set(user.userId, user);
+                });
+                setUserStatuses(newStatuses);
+            }
+        });
+
+        // Handle individual status changes
+        const unsubscribeStatusChange = webSocketService.registerHandler("user_status_change", (message: any) => {
+            if (message.data) {
+                const { userId, status, lastSeen, username } = message.data;
+                
+                // Update online users list
+                setOnlineUsers(prev => {
+                    if (status === "online") {
+                        const exists = prev.find(u => u.userId === userId);
+                        if (exists) {
+                            return prev.map(u => 
+                                u.userId === userId 
+                                    ? { ...u, status, lastSeen, username: username || u.username }
+                                    : u
+                            );
+                        } else {
+                            return [...prev, { userId, status, lastSeen, username }];
+                        }
+                    } else {
+                        return prev.filter(u => u.userId !== userId);
+                    }
+                });
+
+                // Update userStatuses map
+                setUserStatuses(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(userId, { userId, status, lastSeen, username });
+                    return newMap;
+                });
+
+                // Dispatch custom event for components
+                window.dispatchEvent(new CustomEvent("userStatusChange", { 
+                    detail: { userId, status, lastSeen } 
+                }));
+            }
+        });
+
+        // Handle bulk status responses
+        const unsubscribeStatuses = webSocketService.registerHandler("user_statuses", (message: any) => {
+            if (message.data) {
+                const newStatuses = new Map(userStatuses);
+                Object.entries(message.data).forEach(([userId, statusData]: [string, any]) => {
+                    newStatuses.set(userId, {
+                        userId,
+                        status: statusData.status,
+                        lastSeen: statusData.lastSeen,
+                        username: statusData.username
+                    });
+                });
+                setUserStatuses(newStatuses);
+            }
+        });
+
+        return () => {
+            unsubscribeStatus();
+            unsubscribeOnlineUsers();
+            unsubscribeStatusChange();
+            unsubscribeStatuses();
+        };
+    }, []);
+
+    // Auto-connect if enabled
+    useEffect(() => {
+        if (autoConnect) {
+            // Small delay to ensure component is mounted
+            const timer = setTimeout(() => {
+                connectWebSocket();
+            }, 100);
+            
+            return () => clearTimeout(timer);
+        }
+        
+        return () => {
+            disconnectWebSocket();
+        };
+    }, [autoConnect]);
+
     const connect = useCallback(() => {
         connectWebSocket();
     }, []);
 
-    // Disconnect from WebSocket
     const disconnect = useCallback(() => {
         disconnectWebSocket();
+        setOnlineUsers([]);
+        setUserStatuses(new Map());
     }, []);
 
-    // Send message
-    const send = useCallback((message: OutgoingWebSocketMessage): boolean => {
+    const send = useCallback((message: any): boolean => {
         return webSocketService.send(message);
     }, []);
 
-    // Register handler (memoized to prevent unnecessary re-renders)
-    const registerHandler = useCallback(
-        <T extends WebSocketMessage>(
-            type: MessageType,
-            handler: MessageHandler<T>
-        ): (() => void) => {
-            return webSocketService.registerHandler(type, handler);
-        },
-        []
-    );
-
-    // Subscribe to connection status changes
-    useEffect(() => {
-        const unsubscribe = webSocketService.onStatusChange((status) => {
-            setConnectionStatus(status);
-        });
-
-        return () => {
-            unsubscribe();
-        };
+    const registerHandler = useCallback((type: string, handler: (data: any) => void) => {
+        return webSocketService.registerHandler(type, handler);
     }, []);
 
-    // Auto-connect on mount
-    useEffect(() => {
-        if (autoConnect) {
-            connect();
-        }
+    const getUserStatus = useCallback((userId: string): UserStatus | undefined => {
+        return userStatuses.get(userId);
+    }, [userStatuses]);
 
-        return () => {
-            disconnect();
-        };
-    }, [autoConnect, connect, disconnect]);
-
-    // Memoized context value
     const value = useMemo(
         () => ({
             connectionStatus,
             isConnected,
+            onlineUsers,
+            userStatuses,
             connect,
             disconnect,
             send,
+            getUserStatus,
             registerHandler,
         }),
-        [connectionStatus, isConnected, connect, disconnect, send, registerHandler]
+        [connectionStatus, isConnected, onlineUsers, userStatuses, connect, disconnect, send, registerHandler, getUserStatus]
     );
 
     return (
@@ -132,8 +201,6 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
     );
 };
 
-// ==== Hook ====
-
 export const useWebSocket = (): WebSocketContextType => {
     const context = useContext(WebSocketContext);
     if (!context) {
@@ -142,24 +209,47 @@ export const useWebSocket = (): WebSocketContextType => {
     return context;
 };
 
-// ==== Utility Hook for registering handlers ====
-
-/**
- * Hook to register a WebSocket message handler
- * Automatically unregisters when component unmounts
- */
-export function useWebSocketHandler<T extends WebSocketMessage>(
-    type: MessageType,
-    handler: MessageHandler<T>,
-    deps: React.DependencyList = []
-) {
-    const { registerHandler } = useWebSocket();
+// Hook to track specific user status
+export function useUserStatus(userId: string) {
+    const { getUserStatus, isConnected } = useWebSocket();
+    const [status, setStatus] = useState<UserStatus | undefined>();
 
     useEffect(() => {
-        const unsubscribe = registerHandler(type, handler);
-        return () => {
-            unsubscribe();
+        if (!userId) return;
+
+        setStatus(getUserStatus(userId));
+
+        const handleStatusChange = (event: CustomEvent) => {
+            if (event.detail.userId === userId) {
+                setStatus({
+                    userId,
+                    status: event.detail.status,
+                    lastSeen: event.detail.lastSeen
+                });
+            }
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [type, registerHandler, ...deps]);
+
+        window.addEventListener("userStatusChange", handleStatusChange as EventListener);
+
+        return () => {
+            window.removeEventListener("userStatusChange", handleStatusChange as EventListener);
+        };
+    }, [userId, getUserStatus]);
+
+    return {
+        isOnline: status?.status === "online",
+        status: status?.status,
+        lastSeen: status?.lastSeen,
+        loading: !status && isConnected
+    };
+}
+
+// Hook to get all online users
+export function useOnlineUsers() {
+    const { onlineUsers, isConnected } = useWebSocket();
+    return {
+        onlineUsers,
+        count: onlineUsers.length,
+        isConnected
+    };
 }

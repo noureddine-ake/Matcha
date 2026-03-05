@@ -4,6 +4,9 @@ import jwtHelper from '../middlewares/authMiddleware.js';
 // Store connected clients: userId -> WebSocket connection
 const clients = new Map();
 
+// Store user status with timestamps: userId -> { status: 'online'|'offline', lastSeen: Date }
+const userStatus = new Map();
+
 // Chat-specific handlers
 const chatHandlers = new Map();
 
@@ -25,7 +28,7 @@ export const setupWebSocket = (server) => {
     }
 
     try {
-      // Use your existing decodeToken function
+      // Decode token
       const decoded = jwtHelper.decodeToken(token);
       
       if (!decoded) {
@@ -34,17 +37,58 @@ export const setupWebSocket = (server) => {
         return;
       }
 
-      const userId = decoded.data.id;
+      // Extract user ID from token (try different paths)
+      let userId = null;
+      if (decoded.data && decoded.data.id) {
+        userId = decoded.data.id;
+      } else if (decoded.id) {
+        userId = decoded.id;
+      } else if (decoded.userId) {
+        userId = decoded.userId;
+      } else if (decoded.sub) {
+        userId = decoded.sub;
+      }
+
+      if (!userId) {
+        console.log('❌ Could not extract userId from token');
+        ws.close(1008, 'Invalid token structure');
+        return;
+      }
+
+      // Convert to string for consistent comparison
+      userId = userId.toString();
+
+      // Get username from token
+      const username = decoded.data?.username || decoded.username || `User ${userId}`;
 
       // Store connection
       clients.set(userId, ws);
-      console.log(`✅ User ${userId} connected via WebSocket`);
+      
+      // Update user status to online
+      userStatus.set(userId, { 
+        status: 'online', 
+        lastSeen: new Date(),
+        username
+      });
+      
+      console.log(`✅ User ${userId} (${username}) connected`);
+      console.log(`📊 Total connected: ${clients.size}`);
 
-      // Send connection success message
+      // Broadcast status change to all connected clients
+      broadcastUserStatus(userId, 'online', username);
+
+      // Send connection success message with current online users
       ws.send(JSON.stringify({
         type: 'connection',
         message: 'Connected to notification service',
-        userId
+        userId,
+        onlineUsers: getOnlineUsersList()
+      }));
+
+      // Send initial online users list
+      ws.send(JSON.stringify({
+        type: 'users_online',
+        users: getOnlineUsersList()
       }));
 
       // Handle client messages
@@ -52,16 +96,24 @@ export const setupWebSocket = (server) => {
         try {
           const data = JSON.parse(message);
           
-          // Handle ping
           if (data.type === 'ping') {
             ws.send(JSON.stringify({ type: 'pong' }));
+            
+            // Update last seen on ping
+            const status = userStatus.get(userId);
+            if (status) {
+              status.lastSeen = new Date();
+              userStatus.set(userId, status);
+            }
           }
-          // Handle chat messages
           else if (data.type === 'chat_message' || 
                    data.type === 'typing_start' || 
                    data.type === 'typing_stop' ||
                    data.type === 'mark_read') {
             handleChatMessage(userId, data);
+          }
+          else if (data.type === 'get_user_status') {
+            handleStatusRequest(ws, data);
           }
         } catch (error) {
           console.error('Error parsing message:', error);
@@ -71,147 +123,172 @@ export const setupWebSocket = (server) => {
       // Handle disconnection
       ws.on('close', () => {
         clients.delete(userId);
+        
+        const status = userStatus.get(userId);
+        if (status) {
+          status.status = 'offline';
+          status.lastSeen = new Date();
+          userStatus.set(userId, status);
+        }
+        
         console.log(`🔌 User ${userId} disconnected`);
+        console.log(`📊 Remaining connected: ${clients.size}`);
+        
+        broadcastUserStatus(userId, 'offline');
       });
 
       // Handle errors
       ws.on('error', (error) => {
         console.error(`WebSocket error for user ${userId}:`, error);
         clients.delete(userId);
+        
+        const status = userStatus.get(userId);
+        if (status) {
+          status.status = 'offline';
+          status.lastSeen = new Date();
+          userStatus.set(userId, status);
+        }
+        
+        broadcastUserStatus(userId, 'offline');
       });
 
     } catch (error) {
-      console.log('❌ Invalid token:', error.message);
+      console.log('❌ Error:', error.message);
       ws.close(1008, 'Invalid authentication token');
     }
   });
 
-  console.log('🚀 WebSocket server initialized with chat support');
-
+  console.log('🚀 WebSocket server initialized');
   return wss;
 };
 
-// Handle chat-specific messages
-// In your websocket.js file, update the handleChatMessage function:
-
-// Handle chat-specific messages
-async function handleChatMessage(senderId, data) {
-  console.log("🟡 WebSocket chat message:", data.type, "from:", senderId);
+// Handle status request
+function handleStatusRequest(ws, data) {
+  const { userIds } = data;
   
-  const handler = chatHandlers.get(data.type);
-  if (handler) {
-    await handler(senderId, data);
-  } else {
-    console.log(`Unknown chat message type: ${data.type}`);
+  if (Array.isArray(userIds)) {
+    const statuses = {};
+    userIds.forEach(id => {
+      const idStr = id.toString();
+      const status = userStatus.get(idStr) || { 
+        status: 'offline', 
+        lastSeen: null,
+        username: null 
+      };
+      statuses[idStr] = {
+        status: status.status,
+        lastSeen: status.lastSeen,
+        username: status.username
+      };
+    });
+    
+    ws.send(JSON.stringify({
+      type: 'user_statuses',
+      data: statuses
+    }));
   }
 }
 
-// Add this function to send real-time messages
+// Broadcast user status change to all connected clients
+function broadcastUserStatus(userId, status, username = null) {
+  const statusData = {
+    userId,
+    status,
+    lastSeen: new Date(),
+    username,
+    timestamp: new Date().toISOString()
+  };
+
+  clients.forEach((client) => {
+    if (client.readyState === 1) {
+      client.send(JSON.stringify({
+        type: 'user_status_change',
+        data: statusData
+      }));
+    }
+  });
+  
+  console.log(`📢 User ${userId} is now ${status}`);
+}
+
+// Handle chat messages
+async function handleChatMessage(senderId, data) {
+  const handler = chatHandlers.get(data.type);
+  if (handler) {
+    await handler(senderId, data);
+  }
+}
+
+// Send real-time message
 export const sendRealTimeMessage = (receiverId, messageData) => {
-  const client = clients.get(receiverId);
+  const receiverIdStr = receiverId.toString();
+  const client = clients.get(receiverIdStr);
   
   if (client && client.readyState === 1) {
     client.send(JSON.stringify({
       type: 'chat_message',
       data: messageData
     }));
-    console.log(`💬 Real-time message sent to user ${receiverId}`);
     return true;
   }
   
-  console.log(`⚠️  User ${receiverId} not connected for real-time message`);
+  console.log(`⚠️ User ${receiverIdStr} not connected`);
   return false;
 };
-// Register chat message handlers
+
+// Register chat handler
 export const registerChatHandler = (messageType, handler) => {
   chatHandlers.set(messageType, handler);
 };
 
-// Send notification to specific user
+// Send notification
 export const sendNotificationToUser = (userId, notification) => {
-  const client = clients.get(userId);
+  const userIdStr = userId.toString();
+  const client = clients.get(userIdStr);
 
   if (client && client.readyState === 1) {
     client.send(JSON.stringify({
       type: 'notification',
       data: notification
     }));
-    console.log(`📤 Sent notification to user ${userId}`);
-    return true;
-  }
-  
-  console.log(`⚠️  User ${userId} not connected`);
-  return false;
-};
-
-// Send message to specific user (for real-time chat)
-export const sendMessageToUser = (userId, message) => {
-  const client = clients.get(userId);
-  
-  if (client && client.readyState === 1) {
-    client.send(JSON.stringify({
-      type: 'message',
-      data: message
-    }));
-    console.log(`💬 Sent message to user ${userId}`);
     return true;
   }
   
   return false;
 };
 
-// Send chat message to specific user
-export const sendChatMessageToUser = (userId, chatData) => {
-  const client = clients.get(userId);
-  
-  if (client && client.readyState === 1) {
-    client.send(JSON.stringify({
-      type: 'chat_message',
-      data: chatData
-    }));
-    console.log(`💬 Sent chat message to user ${userId}`);
-    return true;
-  }
-  
-  return false;
-};
-
-// Send typing indicator
-export const sendTypingIndicator = (userId, typingData) => {
-  const client = clients.get(userId);
-  
-  if (client && client.readyState === 1) {
-    client.send(JSON.stringify({
-      type: typingData.isTyping ? 'typing_start' : 'typing_stop',
-      data: typingData
-    }));
-    return true;
-  }
-  
-  return false;
-};
-
-// Broadcast to all connected clients (optional)
-export const broadcastToAll = (data) => {
-  let sentCount = 0;
-
+// Get online users list with details
+export const getOnlineUsersList = () => {
+  const onlineUsers = [];
   clients.forEach((client, userId) => {
     if (client.readyState === 1) {
-      client.send(JSON.stringify(data));
-      sentCount++;
+      const status = userStatus.get(userId) || { 
+        status: 'online', 
+        lastSeen: new Date(),
+        username: `User ${userId}`
+      };
+      onlineUsers.push({
+        userId,
+        status: status.status,
+        lastSeen: status.lastSeen,
+        username: status.username
+      });
     }
   });
-
-  console.log(`📢 Broadcast sent to ${sentCount} users`);
-};
-
-// Get online users
-export const getOnlineUsers = () => {
-  return Array.from(clients.keys());
+  return onlineUsers;
 };
 
 // Check if user is online
 export const isUserOnline = (userId) => {
-  const client = clients.get(userId);
+  const userIdStr = userId.toString();
+  const client = clients.get(userIdStr);
   return client && client.readyState === 1;
+};
+
+// Debug function
+export const debugConnections = () => {
+  return {
+    connectedUsers: Array.from(clients.keys()),
+    userStatuses: Array.from(userStatus.entries())
+  };
 };

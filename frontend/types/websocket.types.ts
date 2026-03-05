@@ -153,7 +153,7 @@ export const SYSTEM_MESSAGE_TYPES = [
 export type ChatMessageType = typeof CHAT_MESSAGE_TYPES[number];
 export type NotificationMessageType = typeof NOTIFICATION_MESSAGE_TYPES[number];
 export type SystemMessageType = typeof SYSTEM_MESSAGE_TYPES[number];
-export type MessageType = ChatMessageType | NotificationMessageType | SystemMessageType;
+export type MessageType = ChatMessageType | NotificationMessageType | SystemMessageType | "users_online" | "user_status_change" | "user_statuses" | string; // add user status types
 
 // ==== Handler Types ====
 

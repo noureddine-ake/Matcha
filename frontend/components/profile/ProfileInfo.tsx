@@ -49,7 +49,7 @@ export default function ProfileInfo({
                 <div className="flex items-center gap-4 mt-3">
                     <div className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full">
                         <Heart className="w-5 h-5 text-red-500 fill-current" />
-                        <span className="font-semibold">4.8</span>
+                        <span className="font-semibold">{currentProfile.fame_rating}</span>
                     </div>
                     <div className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full">
                         <VenusAndMars className="w-5 h-5 text-blue-400" />

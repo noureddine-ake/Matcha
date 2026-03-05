@@ -3,7 +3,7 @@ import { pool } from '../config/config.js';
 // suggested profiles 2
 export const searchSuggestions2 = async (userId, filters) => {
   const query = `
-  WITH user_location AS (
+  WITH current_user_location AS (
     SELECT latitude, longitude FROM profiles WHERE user_id = $1
   ),
   current_user_tags AS (
@@ -21,15 +21,15 @@ export const searchSuggestions2 = async (userId, filters) => {
     p.country,
     p.is_online,
     p.last_seen,
+    p.latitude,
+    p.longitude,
     EXTRACT(YEAR FROM AGE(p.birth_date)) as age,
     -- Calculate distance in km using Haversine formula
     ROUND(
       6371 * acos(
-        cos(radians((SELECT latitude FROM user_location))) * 
-        cos(radians(p.latitude)) * 
-        cos(radians(p.longitude) - radians((SELECT longitude FROM user_location))) + 
-        sin(radians((SELECT latitude FROM user_location))) * 
-        sin(radians(p.latitude))
+        cos(radians(curr.latitude)) * cos(radians(p.latitude)) * 
+        cos(radians(p.longitude) - radians(curr.longitude)) + 
+        sin(radians(curr.latitude)) * sin(radians(p.latitude))
       )
     ) as distance,
     -- Count common tags
@@ -38,7 +38,7 @@ export const searchSuggestions2 = async (userId, filters) => {
      WHERE ut_current.user_id = u.id 
      AND ut_current.tag_id IN (SELECT tag_id FROM current_user_tags)
     ) as common_tags,
-    -- Get user's tags (using subquery instead of JOIN)
+    -- Get user's tags
     (SELECT array_agg(DISTINCT t.name)
      FROM user_tags ut_tags
      INNER JOIN tags t ON ut_tags.tag_id = t.id
@@ -48,13 +48,13 @@ export const searchSuggestions2 = async (userId, filters) => {
     (
       SELECT json_agg(
         json_build_object(
-          'id', p.id,
-          'photo_url', p.photo_url,
-          'is_profile_picture', p.is_profile_picture
+          'id', ph.id,
+          'photo_url', ph.photo_url,
+          'is_profile_picture', ph.is_profile_picture
         )
       )
-      FROM photos p
-      WHERE p.user_id = u.id
+      FROM photos ph
+      WHERE ph.user_id = u.id
     ) AS photos,
     -- Check if already liked
     EXISTS(SELECT 1 FROM likes WHERE liker_user_id = $1 AND liked_user_id = u.id) as already_liked,
@@ -62,46 +62,43 @@ export const searchSuggestions2 = async (userId, filters) => {
     EXISTS(SELECT 1 FROM likes WHERE liker_user_id = u.id AND liked_user_id = $1) as they_liked_us
   FROM users u
   INNER JOIN profiles p ON u.id = p.user_id
+  CROSS JOIN current_user_location curr
   WHERE u.id != $1
     AND u.is_verified = TRUE
     AND p.gender IS NOT NULL
     AND p.sexual_preference IS NOT NULL
     AND p.biography IS NOT NULL
+    AND p.latitude IS NOT NULL
+    AND p.longitude IS NOT NULL
+    AND curr.latitude IS NOT NULL
+    AND curr.longitude IS NOT NULL
     AND EXISTS(SELECT 1 FROM photos WHERE user_id = u.id AND is_profile_picture = TRUE)
     -- Not blocked by current user or blocking current user
     AND NOT EXISTS(SELECT 1 FROM blocks WHERE blocker_user_id = $1 AND blocked_user_id = u.id)
     AND NOT EXISTS(SELECT 1 FROM blocks WHERE blocker_user_id = u.id AND blocked_user_id = $1)
-    -- Not blocked by current user or blocking current user
+    -- Not already liked
     AND NOT EXISTS(SELECT 1 FROM likes WHERE liker_user_id = $1 AND liked_user_id = u.id)
+    -- Distance filter in WHERE
+    AND (
+      6371 * acos(
+        cos(radians(curr.latitude)) * cos(radians(p.latitude)) * 
+        cos(radians(p.longitude) - radians(curr.longitude)) + 
+        sin(radians(curr.latitude)) * sin(radians(p.latitude))
+      )
+    ) <= $2
     -- Apply gender filter
     ${filters.genderFilter}
     -- Apply mutual preference filter
     ${filters.mutualPreferenceFilter}
-  GROUP BY u.id, u.username, u.first_name, u.last_name, p.gender, p.biography, 
-           p.fame_rating, p.city, p.country, p.latitude, p.longitude, p.birth_date,
-           p.is_online, p.last_seen
-  HAVING 
-    -- Distance filter
-    ROUND(6371 * acos(
-      cos(radians((SELECT latitude FROM user_location))) * 
-      cos(radians(p.latitude)) * 
-      cos(radians(p.longitude) - radians((SELECT longitude FROM user_location))) + 
-      sin(radians((SELECT latitude FROM user_location))) * 
-      sin(radians(p.latitude))
-    )) <= $2
     -- Age filters
     ${
       filters.minAge
-        ? `AND EXTRACT(YEAR FROM AGE(p.birth_date)) >= ${parseInt(
-            filters.minAge
-          )}`
+        ? `AND EXTRACT(YEAR FROM AGE(p.birth_date)) >= ${parseInt(filters.minAge)}`
         : ''
     }
     ${
       filters.maxAge
-        ? `AND EXTRACT(YEAR FROM AGE(p.birth_date)) <= ${parseInt(
-            filters.maxAge
-          )}`
+        ? `AND EXTRACT(YEAR FROM AGE(p.birth_date)) <= ${parseInt(filters.maxAge)}`
         : ''
     }
     -- Fame filters
@@ -115,17 +112,29 @@ export const searchSuggestions2 = async (userId, filters) => {
         ? `AND p.fame_rating <= ${parseFloat(filters.maxFame)}`
         : ''
     }
+  GROUP BY u.id, u.username, u.first_name, u.last_name, p.gender, p.biography, 
+           p.fame_rating, p.city, p.country, p.latitude, p.longitude, p.birth_date,
+           p.is_online, p.last_seen, curr.latitude, curr.longitude
   ${filters.orderByClause}
   LIMIT $3 OFFSET $4
 `;
 
   const values = [
     userId,
-    filters.maxDistance,
-    parseInt(filters.limit),
-    parseInt(filters.offset),
+    parseInt(filters.maxDistance) || 500,
+    parseInt(filters.limit) || 20,
+    parseInt(filters.offset) || 0,
   ];
+  
+  console.log('[searchSuggestions2] filters:', JSON.stringify(filters, null, 2));
+  console.log('[searchSuggestions2] values:', values);
+  console.log('[searchSuggestions2] full query:', query);
+  
   const ret = await pool.query(query, values);
+  
+  console.log('[searchSuggestions2] result rowCount:', ret.rowCount);
+  console.log('[searchSuggestions2] result rows:', JSON.stringify(ret.rows, null, 2));
+  
   return ret;
 };
 
@@ -176,7 +185,7 @@ export const getAllMatches = async (data) => {
     LEFT JOIN photos ph ON ph.user_id = u.id
     LEFT JOIN user_tags ut ON ut.user_id = u.id
     LEFT JOIN tags t ON t.id = ut.tag_id
-    WHERE l1.liker_user_id = $1  -- current user ID
+    WHERE l1.liker_user_id = $1
     GROUP BY 
       u.id, u.username, u.first_name, u.last_name,
       p.gender, p.sexual_preference, p.biography, p.city, p.country,
@@ -270,7 +279,6 @@ export const getUserLikes = async (userId) => {
   const current = await pool.query(query, values);
   return current;
 };
-
 
 /**
  * Get total number of matches for a user

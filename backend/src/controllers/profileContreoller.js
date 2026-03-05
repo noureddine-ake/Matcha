@@ -26,6 +26,19 @@ import { pool } from '../config/config.js';
 import fs from 'fs';
 import path from 'path';
 import JWT from '../middlewares/authMiddleware.js';
+
+const MIN_AGE = 18;
+
+const isValidAge = (birthDateStr) => {
+  const birthDate = new Date(birthDateStr);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age >= MIN_AGE;
+};
 import {
   recordProfileView,
   getProfileViewCount,
@@ -127,11 +140,27 @@ export const getProfileUser = async (req, res) => {
     const user = userResult.rows[0];
     const viewedId = user.id;
 
-    // 2. Prevent recording view if user visits their own profile
     if (viewerId && viewerId !== viewedId) {
-      // send notif
-      await createAndSendNotification(viewedId,notificationTypes.VIEW, viewerId);
-      await recordProfileView(viewerId, viewedId); // ✅ Record the view
+      const blockCheck = await pool.query(
+        `SELECT
+          EXISTS(SELECT 1 FROM blocks WHERE blocker_user_id = $1 AND blocked_user_id = $2) AS "iBlocked",
+          EXISTS(SELECT 1 FROM blocks WHERE blocker_user_id = $2 AND blocked_user_id = $1) AS "theyBlocked"`,
+        [viewerId, viewedId]
+      );
+      const { iBlocked, theyBlocked } = blockCheck.rows[0];
+      if (iBlocked || theyBlocked) {
+        return res.status(403).json({
+          error: 'blocked',
+          iBlocked,
+          theyBlocked,
+          username: user.username,
+        });
+      }
+    }
+
+    if (viewerId && viewerId !== viewedId) {
+      await createAndSendNotification(viewedId, notificationTypes.VIEW, viewerId);
+      await recordProfileView(viewerId, viewedId);
     }
 
     // 3. Get profile
@@ -271,12 +300,17 @@ export const updateProfile = async (req, res) => {
             ? 'female'
             : 'both';
     }
-    if (req.body.biography && req.body.biography.length < 150) profileUpdates.biography = req.body.biography;
+    if (req.body.biography && req.body.biography.length <= 150) profileUpdates.biography = req.body.biography;
     if (req.body.latitude) profileUpdates.latitude = req.body.latitude;
     if (req.body.longitude) profileUpdates.longitude = req.body.longitude;
 
     // Validate and update birth date if provided
     if (req.body.birth_date && !isNaN(Date.parse(req.body.birth_date))) {
+      if (!isValidAge(req.body.birth_date)) {
+        return res.status(400).json({
+          error: `You must be at least ${MIN_AGE} years old`,
+        });
+      }
       profileUpdates.birth_date = req.body.birth_date;
     }
 
@@ -357,8 +391,8 @@ export const updateProfile = async (req, res) => {
             : 'both',
       biography: updatedProfile.biography,
       birth_date: updatedProfile.birth_date,
-      city: 'ifrane', // Note: This seems hardcoded - consider using updatedProfile.city
-      country: 'morocco', // Note: This seems hardcoded - consider using updatedProfile.country
+      city: updatedProfile.city,
+      country: updatedProfile.country,
       photos: photos,
       tags: tags,
       position: {
@@ -564,6 +598,15 @@ export const logoutController = (req, res) => {
 export const completeProfile = async (req, res) => {
   try {
     const userTokenData = req.user.data;
+
+    // Validate age
+    if (req.body.birth_date) {
+      if (!isValidAge(req.body.birth_date)) {
+        return res.status(400).json({
+          error: `You must be at least ${MIN_AGE} years old`,
+        });
+      }
+    }
 
     // Check if profile already exists
     const isProfileExisted = await checkExistedProfiles(userTokenData.id);

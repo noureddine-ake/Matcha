@@ -30,6 +30,7 @@ export interface User {
   photos: Photo[];
   tags: Tag[];
   position: Position;
+  fame_rating?: string;
   stats: Stats;
 };
 
@@ -72,8 +73,8 @@ export interface Stats {
 interface GlobalContextType {
   user: User | null;
   loading: boolean;
+  updating: boolean;
   error: string | null;
-  profile: User | null;
 
   // Functions
   fetchProfile: () => Promise<void>;
@@ -89,16 +90,14 @@ const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ==== Fetch profile ====
   const fetchProfile = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get<User>('/profile');
-      console.log("ttt", res.data)
       setUser(res.data);
       setError(null);
     } catch (err) {
@@ -110,55 +109,44 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const updateProfile = useCallback(async (formdata: FormUpdateUser) => {
-    setLoading(true);
+    setUpdating(true);
     setError("");
 
     try {
       const res = await api.put<User>("/profile/update", formdata);
-      console.log("hehehehe", res.data)
       setUser(res.data);
 
     } catch (err: unknown) {
       console.error("Profile update failed:", err);
-      // if (err instanceof AxiosError)
-      //   setError(err.response?.data?.message || "Failed to update profile");
     } finally {
-      setLoading(false);
+      setUpdating(false);
     }
   }, [])
 
-  // ==== Fetch user profile by username ====
   const fetchUserProfile = useCallback(
     async (username: string): Promise<User | null> => {
       try {
         const res = await api.get<User>(`/profile/user/${username}`);
-        const userProfile = res.data;
-        if (userProfile) {
-          setProfile(userProfile as User);
-
-          console.log("profile :", profile);
-        }
         return res.data;
       } catch (err) {
         console.error('Failed to fetch user profile:', err);
         return null;
       }
     },
-    [profile]
+    []
   );
 
-  // ==== Memoized value ====
   const value = useMemo(
     () => ({
       user,
       loading,
+      updating,
       error,
-      profile,
       fetchProfile,
       updateProfile,
       fetchUserProfile,
     }),
-    [user, loading, profile, error, fetchProfile, updateProfile, fetchUserProfile]
+    [user, loading, updating, error, fetchProfile, updateProfile, fetchUserProfile]
   );
 
   return (

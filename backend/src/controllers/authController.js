@@ -40,8 +40,9 @@ export const registrationControler = async (req, res) => {
     });
     res.cookie('token', token, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     const code = Math.floor(100000 + Math.random() * 900000);
     const now = new Date(Date.now() + 5 * 60 * 1000);
@@ -126,8 +127,9 @@ export const loginController = async (req, res) => {
     // Set cookie with token
     res.cookie('token', token, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     // Return success response with user data (excluding sensitive info)

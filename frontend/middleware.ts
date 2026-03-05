@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 const protectedRoutes = ['/profile', '/dashboard', '/settings', '/auth/verify-email'];
 const authRoutes = ['/auth/login', '/auth/registration'];
-const completionRoutes = ['/profile/complete', '/auth/verify-email'];
+const completionRoutes = ['/auth/profile/complete', '/auth/verify-email'];
 
 function decodeJwt(token: string) {
   try {
@@ -25,7 +25,6 @@ export function middleware(req: NextRequest) {
   const token = req.cookies.get('token')?.value;
   const { pathname } = req.nextUrl;
   const url = req.nextUrl.clone();
-  console.log("dkhel hhhh");
 
   // 1️⃣ No token → protect private routes
   if (!token) {
@@ -55,8 +54,8 @@ export function middleware(req: NextRequest) {
   }
 
   // 4️⃣ Redirect incomplete profiles (except on completion page)
-  if (is_verified && !completed_profile && !pathname.startsWith('/profile/complete')) {
-    url.pathname = '/profile/complete';
+  if (is_verified && !completed_profile && !pathname.startsWith('/auth/profile/complete')) {
+    url.pathname = '/auth/profile/complete';
     return NextResponse.redirect(url);
   }
 
