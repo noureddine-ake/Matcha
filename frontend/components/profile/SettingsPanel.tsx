@@ -72,7 +72,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [loadingBlocked, setLoadingBlocked] = useState(false);
   const router = useRouter();
 
-  const { user, updateProfile, loading: profileLoading } = useGlobal();
+  const { user, updateProfile, updating: profileLoading } = useGlobal();
 
   const [formData, setFormData] = useState<Partial<FormUpdateUser>>({
     first_name: user?.first_name || "",

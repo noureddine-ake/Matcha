@@ -3,21 +3,17 @@
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/contexts/notifications-provider";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, X, Heart, MessageCircle, Eye, Sparkles } from "lucide-react";
+import { Bell, Heart, HeartCrack, MessageCircle, Eye, Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
-    case "like":
-      return <Heart className="w-4 h-4 text-pink-400" />;
-    case "match":
-      return <Sparkles className="w-4 h-4 text-purple-400" />;
-    case "message":
-      return <MessageCircle className="w-4 h-4 text-blue-400" />;
-    case "view":
-      return <Eye className="w-4 h-4 text-green-400" />;
-    default:
-      return <Bell className="w-4 h-4 text-white/60" />;
+    case "like":    return <Heart className="w-4 h-4 text-pink-400" />;
+    case "match":   return <Sparkles className="w-4 h-4 text-purple-400" />;
+    case "message": return <MessageCircle className="w-4 h-4 text-blue-400" />;
+    case "view":    return <Eye className="w-4 h-4 text-green-400" />;
+    case "unlike":  return <HeartCrack className="w-4 h-4 text-red-400" />;
+    default:        return <Bell className="w-4 h-4 text-white/60" />;
   }
 };
 
@@ -115,11 +111,13 @@ const NotificationPopup = () => {
                                 (n.type === "like"
                                   ? `${n.from_username} liked your profile`
                                   : n.type === "match"
-                                  ? `You got a new match with ${n.from_username}`
+                                  ? `You matched with ${n.from_username}!`
                                   : n.type === "message"
-                                  ? `You received a new message from ${n.from_username}`
+                                  ? `New message from ${n.from_username}`
                                   : n.type === "view"
-                                  ? `You received a new view from ${n.from_username}`
+                                  ? `${n.from_username} viewed your profile`
+                                  : n.type === "unlike"
+                                  ? `${n.from_username} unliked your profile`
                                   : "New notification")}
                             </p>
                             <p className="text-xs text-white/40 mt-1">

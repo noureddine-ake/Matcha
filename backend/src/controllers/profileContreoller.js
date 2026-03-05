@@ -140,11 +140,27 @@ export const getProfileUser = async (req, res) => {
     const user = userResult.rows[0];
     const viewedId = user.id;
 
-    // 2. Prevent recording view if user visits their own profile
     if (viewerId && viewerId !== viewedId) {
-      // send notif
-      await createAndSendNotification(viewedId,notificationTypes.VIEW, viewerId);
-      await recordProfileView(viewerId, viewedId); // ✅ Record the view
+      const blockCheck = await pool.query(
+        `SELECT
+          EXISTS(SELECT 1 FROM blocks WHERE blocker_user_id = $1 AND blocked_user_id = $2) AS "iBlocked",
+          EXISTS(SELECT 1 FROM blocks WHERE blocker_user_id = $2 AND blocked_user_id = $1) AS "theyBlocked"`,
+        [viewerId, viewedId]
+      );
+      const { iBlocked, theyBlocked } = blockCheck.rows[0];
+      if (iBlocked || theyBlocked) {
+        return res.status(403).json({
+          error: 'blocked',
+          iBlocked,
+          theyBlocked,
+          username: user.username,
+        });
+      }
+    }
+
+    if (viewerId && viewerId !== viewedId) {
+      await createAndSendNotification(viewedId, notificationTypes.VIEW, viewerId);
+      await recordProfileView(viewerId, viewedId);
     }
 
     // 3. Get profile

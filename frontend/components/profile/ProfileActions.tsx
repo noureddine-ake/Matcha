@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Heart, MessageCircle, Flag, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Heart, HeartCrack, MessageCircle, Flag, ThumbsDown, ThumbsUp, Sparkles } from "lucide-react";
 import api from "@/lib/api";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -13,46 +13,84 @@ interface ProfileActionsProps {
     userId?: string;
 }
 
+interface LikeStatus {
+    iLiked: boolean;
+    theyLiked: boolean;
+    isMatch: boolean;
+}
+
 export default function ProfileActions({ isCurrentUser, username, userId }: ProfileActionsProps) {
     const [isReporting, setIsReporting] = useState(false);
     const [reportReason, setReportReason] = useState("fake_account");
     const [showReportModal, setShowReportModal] = useState(false);
     const [isBlocked, setIsBlocked] = useState(false);
     const [isLoadingBlockStatus, setIsLoadingBlockStatus] = useState(true);
+    const [likeStatus, setLikeStatus] = useState<LikeStatus>({ iLiked: false, theyLiked: false, isMatch: false });
+    const [isLoadingLikeStatus, setIsLoadingLikeStatus] = useState(true);
+    const [isLikeActionPending, setIsLikeActionPending] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
         if (!username || isCurrentUser) {
             setIsLoadingBlockStatus(false);
+            setIsLoadingLikeStatus(false);
             return;
         }
 
-        const checkBlockStatus = async () => {
+        const checkStatuses = async () => {
             try {
-                const response = await api.get(`/users/block/${username}/status`);
-                setIsBlocked(response.data.isBlocked);
+                const [blockRes, likeRes] = await Promise.all([
+                    api.get(`/users/block/${username}/status`),
+                    api.get(`/like/${username}/status`),
+                ]);
+                setIsBlocked(blockRes.data.isBlocked);
+                setLikeStatus(likeRes.data);
             } catch (err) {
-                console.error("Error checking block status:", err);
+                console.error("Error checking statuses:", err);
             } finally {
                 setIsLoadingBlockStatus(false);
+                setIsLoadingLikeStatus(false);
             }
         };
 
-        checkBlockStatus();
+        checkStatuses();
     }, [username, isCurrentUser]);
 
     const handleLike = async () => {
+        setIsLikeActionPending(true);
         try {
-            await api.post(`/like/${username}`);
-            toast.success("Liked!");
+            const res = await api.post(`/like/${username}`);
+            const isMatch = res.data.isMatch;
+            setLikeStatus({ iLiked: true, theyLiked: likeStatus.theyLiked, isMatch });
+            if (isMatch) {
+                toast.success(`You matched with ${username}! 🎉`);
+            } else {
+                toast.success(`You liked ${username}`);
+            }
         } catch (err) {
             console.error("Error liking user:", err);
             toast.error("Failed to like user");
+        } finally {
+            setIsLikeActionPending(false);
+        }
+    };
+
+    const handleUnlike = async () => {
+        setIsLikeActionPending(true);
+        try {
+            await api.delete(`/like/${username}`);
+            setLikeStatus({ iLiked: false, theyLiked: likeStatus.theyLiked, isMatch: false });
+            toast.success(`Unliked ${username}`);
+        } catch (err) {
+            console.error("Error unliking user:", err);
+            toast.error("Failed to unlike user");
+        } finally {
+            setIsLikeActionPending(false);
         }
     };
 
     const handleChat = () => {
-        console.log("Open chat with:", username);
+        router.push(`/chat?username=${username}`);
     };
 
     const handleReport = () => {
@@ -86,7 +124,7 @@ export default function ProfileActions({ isCurrentUser, username, userId }: Prof
             toast.error("User ID not found");
             return;
         }
-        
+
         setIsReporting(true);
         try {
             const response = await api.post(`/reports/${userId}`, {
@@ -102,7 +140,7 @@ export default function ProfileActions({ isCurrentUser, username, userId }: Prof
             }
         } catch (err: unknown) {
             console.error("Error reporting user:", err);
-            
+
             const axiosErr = err as { response?: { status?: number; data?: { message?: string } } };
             if (axiosErr.response?.status === 400) {
                 toast.error(axiosErr.response.data?.message || "Cannot report this user");
@@ -126,33 +164,102 @@ export default function ProfileActions({ isCurrentUser, username, userId }: Prof
         { value: "other", label: "Other" }
     ];
 
-    if (isCurrentUser) {
-        return null;
-    }
+    if (isCurrentUser) return null;
 
-    if (isLoadingBlockStatus) {
+    if (isLoadingBlockStatus || isLoadingLikeStatus) {
         return (
             <div className="flex flex-wrap gap-3 p-4">
-                <div className="w-24 h-12 bg-gray-800 animate-pulse rounded-xl"></div>
-                <div className="w-24 h-12 bg-gray-800 animate-pulse rounded-xl"></div>
+                <div className="w-28 h-12 bg-gray-800 animate-pulse rounded-xl" />
+                <div className="w-24 h-12 bg-gray-800 animate-pulse rounded-xl" />
             </div>
         );
     }
+
+    const renderLikeButton = () => {
+        const { iLiked, theyLiked, isMatch } = likeStatus;
+
+        if (isMatch) {
+            return (
+                <div className="flex items-center gap-2">
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        disabled
+                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl shadow-lg font-semibold shadow-green-900/30 cursor-default"
+                    >
+                        <Sparkles className="w-5 h-5" />
+                        Connected
+                    </motion.button>
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleUnlike}
+                        disabled={isLikeActionPending}
+                        className="flex items-center gap-2 px-4 py-3 bg-gray-800 hover:bg-red-900/40 text-gray-300 hover:text-red-400 rounded-xl shadow-lg transition-all duration-300 border border-gray-700 hover:border-red-700 disabled:opacity-50"
+                    >
+                        <HeartCrack className="w-5 h-5" />
+                        Disconnect
+                    </motion.button>
+                </div>
+            );
+        }
+
+        if (iLiked) {
+            return (
+                <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleUnlike}
+                    disabled={isLikeActionPending}
+                    className="flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-xl shadow-lg transition-all duration-300 border border-gray-600 disabled:opacity-50"
+                >
+                    <HeartCrack className="w-5 h-5 text-red-400" />
+                    Unlike
+                </motion.button>
+            );
+        }
+
+        if (theyLiked) {
+            return (
+                <div className="flex flex-col gap-1">
+                    <span className="text-xs text-pink-400 font-medium px-1 flex items-center gap-1">
+                        <Heart className="w-3 h-3 fill-pink-400" />
+                        {username} liked you
+                    </span>
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleLike}
+                        disabled={isLikeActionPending}
+                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white rounded-xl shadow-lg transition-all duration-300 font-semibold shadow-pink-900/30 disabled:opacity-50"
+                    >
+                        <Heart className="w-5 h-5" />
+                        Like Back
+                    </motion.button>
+                </div>
+            );
+        }
+
+        return (
+            <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleLike}
+                disabled={isLikeActionPending}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white rounded-xl shadow-lg transition-all duration-300 font-semibold shadow-pink-900/30 disabled:opacity-50"
+            >
+                <Heart className="w-5 h-5" />
+                Like
+            </motion.button>
+        );
+    };
 
     return (
         <>
             <div className="flex flex-wrap gap-3 p-4">
                 {!isBlocked ? (
                     <>
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={handleLike}
-                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white rounded-xl shadow-lg transition-all duration-300 font-semibold shadow-pink-900/30"
-                        >
-                            <Heart className="w-5 h-5" />
-                            Like
-                        </motion.button>
+                        {renderLikeButton()}
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -197,7 +304,7 @@ export default function ProfileActions({ isCurrentUser, username, userId }: Prof
 
             {showReportModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl"
@@ -206,11 +313,11 @@ export default function ProfileActions({ isCurrentUser, username, userId }: Prof
                         <p className="text-gray-300 mb-6">
                             Why are you reporting <span className="font-semibold text-white">{username}</span>?
                         </p>
-                        
+
                         <div className="space-y-3 mb-6">
                             {reportReasons.map((reason) => (
-                                <label 
-                                    key={reason.value} 
+                                <label
+                                    key={reason.value}
                                     className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-gray-800 transition-colors"
                                 >
                                     <input

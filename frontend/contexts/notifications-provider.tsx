@@ -10,10 +10,20 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { toast } from "sonner";
 import { useWebSocket } from "./WebSocketContext";
 import { NotificationWrapper } from "@/types/websocket.types";
 
-// ==== Types ====
+const getNotificationMessage = (type: string, username: string): string => {
+  switch (type) {
+    case "like":    return `${username} liked your profile`;
+    case "match":   return `You matched with ${username}!`;
+    case "view":    return `${username} viewed your profile`;
+    case "message": return `New message from ${username}`;
+    case "unlike":  return `${username} unliked your profile`;
+    default:        return "New notification";
+  }
+};
 
 export interface Notification {
   id: number;
@@ -61,19 +71,21 @@ export const NotificationsProvider = ({
 
   // ✅ Handle incoming notification from WebSocket
   const handleNotification = useCallback((message: NotificationWrapper) => {
-    console.log("🔔 Notification received:", message);
+    const { type, from_user } = message.data;
+    const msg = getNotificationMessage(type, from_user.username);
 
     const newNotification: Notification = {
       id: message.data.id,
-      type: message.data.type,
+      type,
       is_read: message.data.is_read,
       created_at: new Date().toISOString(),
-      from_username: message.data.from_user.username,
-      from_user_id: message.data.from_user.id,
-      message: message.data.type === "like" ? "Someone liked you!" : "You have a new match!",
+      from_username: from_user.username,
+      from_user_id: from_user.id,
+      message: msg,
     };
 
     setNotifications((prev) => [newNotification, ...prev]);
+    toast(msg);
   }, []);
 
   // ✅ Register WebSocket handler for notifications
