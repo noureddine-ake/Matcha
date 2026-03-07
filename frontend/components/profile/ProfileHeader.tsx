@@ -67,8 +67,7 @@ export default function ProfileHeader({
   const handleLogout = async () => {
     setLoading(true);
     try {
-      await api.post("/profile/logout");
-      document.cookie = "token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+      await api.post("/auth/logout");
       window.location.href = "/auth/login";
     } catch (err) {
       console.error("Error during logout:", err);

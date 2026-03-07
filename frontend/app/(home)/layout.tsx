@@ -10,7 +10,7 @@ import { NotificationsProvider } from "@/contexts/notifications-provider";
 import LightPillar from "@/components/LightPillar";
 import api from "@/lib/api";
 import { motion } from "framer-motion";
-import { Flame, Heart, MessageCircle, User } from "lucide-react";
+import { Flame, Heart, MessageCircle, User, LogOut } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -69,6 +69,16 @@ export default function HomeLayout({
     fetchProfile();
   }, [fetchProfile]);
 
+  const handleLogout = async () => {
+    try {
+      await api.post("/auth/logout");
+      window.location.href = "/auth/login";
+    } catch (err) {
+      console.error("Logout error:", err);
+      window.location.href = "/auth/login";
+    }
+  };
+
   return (
     <DiscoverProvider>
       <WebSocketProvider>
@@ -118,6 +128,15 @@ export default function HomeLayout({
                     <div className="flex gap-2">
                       <FilterPopup />
                       <NotificationPopup />
+                      <motion.button
+                        onClick={handleLogout}
+                        className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        title="Logout"
+                      >
+                        <LogOut className="w-5 h-5" />
+                      </motion.button>
                     </div>
                   </div>
                 </motion.div>

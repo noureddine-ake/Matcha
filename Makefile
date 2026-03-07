@@ -8,12 +8,15 @@ COMPOSE = docker compose
 
 # Start containers
 up:
-	$(COMPOSE) up -d
+	$(COMPOSE) up -d 
 
 # Stop containers
 down:
 	$(COMPOSE) down
 
+# remove container
+rm:
+	$(COMPOSE) rm -f
 # Build containers
 build:
 	$(COMPOSE) build
@@ -21,7 +24,7 @@ build:
 # Rebuild and start
 restart:
 	$(COMPOSE) down
-	$(COMPOSE) up -d --build
+	$(COMPOSE) up -d 
 
 # Show logs
 logs:
