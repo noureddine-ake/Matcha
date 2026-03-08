@@ -83,6 +83,21 @@ export const googleCallbackController = async (req, res) => {
       secure: process.env.NODE_ENV === "production",
       sameSite: 'lax',
     });
+    
+     const refreshToken = JWT.createRefreshToken({
+          sessionData: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            completed_profile: user.completed_profile,
+          },
+        });
+   res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
 
     const redirectUrl  = user.completed_profile ? `http://localhost:3000/profile/${user.username}` : 'http://localhost:3000/auth/profile/complete'
     res.redirect(redirectUrl);

@@ -578,13 +578,20 @@ export const deleteGalleryPicture = async (req, res) => {
  * @returns {Object} JSON response confirming logout
  */
 export const logoutController = (req, res) => {
-  // Clear the JWT authentication cookie
-  res.cookie('token', '', {
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  const cookieOptions = {
     httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
-    expires: new Date(0), // Expire immediately
-  });
+    secure: isProduction,
+    sameSite: isProduction ? 'strict' : 'lax',
+    path: '/',
+  };
+
+  // Clear the JWT authentication cookie
+  res.clearCookie('token', cookieOptions);
+
+  // Clear the refresh token cookie
+  res.clearCookie('refreshToken', cookieOptions);
 
   res.status(200).json({ message: 'Logged out successfully' });
 };

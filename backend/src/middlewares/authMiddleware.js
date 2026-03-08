@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 
 function verifyJWT(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -39,6 +40,34 @@ const getTokeFromCookies = (req) => {
   return tokenCookie.split('=')[1];
 };
 
+const getRefreshTokenFromCookies = (req) => {
+  if (!req.headers.cookie) return null;
+
+  const cookies = req.headers.cookie.split('; ');
+  const refreshCookie = cookies.find((c) => c.startsWith('refreshToken='));
+
+  if (!refreshCookie) return null;
+  return refreshCookie.split('=')[1];
+};
+
+const createRefreshToken = (details) => {
+  const token = jwt.sign(
+    { data: details.sessionData },
+    REFRESH_TOKEN_SECRET,
+    { expiresIn: '7 days', algorithm: 'HS256' }
+  );
+  return token;
+};
+
+const verifyRefreshToken = (token) => {
+  try {
+    return jwt.verify(token, REFRESH_TOKEN_SECRET);
+  } catch (err) {
+    console.log('Invalid Refresh Token', err.message);
+    return null;
+  }
+};
+
 const verifyAndDecodeToken = (req, res, next) => {
   const token = getTokeFromCookies(req);
   if (!token) {
@@ -60,4 +89,7 @@ export default {
   verifyJWT,
   getTokeFromCookies,
   verifyAndDecodeToken,
+  getRefreshTokenFromCookies,
+  createRefreshToken,
+  verifyRefreshToken,
 };

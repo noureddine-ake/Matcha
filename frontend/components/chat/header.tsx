@@ -3,7 +3,7 @@ import { Menu } from "lucide-react";
 import Image from "next/image";
 import { motion } from 'framer-motion';
 import { useUserStatus } from "@/contexts/WebSocketContext"; // Add this import
-
+import {useRouter} from "next/navigation";
 interface ChatHeaderProps {
   user: User | null;
   isConnected: boolean;
@@ -24,6 +24,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 }) => {
   // Get real-time online status from WebSocket
   const { isOnline, lastSeen } = useUserStatus(user?.id || '');
+  const router = useRouter();
 
   if (isMobile) {
     return (
@@ -38,7 +39,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           </button>
 
           {user && (
-            <div className="flex items-center gap-3 flex-1 justify-center min-w-0">
+            <div className="flex items-center gap-3 flex-1 justify-center min-w-0"
+            
+            >
               <div className="w-8 h-8 rounded-full border-2 border-white/20 bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold overflow-hidden flex-shrink-0">
                 {user.profile_photo ? (
                   <Image
@@ -101,10 +104,12 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 <Image
                   src={user.profile_photo}
                   alt={user.username}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover cursor-pointer hover:brightness-90 border-2 border-transparent hover:border-white rounded-full transition-all"
                   width={40}
                   height={40}
                   unoptimized
+                 onClick={() => router.push(`/profile/${user.username}`)}
+
                 />
               ) : (
                 user.username.charAt(0).toUpperCase()

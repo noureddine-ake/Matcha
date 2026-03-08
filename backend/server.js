@@ -18,6 +18,9 @@ import { userRoutes } from './src/routes/userRoutes.js';
 import { swaggerUi, swaggerSpec } from "./swagger.js";
 import { setupWebSocket } from './src/config/websocket.js';
 import http from 'http';
+import cookieParser from 'cookie-parser'; 
+
+
 
 
 // Load environment variables
@@ -27,6 +30,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 

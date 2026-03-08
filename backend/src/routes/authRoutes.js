@@ -6,6 +6,8 @@ import {
   resendCode,
   requestPasswordReset,
   confirmPasswordReset,
+  refreshTokenController,
+  logoutController,
 } from '../controllers/authController.js';
 import JWT from '../middlewares/authMiddleware.js';
 
@@ -13,6 +15,7 @@ export const registerRoute = express.Router();
 
 registerRoute.post('/register', registrationControler);
 registerRoute.post('/login', loginController);
+registerRoute.post('/logout', logoutController);
 registerRoute.post(
   '/verify-email',
   JWT.verifyAndDecodeToken,
@@ -24,3 +27,5 @@ registerRoute.post('/resend-code', resendCode);
 registerRoute.post('/reset-password/request', requestPasswordReset);
 // Step 2: Confirm reset and set new password
 registerRoute.post('/reset-password/confirm', confirmPasswordReset);
+// Refresh token endpoint
+registerRoute.post('/refresh', refreshTokenController);
