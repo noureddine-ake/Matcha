@@ -1,12 +1,8 @@
-<<<<<<< HEAD
-import axios, { AxiosResponse, AxiosError, InternalAxiosRequestConfig } from "axios";
-=======
 import axios, {
   AxiosResponse,
   AxiosError,
   InternalAxiosRequestConfig,
 } from "axios";
->>>>>>> 7e7bb46 (feat(auth): fixed build for new changes)
 
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000/api";
 
@@ -20,11 +16,7 @@ const api = axios.create({
 
 let isRefreshing = false;
 let failedQueue: Array<{
-<<<<<<< HEAD
-  resolve: (value: unknown) => void;
-=======
   resolve: (value?: unknown) => void;
->>>>>>> 7e7bb46 (feat(auth): fixed build for new changes)
   reject: (reason?: unknown) => void;
 }> = [];
 
@@ -49,24 +41,15 @@ api.interceptors.request.use(
     }
     return config;
   },
-<<<<<<< HEAD
-  (error: AxiosError): Promise<never> => Promise.reject(error)
-=======
   (error: AxiosError) => Promise.reject(error),
->>>>>>> 7e7bb46 (feat(auth): fixed build for new changes)
 );
 
 api.interceptors.response.use(
   (response: AxiosResponse): AxiosResponse => response,
-<<<<<<< HEAD
-  async (error: AxiosError): Promise<unknown> => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-=======
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
->>>>>>> 7e7bb46 (feat(auth): fixed build for new changes)
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
