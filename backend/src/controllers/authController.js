@@ -1,5 +1,5 @@
 import { getUserAttr, createUser, updateUser } from '../models/userModel.js';
-import { createOTP, getUserOTP } from '../models/otpModals.js';
+import { createOTP, getUserOTP, saveVerificationToken, getUserByVerificationToken, clearVerificationToken } from '../models/otpModals.js';
 import bcrypt from 'bcryptjs';
 import JWT from '../middlewares/authMiddleware.js';
 import nodemailer from 'nodemailer';
@@ -13,6 +13,37 @@ const cookieOptions = {
   secure: isProduction,
   sameSite: isProduction ? 'strict' : 'lax',
   path: '/',
+};
+
+const getVerificationEmailContent = (username, verifyLink) => {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .button { display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }
+    .footer { margin-top: 20px; font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome to Matcha, ${username}!</h1>
+    <p>Thank you for registering. Please verify your email address by clicking the button below:</p>
+    <p style="text-align: center; margin: 30px 0;">
+      <a href="${verifyLink}" class="button">Verify Email</a>
+    </p>
+    <p>Or copy and paste this link in your browser:</p>
+    <p style="word-break: break-all; color: #8b5cf6;">${verifyLink}</p>
+    <p>This link will expire in 24 hours.</p>
+    <div class="footer">
+      <p>If you didn't create an account, please ignore this email.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
 };
 
 export const registrationControler = async (req, res) => {
@@ -71,9 +102,12 @@ export const registrationControler = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    // Send verification email
-    const code = Math.floor(100000 + Math.random() * 900000);
-    const now = new Date(Date.now() + 5 * 60 * 1000);
+    // Send verification email with secure token
+    const verificationToken = randomBytes(32).toString('hex');
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const verifyLink = `${FRONTEND_URL}/auth/verify-email/verify?token=${verificationToken}`;
+
+    await saveVerificationToken(user.id, verificationToken);
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -86,14 +120,8 @@ export const registrationControler = async (req, res) => {
     await transporter.sendMail({
       from: process.env.MAIL_USER,
       to: user.email,
-      subject: 'Verify your email',
-      text: `Matcha : verification code ${code}`,
-    });
-
-    await createOTP({
-      user_id: user.id,
-      verification_code: code,
-      expires_at: now,
+      subject: 'Verify your email - Matcha',
+      html: getVerificationEmailContent(user.username, verifyLink),
     });
 
     res.status(200).json({ 
@@ -133,6 +161,13 @@ export const loginController = async (req, res) => {
     
     if (!isPasswordValid) {
       return res.status(400).json({ error: 'Invalid username or password' });
+    }
+    console.log('User found:', user.is_verified); // Debug log
+    if (!user.is_verified) {
+      return res.status(403).json({ 
+        error: 'Email not verified. Please verify your email to login.',
+        requiresVerification: true 
+      });
     }
 
     // Create access token (15 minutes)
@@ -236,13 +271,92 @@ export const verifyEmailControler = async (req, res) => {
   }
 };
 
+export const verifyEmailByToken = async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({ error: 'Verification token is required' });
+    }
+
+    const users = await getUserByVerificationToken(token);
+    
+    if (!users.length) {
+      return res.status(400).json({ error: 'Invalid or expired verification token' });
+    }
+
+    const user = users[0];
+    
+    if (user.is_verified) {
+      return res.status(200).json({ 
+        message: 'Email already verified',
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          is_verified: true
+        }
+      });
+    }
+
+    await updateUser(user.id, { is_verified: true });
+    await clearVerificationToken(user.id);
+
+    const tokenData = JWT.createJWToken({ 
+      sessionData: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        is_verified: true,
+        completed_profile: user.completed_profile,
+      }, 
+      maxAge: '15m' 
+    });
+
+    const refreshToken = JWT.createRefreshToken({ 
+      sessionData: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        is_verified: true,
+        completed_profile: user.completed_profile,
+      }
+    });
+
+    res.cookie('token', tokenData, {
+      ...cookieOptions,
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie('refreshToken', refreshToken, {
+      ...cookieOptions,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({ 
+      message: 'Email verified successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        is_verified: true
+      }
+    });
+  } catch (err) {
+    console.error('Token verification error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const resendCode = async (req, res) => {
   try {
     const user = req.user.data;
     
-    // Generate new OTP
-    const code = Math.floor(100000 + Math.random() * 900000);
-    const now = new Date(Date.now() + 5 * 60 * 1000);
+    const verificationToken = randomBytes(32).toString('hex');
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const verifyLink = `${FRONTEND_URL}/auth/verify-email/verify?token=${verificationToken}`;
+
+    await saveVerificationToken(user.id, verificationToken);
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -252,22 +366,73 @@ export const resendCode = async (req, res) => {
       },
     });
 
-    await transporter.sendMail({
+    const mailOptions = {
       from: process.env.MAIL_USER,
       to: user.email,
       subject: 'Verify your email',
-      text: `Matcha : verification code ${code}`,
-    });
+      html: getVerificationEmailContent(user.username, verifyLink),
+    };
 
-    await createOTP({
-      user_id: user.id,
-      verification_code: code,
-      expires_at: now,
-    });
+    await transporter.sendMail(mailOptions);
 
-    res.status(200).json({ message: 'Verification code resent successfully' });
+    res.status(200).json({ message: 'Verification link sent successfully' });
   } catch (err) {
     console.error('Resend code error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const resendVerificationPublic = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    const userResult = await getUserAttr('email', email.toLowerCase());
+    
+    if (!userResult.rowCount) {
+      return res.status(404).json({ error: 'No account found with this email' });
+    }
+
+    const user = userResult.rows[0];
+
+    if (user.is_verified) {
+      return res.status(400).json({ error: 'This email is already verified' });
+    }
+
+    const verificationToken = randomBytes(32).toString('hex');
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const verifyLink = `${FRONTEND_URL}/auth/verify-email/verify?token=${verificationToken}`;
+
+    await saveVerificationToken(user.id, verificationToken);
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.MAIL_USER,
+      to: user.email,
+      subject: 'Verify your email',
+      html: getVerificationEmailContent(user.username, verifyLink),
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: 'Verification link sent successfully' });
+  } catch (err) {
+    console.error('Resend verification public error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

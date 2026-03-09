@@ -33,7 +33,9 @@ export default function HomeLayout({
   const pathname = usePathname();
 
   useEffect(() => {
-    setActiveTab(pathname.slice(1));
+    if (pathname) {
+      setActiveTab(pathname.slice(1));
+    }
   }, [pathname]);
   useEffect(() => {
     const stored = localStorage.getItem("user_location");

@@ -1,43 +1,58 @@
 'use client';
 
-import type React from 'react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
-import { Mail, ArrowRight, Heart, Link as LinkIcon } from 'lucide-react';
+import { Mail, ArrowRight, Heart, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import api from '@/lib/api';
 import { AxiosError } from 'axios';
 
-// Define interface for error response
+// Define an interface for your error response
 interface ErrorResponse {
   error?: string;
   message?: string;
 }
 
-export default function VerifyEmailPage() {
+export default function ResendVerificationPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
-  const [resending, setResending] = useState(false);
-  const [resent, setResent] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleResend = async () => {
-    setResending(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError('');
+    setSuccess('');
+
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      await api.post('/auth/resend-code');
-      setResent(true);
+      await api.post('/auth/resend-verification', { email });
+      setSuccess('Verification email sent! Check your inbox and click the link to verify your account.');
     } catch (err: unknown) {
-      // Properly type the Axios error
+      // Type guard to check if it's an AxiosError
       if (err instanceof AxiosError && err.response) {
+        // Access the error message from the response data
         const errorData = err.response.data as ErrorResponse;
-        setError(errorData.error || errorData.message || 'Failed to resend verification link');
+        setError(errorData.error || errorData.message || 'Failed to send verification email');
       } else if (err instanceof Error) {
+        // Handle generic errors
         setError(err.message);
       } else {
+        // Handle unknown errors
         setError('An unexpected error occurred');
       }
     } finally {
-      setResending(false);
+      setLoading(false);
     }
   };
 
@@ -70,10 +85,10 @@ export default function VerifyEmailPage() {
           >
             <Mail className="w-16 h-16 text-purple-300 mx-auto mb-4" />
             <h2 className="text-3xl font-bold text-white mb-3">
-              Check Your Email
+              Resend Verification
             </h2>
             <p className="text-purple-200 text-lg">
-              We&apos;ve sent you a verification link
+              Enter your email to receive a new verification link
             </p>
           </motion.div>
         </motion.div>
@@ -92,54 +107,47 @@ export default function VerifyEmailPage() {
                 transition={{ duration: 0.5, delay: 0.1 }}
                 className="text-4xl font-bold text-white mb-2"
               >
-                Verify Email
+                Verify Your Email
               </motion.h1>
               <p className="text-purple-200">
-                Click the link in your email to verify your account
+                Enter your email address and we&apos;ll send you a verification link
               </p>
             </div>
 
-            <div className="space-y-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.2 }}
-                className="bg-white/5 rounded-2xl p-6 border border-white/10"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                    <LinkIcon className="w-5 h-5 text-purple-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-semibold mb-1">
-                      Verification Link Sent
-                    </h3>
-                    <p className="text-purple-200 text-sm">
-                      Please check your email inbox and click the verification link to activate your account.
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <Label htmlFor="email" className="text-purple-200 text-sm">
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400"
+                />
+              </div>
 
               {error && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-red-300 text-sm text-center bg-red-500/20 py-3 px-4 rounded-2xl"
+                  className="text-red-300 text-sm bg-red-500/20 py-3 px-4 rounded-xl flex items-center gap-2"
                 >
+                  <AlertCircle className="w-4 h-4" />
                   {error}
                 </motion.div>
               )}
 
-              {resent && (
+              {success && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-green-300 text-sm text-center bg-green-500/20 py-3 px-4 rounded-2xl"
+                  className="text-green-300 text-sm bg-green-500/20 py-3 px-4 rounded-xl flex items-center gap-2"
                 >
-                  Verification link sent! Check your email.
+                  <CheckCircle className="w-4 h-4" />
+                  {success}
                 </motion.div>
               )}
 
@@ -151,24 +159,34 @@ export default function VerifyEmailPage() {
                 whileTap={{ scale: 0.98 }}
               >
                 <Button
-                  onClick={handleResend}
-                  disabled={resending || resent}
+                  type="submit"
+                  disabled={loading}
                   className="w-full h-14 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-lg font-semibold rounded-2xl shadow-lg transition-all duration-200 disabled:opacity-50 flex items-center justify-center"
                 >
-                  {resending ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                       Sending...
-                    </div>
+                    </>
                   ) : (
-                    <div className="flex items-center">
-                      {resent ? 'Link Sent!' : 'Resend Link'}
+                    <>
+                      Send Verification Link
                       <ArrowRight className="ml-2 h-5 w-5" />
-                    </div>
+                    </>
                   )}
                 </Button>
               </motion.div>
-            </div>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => router.push('/auth/login')}
+                  className="text-purple-200 hover:text-white text-sm transition-colors"
+                >
+                  Back to Login
+                </button>
+              </div>
+            </form>
           </div>
         </motion.div>
       </div>

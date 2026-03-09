@@ -34,7 +34,11 @@ export default function LoginPage() {
       router.push(`/profile/${formData.username}`) // Redirect after login
     } catch (err) {
       if (err instanceof AxiosError && err.response) {
-        setError(err.response?.data?.error || "Login failed")
+        if (err.response.data?.requiresVerification) {
+          router.push('/auth/resend-verification')
+        } else {
+          setError(err.response?.data?.error || "Login failed")
+        }
       } else {
         setError("An error occurred")
       }

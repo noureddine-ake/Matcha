@@ -268,6 +268,8 @@ export const updateProfile = async (req, res) => {
         return res.status(400).json({ error: 'Email already in use' });
       }
       userUpdates.email = req.body.email;
+      // update flag is_verified to false when email is changed
+      userUpdates.is_verified = false;
     }
 
     // Validate and update username if provided
