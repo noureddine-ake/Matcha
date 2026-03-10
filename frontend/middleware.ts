@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 const protectedRoutes = ['/profile', '/dashboard', '/settings', '/auth/verify-email'];
 const authRoutes = ['/auth/login', '/auth/registration'];
 const completionRoutes = ['/auth/profile/complete', '/auth/verify-email'];
+const publicVerifyRoutes = ['/auth/verify-email/verify', '/settings/email-update/verify'];
 
 function decodeJwt(token: string) {
   try {
@@ -28,6 +29,10 @@ export function middleware(req: NextRequest) {
 
   // 1️⃣ No token → protect private routes
   if (!token) {
+    // Allow public verification route without token
+    if (publicVerifyRoutes.some((route) => pathname.startsWith(route))) {
+      return NextResponse.next();
+    }
     if (protectedRoutes.some((route) => pathname.startsWith(route))) {
       url.pathname = '/auth/login';
       return NextResponse.redirect(url);
@@ -47,6 +52,11 @@ export function middleware(req: NextRequest) {
   }
 
   const { is_verified, completed_profile } = userData.data || {};
+
+  // Allow unverified users to access the token verification page
+  if (!is_verified && pathname.startsWith('/auth/verify-email/verify')) {
+    return NextResponse.next();
+  }
 
   if (!is_verified && !pathname.startsWith('/auth/verify-email')) {
     url.pathname = '/auth/verify-email';

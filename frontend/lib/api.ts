@@ -79,7 +79,10 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError as AxiosError);
-        window.location.href = "/auth/login";
+        // Use window.location for client-side navigation
+        if (typeof window !== 'undefined') {
+          window.location.href = "/auth/login";
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -87,7 +90,9 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401) {
-      window.location.href = "/auth/login";
+      if (typeof window !== 'undefined') {
+        window.location.href = "/auth/login";
+      }
     }
 
     return Promise.reject(error);

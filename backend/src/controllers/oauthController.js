@@ -58,9 +58,21 @@ export const googleCallbackController = async (req, res) => {
     if (!rows.rowCount) {
         const randomPassword = crypto.randomBytes(12).toString("base64");
         const hashedPassword = await bcrypt.hash(randomPassword, 10);
+        
+        let username = userData.name || userData.email.split('@')[0];
+        username = username.replace(/\s+/g, '_').toLowerCase();
+        
+        let existingUsername = await getUserAttr("username", username);
+        let counter = 1;
+        while (existingUsername.rowCount > 0) {
+          username = `${username}_${counter}`;
+          existingUsername = await getUserAttr("username", username);
+          counter++;
+        }
+        
         const newUser = {
           email: userData.email,
-          username: userData.name,
+          username: username,
           first_name: userData.given_name,
           last_name: userData.family_name,
           password_hash: hashedPassword,

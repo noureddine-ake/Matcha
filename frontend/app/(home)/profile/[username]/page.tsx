@@ -116,7 +116,8 @@ function BlockedProfileWall({
 }
 
 export default function ProfilePage() {
-  const { username } = useParams<{ username: string }>();
+  const params = useParams<{ username: string }>();
+  const username = params?.username ?? "";
   const { user, loading, fetchUserProfile } = useGlobal();
   const [showSettings, setShowSettings] = useState(false);
   const [flagUrl, setFlagUrl] = useState<string | null>(null);

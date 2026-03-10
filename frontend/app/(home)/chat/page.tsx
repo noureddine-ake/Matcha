@@ -28,7 +28,7 @@ export default function ChatPage() {
   const selectedUser = state.users.find(user => user.id === state.selectedUserId);
 
   useEffect(() => {
-    const username = searchParams.get('username');
+    const username = searchParams?.get('username');
     if (username && !state.loading && state.users.length > 0 && !state.selectedUserId) {
       const user = state.users.find(u => u.username === decodeURIComponent(username));
       if (user) {

@@ -482,13 +482,13 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
                         };
                     });
                 }
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error("Failed to fetch messages:", error);
                 setState((prev) => ({
                     ...prev,
                     loading: false,
                     loadingMore: false,
-                    error: error.message || "Failed to load messages",
+                    error: error instanceof Error ? error.message : "Failed to load messages",
                 }));
             }
         },
@@ -516,7 +516,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
                 error: null,
             }));
 
-            const params = new URLSearchParams(searchParams.toString());
+            const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
             params.set("user", userId);
             router.replace(`?${params.toString()}`, { scroll: false });
 
@@ -577,7 +577,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
                 ),
                 sending: false,
             }));
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Failed to send message:", error);
 
             setState((prev) => ({
@@ -586,7 +586,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
                     msg.id === tempId ? { ...msg, isSending: false, isFailed: true } : msg
                 ),
                 sending: false,
-                error: error.message || "Failed to send message",
+                error: error instanceof Error ? error.message : "Failed to send message",
             }));
 
             setTimeout(() => {
@@ -711,7 +711,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     // Initialize from URL
     useEffect(() => {
         const initializeFromURL = async () => {
-            const urlUser = searchParams.get("user");
+            const urlUser = searchParams ? searchParams.get("user") : null;
             if (urlUser) {
                 try {
                     const usersResponse = await chatService.getUsers();
@@ -720,7 +720,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
                     if (userExists) {
                         await selectUser(urlUser);
                     } else {
-                        const params = new URLSearchParams(searchParams.toString());
+                        const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
                         params.delete("user");
                         router.replace(`?${params.toString()}`, { scroll: false });
                         setState((prev) => ({ ...prev, error: "Selected user not found" }));

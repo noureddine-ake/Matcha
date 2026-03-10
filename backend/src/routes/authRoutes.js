@@ -3,7 +3,9 @@ import {
   registrationControler,
   loginController,
   verifyEmailControler,
+  verifyEmailByToken,
   resendCode,
+  resendVerificationPublic,
   requestPasswordReset,
   confirmPasswordReset,
   refreshTokenController,
@@ -21,8 +23,10 @@ registerRoute.post(
   JWT.verifyAndDecodeToken,
   verifyEmailControler
 );
+registerRoute.post('/verify-email/token', verifyEmailByToken);
 
-registerRoute.post('/resend-code', resendCode);
+registerRoute.post('/resend-code', JWT.verifyAndDecodeToken, resendCode);
+registerRoute.post('/resend-verification', resendVerificationPublic);
 // Step 1: Request reset link
 registerRoute.post('/reset-password/request', requestPasswordReset);
 // Step 2: Confirm reset and set new password

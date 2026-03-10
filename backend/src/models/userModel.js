@@ -68,3 +68,44 @@ export async function getUserAttr(attr, value) {
   return rows;
 }
 
+// PENDING EMAIL FUNCTIONS
+export async function updatePendingEmail(userId, pendingEmail, token) {
+  const { rows } = await pool.query(
+    `UPDATE users SET pending_email = $1, pending_email_token = $2, updated_at = NOW() WHERE id = $3 RETURNING *`,
+    [pendingEmail, token, userId]
+  );
+  return rows[0];
+}
+
+export async function getUserByPendingEmailToken(token) {
+  const { rows } = await pool.query(
+    `SELECT * FROM users WHERE pending_email_token = $1`,
+    [token]
+  );
+  return rows[0];
+}
+
+export async function confirmPendingEmail(userId) {
+  const { rows } = await pool.query(
+    `UPDATE users SET 
+      email = pending_email, 
+      pending_email = NULL, 
+      pending_email_token = NULL, 
+      is_verified = FALSE,
+      verification_token = NULL,
+      updated_at = NOW() 
+    WHERE id = $1 
+    RETURNING *`,
+    [userId]
+  );
+  return rows[0];
+}
+
+export async function clearPendingEmail(userId) {
+  const { rows } = await pool.query(
+    `UPDATE users SET pending_email = NULL, pending_email_token = NULL, updated_at = NOW() WHERE id = $1 RETURNING *`,
+    [userId]
+  );
+  return rows[0];
+}
+

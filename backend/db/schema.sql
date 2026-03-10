@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS users (
   verification_token VARCHAR(255),
   completed_profile BOOLEAN DEFAULT FALSE,
   reset_token VARCHAR(255),
+  pending_email VARCHAR(255),
+  pending_email_token VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
