@@ -38,7 +38,12 @@ export default function RegisterPage() {
 
       router.push(`/auth/verify-email`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosErr = err as { response?: { data?: { error?: string } } };
+        setError(axiosErr.response?.data?.error || 'Registration failed');
+      } else {
+        setError('An error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

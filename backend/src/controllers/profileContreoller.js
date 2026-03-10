@@ -724,13 +724,21 @@ export const addUserTag = async (req, res) => {
         .status(400)
         .json({ error: 'Tag name too long (max 30 characters)' });
     tagName = tagName.trim();
-    // Check if tag already exists
-    let tag = await getTagByName(tagName);
+    const tagNameWithHash = tagName.startsWith('#') ? tagName : `#${tagName}`;
+    let tag = await getTagByName(tagNameWithHash);
     if (!tag) {
-      if (!tagName.startsWith('#')) {
-        tagName = `#${tagName}`;
+      try {
+        tag = await createTag({ name: tagNameWithHash, create_at: new Date() });
+      } catch (createErr) {
+        if (createErr.code === '23505') {
+          tag = await getTagByName(tagNameWithHash);
+          if (!tag) {
+            return res.status(500).json({ error: 'Failed to create tag' });
+          }
+        } else {
+          throw createErr;
+        }
       }
-      tag = await createTag({ name: tagName, create_at: new Date() });
     }
 
     // Check if user already has this tag
