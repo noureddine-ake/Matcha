@@ -48,6 +48,37 @@ const getVerificationEmailContent = (username, verifyLink) => {
 
 export const registrationControler = async (req, res) => {
   try {
+    const { email, username, password, firstName, lastName } = req.body;
+
+    // Validate required fields
+    if (!email || !username || !password || !firstName || !lastName) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Please enter a valid email address' });
+    }
+
+    // Validate username format
+    if (username.length < 3 || username.length > 30) {
+      return res.status(400).json({ error: 'Username must be between 3 and 30 characters' });
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return res.status(400).json({ error: 'Username can only contain letters, numbers, and underscores' });
+    }
+
+    // Validate password
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    // Validate name length
+    if (firstName.length > 50 || lastName.length > 50) {
+      return res.status(400).json({ error: 'Names must be less than 50 characters' });
+    }
+
     const existingUserEmail = await getUserAttr('email', req.body.email);
     if (existingUserEmail.rowCount) {
       return res.status(400).json({ error: 'Email already exists' });

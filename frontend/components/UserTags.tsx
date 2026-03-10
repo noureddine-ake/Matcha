@@ -39,13 +39,16 @@ export default function UserTags({ tags: initialTags, editable = true }: UserTag
       setUserTags((prev) => [...prev, res.data.tag]);
       setNewTag("");
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message || "Failed to add tag");
-      } else if (typeof err === "object" && err !== null && "response" in err) {
-        setError((err as { response?: { data?: { error?: string } } }).response?.data?.error || "Failed to add tag");
-      } else {
-        setError("Failed to add tag");
+      let message = "Failed to add tag";
+      if (err && typeof err === 'object') {
+        const axiosErr = err as { response?: { data?: { error?: string } }; message?: string };
+        if (axiosErr.response?.data?.error) {
+          message = axiosErr.response.data.error;
+        } else if (axiosErr.message) {
+          message = axiosErr.message;
+        }
       }
+      setError(message);
     } finally {
       setLoading(false);
     }
