@@ -18,9 +18,10 @@ export async function reverseGeocode(latitude, longitude) {
   // Helper to extract only the Latin part (before any non-Latin/Unicode chunk)
   function extractLatin(str) {
     if (!str) return '';
-    // Match only the first contiguous Latin/ASCII word(s) (letters, spaces, hyphens, dots, commas, apostrophes)
     const match = str.match(/^[A-Za-z0-9 .,'-]+/);
-    return match ? match[0].trim() : str;
+    if (!match) return str;
+    const extracted = match[0].trim();
+    return extracted.length > 1 ? extracted : str;
   }
   return {
     city: extractLatin(
