@@ -5,6 +5,7 @@ import JWT from '../middlewares/authMiddleware.js';
 import nodemailer from 'nodemailer';
 import { randomBytes } from 'crypto';
 import redisClient from "../config/redisClient.js";
+import { validatePasswordWithRecommendations } from '../utils/passwordValidator.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -69,9 +70,18 @@ export const registrationControler = async (req, res) => {
       return res.status(400).json({ error: 'Username can only contain letters, numbers, and underscores' });
     }
 
-    // Validate password
-    if (password.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    // Validate password strength against best practices
+    const passwordValidation = validatePasswordWithRecommendations(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ 
+        error: 'Password does not meet security requirements',
+        details: passwordValidation.errors 
+      });
+    }
+
+    // Warn about weak patterns (non-critical)
+    if (passwordValidation.warnings.length > 0) {
+      console.warn(`Password warnings for ${email}:`, passwordValidation.warnings);
     }
 
     // Validate name length
@@ -515,6 +525,15 @@ export const confirmPasswordReset = async (req, res) => {
     const { token, newPassword } = req.body;
     if (!token || !newPassword) {
       return res.status(400).json({ error: "Missing token or new password" });
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePasswordWithRecommendations(newPassword);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ 
+        error: 'Password does not meet security requirements',
+        details: passwordValidation.errors 
+      });
     }
 
     // Find which user has this token

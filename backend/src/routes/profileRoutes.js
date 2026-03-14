@@ -37,11 +37,46 @@ if (!fs.existsSync(uploadsDir)) {
  * Configure Multer storage for file uploads
  * Sets destination directory and generates unique filenames
  */
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif'
+];
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname),
 });
-const upload = multer({ storage });
+
+const fileFilter = (req, file, cb) => {
+  const ext = file.originalname.toLowerCase().split('.').pop();
+  const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+  
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype) || !allowedExtensions.includes(ext)) {
+    cb(new Error('Invalid file format. Allowed: jpg, jpeg, png, webp, gif'), false);
+    return;
+  }
+  cb(null, true);
+};
+
+const upload = multer({ 
+  storage, 
+  fileFilter, 
+  limits: { fileSize: 5 * 1024 * 1024 } 
+});
+
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
+    }
+    return res.status(400).json({ error: err.message });
+  } else if (err) {
+    return res.status(400).json({ error: err.message });
+  }
+  next();
+};
 
 // =============================================================================
 // PROFILE COMPLETION & RETRIEVAL ROUTES
@@ -55,8 +90,9 @@ const upload = multer({ storage });
  */
 profileRoute.post(
   '/complete',
-  JWT.verifyAndDecodeToken,   // Authenticate user first
-  upload.any(),               // Handle multiple file uploads
+  JWT.verifyAndDecodeToken,
+  upload.any(),
+  handleMulterError,
   completeProfile
 );
 
@@ -82,7 +118,8 @@ profileRoute.get('/user/:username', JWT.verifyAndDecodeToken, getProfileUser);
 profileRoute.put(
   '/update',
   JWT.verifyAndDecodeToken,
-  upload.any(),               // Handle multiple photo uploads
+  upload.any(),
+  handleMulterError,
   updateProfile
 );
 
@@ -139,7 +176,8 @@ profileRoute.get(
 profileRoute.put(
   '/update-profile-picture',
   JWT.verifyAndDecodeToken,
-  upload.single('profilePicture'),    // Handle single profile picture upload
+  upload.single('profilePicture'),
+  handleMulterError,
   updateProfilePicture
 );
 
@@ -168,7 +206,8 @@ profileRoute.delete(
 profileRoute.post(
   '/add-gallery-picture',
   JWT.verifyAndDecodeToken,
-  upload.single('galleryPicture'),    // Handle single gallery picture upload
+  upload.single('galleryPicture'),
+  handleMulterError,
   addGalleryPicture
 );
 

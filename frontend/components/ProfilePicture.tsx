@@ -19,6 +19,21 @@ interface ProfilePictureUploaderProps {
   editable?: boolean;
 }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+
+const validateFile = (file: File): string | null => {
+  const ext = '.' + file.name.toLowerCase().split('.').pop();
+  if (!ALLOWED_MIME_TYPES.includes(file.type) || !ALLOWED_EXTENSIONS.includes(ext)) {
+    return 'Invalid file format. Allowed: jpg, jpeg, png, webp, gif';
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    return 'File too large. Maximum size is 5MB';
+  }
+  return null;
+};
+
 const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
   photos,
   backendUrl,
@@ -73,8 +88,9 @@ const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
   };
 
   const handleFileSelection = (file: File) => {
-    if (!file.type.match('image.*')) {
-      setMessage('⚠️ Please select an image file');
+    const validationError = validateFile(file);
+    if (validationError) {
+      setMessage(validationError);
       return;
     }
     
@@ -146,15 +162,21 @@ const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
       onUpdated?.()
     } catch (err: unknown) {
       console.error(err);
-    
-      if (err instanceof Error) {
-        setMessage(err.message || '❌ Upload failed');
-      } else if (typeof err === 'object' && err !== null && 'response' in err) {
-        // @ts-expect-error: for axios error typing
-        setMessage(err.response?.data?.error || '❌ Upload failed');
-      } else {
-        setMessage('❌ Upload failed');
+      
+      let message = '❌ Upload failed';
+      
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const errWithResponse = err as { response?: { status?: number; data?: { error?: string } } };
+        if (errWithResponse.response?.status === 400) {
+          message = errWithResponse.response.data?.error || message;
+        } else if (!errWithResponse.response) {
+          message = 'Network error. Please check your connection.';
+        }
+      } else if (err instanceof Error) {
+        message = err.message;
       }
+      
+      setMessage(message);
     }
     finally {
       setIsUploading(false);
