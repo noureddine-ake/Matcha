@@ -19,7 +19,8 @@ import { emailUpdateRoute } from './src/routes/emailUpdateRoutes.js';
 import { swaggerUi, swaggerSpec } from "./swagger.js";
 import { setupWebSocket } from './src/config/websocket.js';
 import http from 'http';
-import cookieParser from 'cookie-parser'; 
+import cookieParser from 'cookie-parser';
+import xss from 'xss-clean'; 
 
 
 
@@ -34,6 +35,9 @@ const PORT = process.env.PORT || 5000;
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// sanitize request data to strip HTML/JS and prevent XSS attacks
+app.use(xss());
 
 // Swagger API documentation
 // Swagger UI
