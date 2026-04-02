@@ -34,6 +34,9 @@ logs:
 ps:
 	$(COMPOSE) ps
 
+prune:
+	docker system prune -af
+
 # Remove containers, networks, volumes
 clean:
 	$(COMPOSE) down -v --remove-orphans

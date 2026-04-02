@@ -1,6 +1,6 @@
 import express from 'express';
 import JWT from '../middlewares/authMiddleware.js';
-import { getNotifications, readNotification } from '../controllers/notificationController.js';
+import { getNotifications, readNotification } from '../controllers/notificationController.ts';
 
 export const NotificationsRouts = express.Router();
 

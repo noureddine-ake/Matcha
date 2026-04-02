@@ -1,6 +1,6 @@
 import express from 'express';
 import JWT from '../middlewares/authMiddleware.js';
-import { pool } from '../config/config.js';
+import { pool } from '../config/config.ts';
 
 const router = express.Router();
 

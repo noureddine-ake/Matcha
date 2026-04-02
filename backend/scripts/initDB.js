@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { pool } from '../src/config/config.js';
+import { pool } from '../src/config/config.ts';
 
 // __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);

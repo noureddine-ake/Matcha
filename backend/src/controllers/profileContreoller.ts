@@ -6,23 +6,23 @@ import {
   deleteProfilePictureByUserId,
   getGalleryPhotoById,
   deletePhotoById,
-} from '../models/photosModal.js';
+} from '../models/photosModal.ts';
 import {
   createProfile,
   checkExistedProfiles,
   getProfileByUserId,
   updateUserLocation,
-} from '../models/profileModel.js';
+} from '../models/profileModel.ts';
 import { reverseGeocode } from '../utils/geocode.js';
 import {
   createTag,
   createUserTag,
   getTagByName,
   isUserTagExisted,
-} from '../models/tagModel.js';
-import { updateUser, getUserAttr } from '../models/userModel.js';
-import { getUserTags } from '../models/tagModel.js';
-import { pool } from '../config/config.js';
+} from '../models/tagModel.ts';
+import { updateUser, getUserAttr } from '../models/userModel.ts';
+import { getUserTags } from '../models/tagModel.ts';
+import { pool } from '../config/config.ts';
 import fs from 'fs';
 import path from 'path';
 import JWT from '../middlewares/authMiddleware.js';
@@ -44,11 +44,11 @@ import {
   getProfileViewCount,
   getAllUniqueProfileViewers,
   getProfileTotalViews
-} from '../models/profileViewModel.js'; 
-import {getUserLikesCount} from '../models/likesModel.js'; 
-import {getMatchesCount} from '../models/matchModel.js'; 
+} from '../models/profileViewModel.ts'; 
+import {getUserLikesCount} from '../models/likesModel.ts'; 
+import {getMatchesCount} from '../models/matchModel.ts'; 
 import { createAndSendNotification } from '../utils/notificationHelper.js';
-import { notificationTypes } from './matchingController.js';
+import { notificationTypes } from './matchingController.ts';
 /**
  * Retrieves the complete user profile including personal information, photos, and tags
  * @param {Object} req - Express request object containing user authentication data

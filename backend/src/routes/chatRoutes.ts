@@ -8,7 +8,7 @@ import {
   getOnlineStatus,
   getCurrentUser,
   
-} from "../controllers/chatController.js";    
+} from "../controllers/chatController.ts";    
 
 const router = express.Router();
 

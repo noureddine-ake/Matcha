@@ -1,5 +1,6 @@
 import { WebSocketServer } from 'ws';
 import jwtHelper from '../middlewares/authMiddleware.js';
+import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 
 // Store connected clients: userId -> WebSocket connection
 const clients = new Map();
@@ -10,7 +11,7 @@ const userStatus = new Map();
 // Chat-specific handlers
 const chatHandlers = new Map();
 
-export const setupWebSocket = (server) => {
+export const setupWebSocket = (server: Server<typeof IncomingMessage, typeof ServerResponse>) => {
   const wss = new WebSocketServer({ 
     server,
     path: '/ws'
@@ -95,7 +96,7 @@ export const setupWebSocket = (server) => {
       ws.on('message', (message) => {
         try {
           const data = JSON.parse(message);
-          
+
           if (data.type === 'ping') {
             ws.send(JSON.stringify({ type: 'pong' }));
             

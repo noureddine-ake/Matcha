@@ -1,5 +1,5 @@
 import express from 'express';
-import { googleOauthController } from '../controllers/oauthController.js';
+import { googleOauthController } from '../controllers/oauthController.ts';
 
 
 

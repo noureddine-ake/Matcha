@@ -1,5 +1,5 @@
 import express from 'express';
-import { reportController } from '../controllers/reportController.js';
+import { reportController } from '../controllers/reportController.ts';
 import JWT from '../middlewares/authMiddleware.js';
 
 const router = express.Router();

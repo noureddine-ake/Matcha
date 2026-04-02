@@ -19,7 +19,7 @@ import {
   getProfileUser,
   updateLocation,
   getWhoViewedYou
-} from '../controllers/profileContreoller.js';
+} from '../controllers/profileContreoller.ts';
 
 // Initialize router for profile-related endpoints
 export const profileRoute = express.Router();

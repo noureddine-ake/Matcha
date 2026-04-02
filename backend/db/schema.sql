@@ -1,19 +1,64 @@
--- USERS
-CREATE TABLE IF NOT EXISTS users (
+-- BLOCK
+CREATE TABLE IF NOT EXISTS blocks (
   id SERIAL PRIMARY KEY,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  username VARCHAR(100) UNIQUE NOT NULL,
-  first_name VARCHAR(100),
-  last_name VARCHAR(100),
-  password_hash VARCHAR(255) NOT NULL,
-  is_verified BOOLEAN DEFAULT FALSE,
-  verification_token VARCHAR(255),
-  completed_profile BOOLEAN DEFAULT FALSE,
-  reset_token VARCHAR(255),
-  pending_email VARCHAR(255),
-  pending_email_token VARCHAR(255),
+  blocker_user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  blocked_user_id INT REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  UNIQUE(blocker_user_id, blocked_user_id)
+);
+
+-- email verification
+CREATE TABLE IF NOT EXISTS email_verifications (
+  id SERIAL PRIMARY KEY,
+  user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  verification_code INT NOT NULL,
+  expires_at TIMESTAMP
+);
+
+-- LIKE
+CREATE TABLE IF NOT EXISTS likes (
+  id SERIAL PRIMARY KEY,
+  liker_user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  liked_user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- MESSAGE
+CREATE TABLE IF NOT EXISTS messages (
+  id SERIAL PRIMARY KEY,
+  sender_user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  receiver_user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT FALSE,
+  sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- NOTIFICATION
+CREATE TABLE IF NOT EXISTS notifications (
+  id SERIAL PRIMARY KEY,
+  user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  type VARCHAR(100),
+  from_user_id INT REFERENCES users(id),
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- PHOTO
+CREATE TABLE IF NOT EXISTS photos (
+  id SERIAL PRIMARY KEY,
+  user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  photo_url TEXT NOT NULL,
+  is_profile_picture BOOLEAN DEFAULT FALSE,
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- PROFILE VIEW
+CREATE TABLE IF NOT EXISTS profile_views (
+  id SERIAL PRIMARY KEY,
+  viewer_user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  viewed_user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- PROFILE
@@ -36,13 +81,15 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- PHOTO
-CREATE TABLE IF NOT EXISTS photos (
+
+-- REPORT
+CREATE TABLE IF NOT EXISTS reports (
   id SERIAL PRIMARY KEY,
-  user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  photo_url TEXT NOT NULL,
-  is_profile_picture BOOLEAN DEFAULT FALSE,
-  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  reporter_user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  reported_user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  reason TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(reporter_user_id, reported_user_id)  -- One report per user pair
 );
 
 -- TAG
@@ -59,64 +106,20 @@ CREATE TABLE IF NOT EXISTS user_tags (
   PRIMARY KEY (user_id, tag_id)
 );
 
--- LIKE
-CREATE TABLE IF NOT EXISTS likes (
+-- USERS
+CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
-  liker_user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  liked_user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- MESSAGE
-CREATE TABLE IF NOT EXISTS messages (
-  id SERIAL PRIMARY KEY,
-  sender_user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  receiver_user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  is_read BOOLEAN DEFAULT FALSE,
-  sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- PROFILE VIEW
-CREATE TABLE IF NOT EXISTS profile_views (
-  id SERIAL PRIMARY KEY,
-  viewer_user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  viewed_user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- NOTIFICATION
-CREATE TABLE IF NOT EXISTS notifications (
-  id SERIAL PRIMARY KEY,
-  user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  type VARCHAR(100),
-  from_user_id INT REFERENCES users(id),
-  is_read BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- BLOCK
-CREATE TABLE IF NOT EXISTS blocks (
-  id SERIAL PRIMARY KEY,
-  blocker_user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  blocked_user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  username VARCHAR(100) UNIQUE NOT NULL,
+  first_name VARCHAR(100),
+  last_name VARCHAR(100),
+  password_hash VARCHAR(255) NOT NULL,
+  is_verified BOOLEAN DEFAULT FALSE,
+  verification_token VARCHAR(255),
+  completed_profile BOOLEAN DEFAULT FALSE,
+  reset_token VARCHAR(255),
+  pending_email VARCHAR(255),
+  pending_email_token VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(blocker_user_id, blocked_user_id)
-);
-
--- REPORT
-CREATE TABLE IF NOT EXISTS reports (
-  id SERIAL PRIMARY KEY,
-  reporter_user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  reported_user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  reason TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(reporter_user_id, reported_user_id)  -- One report per user pair
-);
-
-CREATE TABLE IF NOT EXISTS email_verifications (
-  id SERIAL PRIMARY KEY,
-  user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  verification_code INT NOT NULL,
-  expires_at TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -1,10 +1,10 @@
-import { getUserAttr, createUser, updateUser } from '../models/userModel.js';
-import { createOTP, getUserOTP, saveVerificationToken, getUserByVerificationToken, clearVerificationToken } from '../models/otpModals.js';
+import { getUserAttr, createUser, updateUser } from '../models/userModel.ts';
+import { createOTP, getUserOTP, saveVerificationToken, getUserByVerificationToken, clearVerificationToken } from '../models/otpModals.ts';
 import bcrypt from 'bcryptjs';
 import JWT from '../middlewares/authMiddleware.js';
 import nodemailer from 'nodemailer';
 import { randomBytes } from 'crypto';
-import redisClient from "../config/redisClient.js";
+// import redisClient from "../config/redisClient.js";
 import { validatePasswordWithRecommendations } from '../utils/passwordValidator.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -537,16 +537,16 @@ export const confirmPasswordReset = async (req, res) => {
     }
 
     // Find which user has this token
-    const keys = await redisClient.keys("reset:*");
-    let userId = null;
+    // const keys = await redisClient.keys("reset:*");
+    // let userId = null;
 
-    for (const key of keys) {
-      const value = await redisClient.get(key);
-      if (value === token) {
-        userId = key.split(":")[1];
-        break;
-      }
-    }
+    // for (const key of keys) {
+      // const value = await redisClient.get(key);
+      // if (value === token) {
+        // userId = key.split(":")[1];
+        // break;
+      // }
+    // }
 
     if (!userId) {
       return res.status(400).json({ error: "Invalid or expired token" });

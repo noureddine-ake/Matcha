@@ -16,5 +16,5 @@ COPY . .
 
 EXPOSE 5000
 
-# Use npx to run nodemon from local node_modules
-CMD ["npx", "nodemon", "server.js"] 
+# Use npx with tsx to run the TypeScript server directly
+CMD ["npm", "run", "dev"]

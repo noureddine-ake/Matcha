@@ -1,9 +1,9 @@
-import { pool } from '../config/config.js';
+import { pool } from '../config/config.ts';
 import {
   searchSuggestions2,
   getProfileDataforMatches,
   getAllMatches,
-} from '../models/matchModel.js';
+} from '../models/matchModel.ts';
 import { createAndSendNotification } from '../utils/notificationHelper.js';
 
 export const notificationTypes = {

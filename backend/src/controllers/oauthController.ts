@@ -1,5 +1,5 @@
 import JWT from '../middlewares/authMiddleware.js';
-import { createUser, getUserAttr, updateUser } from '../models/userModel.js';
+import { createUser, getUserAttr, updateUser } from '../models/userModel.ts';
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 

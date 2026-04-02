@@ -10,14 +10,15 @@ import {
   confirmPasswordReset,
   refreshTokenController,
   logoutController,
-} from '../controllers/authController.js';
-import JWT from '../middlewares/authMiddleware.js';
-import { 
+} from '../controllers/authController';
+import JWT from '../middlewares/authMiddleware';
+import {
   validateRegistrationMiddleware, 
   validateLoginMiddleware,
   validatePasswordMiddleware 
-} from '../middlewares/validationMiddleware.js';
+} from '../middlewares/validationMiddleware';
 import { body, validationResult } from 'express-validator';
+import { type Request, type Response, type NextFunction } from 'express'
 
 export const registerRoute = express.Router();
 
@@ -31,7 +32,7 @@ const registrationValidation = [
 ];
 
 // helper to run validationResult after express-validator checks
-const runValidators = (req, res, next) => {
+const runValidators = (req: Request, res: Response, next: NextFunction) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });

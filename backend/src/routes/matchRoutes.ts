@@ -1,6 +1,6 @@
 import express from 'express';
 import JWT from '../middlewares/authMiddleware.js';
-import { getMatches, getSuggestions, likeUser, unlikeUser, getLikeStatus } from '../controllers/matchingController.js';
+import { getMatches, getSuggestions, likeUser, unlikeUser, getLikeStatus } from '../controllers/matchingController.ts';
 
 export const SuggestionsRout = express.Router();
 
