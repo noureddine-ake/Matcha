@@ -6,23 +6,23 @@ import {
   deleteProfilePictureByUserId,
   getGalleryPhotoById,
   deletePhotoById,
-} from '../models/photosModal.ts';
+} from '../models/photosModal.js';
 import {
   createProfile,
   checkExistedProfiles,
   getProfileByUserId,
   updateUserLocation,
-} from '../models/profileModel.ts';
+} from '../models/profileModel.js';
 import { reverseGeocode } from '../utils/geocode.js';
 import {
   createTag,
   createUserTag,
   getTagByName,
   isUserTagExisted,
-} from '../models/tagModel.ts';
-import { updateUser, getUserAttr } from '../models/userModel.ts';
-import { getUserTags } from '../models/tagModel.ts';
-import { pool } from '../config/config.ts';
+} from '../models/tagModel.js';
+import { updateUser, getUserAttr } from '../models/userModel.js';
+import { getUserTags } from '../models/tagModel.js';
+import { pool } from '../config/config.js';
 import fs from 'fs';
 import path from 'path';
 import JWT from '../middlewares/authMiddleware.js';

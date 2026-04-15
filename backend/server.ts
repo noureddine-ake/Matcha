@@ -28,6 +28,8 @@ import { initDB } from './database/index.js';
 
 // database custom ORM link
 
+dotenv.config();
+
 try {
     await initDB()
     console.log("-STEP-1: database created successfully");
@@ -35,7 +37,6 @@ try {
     console.error(error);
 }
 
-dotenv.config();
 
 const app: express.Application = express();
 const PORT = process.env.PORT || 5000;

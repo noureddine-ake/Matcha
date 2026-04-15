@@ -10,13 +10,13 @@ import {
   confirmPasswordReset,
   refreshTokenController,
   logoutController,
-} from '../controllers/authController';
-import JWT from '../middlewares/authMiddleware';
+} from '../controllers/authController.js';
+import JWT from '../middlewares/authMiddleware.js';
 import {
   validateRegistrationMiddleware, 
   validateLoginMiddleware,
   validatePasswordMiddleware 
-} from '../middlewares/validationMiddleware';
+} from '../middlewares/validationMiddleware.js';
 import { body, validationResult } from 'express-validator';
 import { type Request, type Response, type NextFunction } from 'express'
 

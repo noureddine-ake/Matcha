@@ -4,7 +4,7 @@ import {
   verifyPendingEmail,
   cancelEmailUpdate,
   getPendingEmailStatus,
-} from '../controllers/emailUpdateController.ts';
+} from '../controllers/emailUpdateController.js';
 import JWT from '../middlewares/authMiddleware.js';
 
 export const emailUpdateRoute = express.Router();

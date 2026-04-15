@@ -29,7 +29,7 @@ services:
     networks:
       - app-network
     ports:
-      - "6380:6370"
+      - "6380:6379"
 
   # ====================
   # Backend (Express)

@@ -5,7 +5,7 @@ import { pool } from '../config/config.js';
  * @param {number} userId - ID of the user
  * @returns {Promise<number>} Total likes
  */
-export const getUserLikesCount = async (userId) => {
+export const getUserLikesCount = async (userId: number) => {
   const query = `
     SELECT COUNT(*)::int AS total_likes
     FROM likes

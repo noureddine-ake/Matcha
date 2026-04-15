@@ -1,6 +1,6 @@
 import express from 'express';
 import JWT from '../middlewares/authMiddleware.js';
-import { getLikes } from '../controllers/likesController.ts';
+import { getLikes } from '../controllers/likesController.js';
 
 export const LikestRoutes = express.Router();
 

@@ -9,6 +9,7 @@ import {
 } from "./define_types.js";
 import config from '../utils/config.js'
 import format from 'pg-format';
+import { QueryBuilder } from "./query_builder.js";
 
 const sqlFunctions = ["CURRENT_TIMESTAMP", "NOW()"] as const;
 
@@ -105,26 +106,20 @@ class ORM {
             )
 
             await this.connection?.query(query);
-        } catch (error) {
+        } catch (error: any) {
             throw (error);
         }
     }
 
-    // function to select specific attrs from a table
-    public select = async (
-        tableName: string,
-        columns: string[],
-        where: string[],
-    ) => {
-        // step 1: SELECT   columns
-        // step 2: FROM     tableName
-        // step 3: JOIN     ...    -- before WHERE
-        // step 4: WHERE    ...    -- before GROUP BY
-        // step 5: GROUP BY ...    -- before HAVING
-        // step 6: HAVING   ...    -- before ORDER BY
-        // step 7: ORDER BY ...    -- before LIMIT
-        // step 8: LIMIT    ...    -- before OFFSET
-        // step 9: OFFSET   ...    -- always last
+    public run = async (query: string, params: any[]): Promise<any> => {
+        try {
+            if (!query || query.trim().length) {
+                const ret = await this.connection?.query(query, params);
+                return ret;
+            }
+        } catch (error: any) {
+            throw (error)
+        }
     }
 }
 

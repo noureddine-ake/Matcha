@@ -1,13 +1,24 @@
 // entities/blocks.entity.ts
 import { ColumnsMap, TableConstraints } from "../define_types.js";
+import Model from "../model.js";
 
-export const blocksColumns: ColumnsMap = {
-  id: { type: "SERIAL", primaryKey: true },
-  blocker_user_id: { type: "INT", references: { table: "users", column: "id", onDelete: "CASCADE" } },
-  blocked_user_id: { type: "INT", references: { table: "users", column: "id", onDelete: "CASCADE" } },
-  created_at: { type: "TIMESTAMP", default: "CURRENT_TIMESTAMP" },
-};
+export class Blocks extends Model<Blocks> {
+  static tableName = "blocks";
 
-export const blocksConstraints: TableConstraints = {
-  unique: ["blocker_user_id", "blocked_user_id"],
-};
+  static columns: ColumnsMap = {
+    id: { type: "SERIAL", primaryKey: true },
+    blocker_user_id: {
+      type: "INT",
+      references: { table: "users", column: "id", onDelete: "CASCADE" },
+    },
+    blocked_user_id: {
+      type: "INT",
+      references: { table: "users", column: "id", onDelete: "CASCADE" },
+    },
+    created_at: { type: "TIMESTAMP", default: "CURRENT_TIMESTAMP" },
+  };
+
+  static constraints: TableConstraints = {
+    unique: ["blocker_user_id", "blocked_user_id"],
+  };
+}

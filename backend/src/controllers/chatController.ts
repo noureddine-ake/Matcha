@@ -1,38 +1,36 @@
-import express from "express";
-import JWT from '../middlewares/authMiddleware.js';
 import { isUserOnline, sendRealTimeMessage } from "../config/websocket.js";
 import {
   getUserById,
   getAllUsersExcept,
   userExists,
-  getMessages,
   saveMessage,
   markMessagesAsRead,
   createNotification,
   getMessagesPaginated
 } from "../models/chatModel.js";
 import {getProfilePictureByUserId} from "../models/photosModal.js";
+
 // ✅ Get current user info
 async function getCurrentUser(req, res) {
   try {
     const currentUserId = extractUserIdFromJWT(req.user);
-    
+
     if (!currentUserId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         error: "No user ID found in token" 
       });
     }
 
     const user = await getUserById(currentUserId);
-    
+
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
         error: "User not found" 
       });
     }
-    
+
     res.json({ 
       success: true,
       user: {
