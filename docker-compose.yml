@@ -20,7 +20,7 @@ services:
   # ====================
   # Redis Cache
   # ====================
-  rediss:
+  redis:
     image: redis:7
     container_name: redis
     restart: always
@@ -42,7 +42,7 @@ services:
       - .env
     depends_on:
       - postgres
-      - rediss
+      - redis
     ports:
       - "5000:5000"
     volumes:

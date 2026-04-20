@@ -1,6 +1,6 @@
+import { User } from "../../database/entities/users.entity.js";
 import { isUserOnline, sendRealTimeMessage } from "../config/websocket.js";
 import {
-  getUserById,
   getAllUsersExcept,
   userExists,
   saveMessage,
@@ -22,7 +22,8 @@ async function getCurrentUser(req, res) {
       });
     }
 
-    const user = await getUserById(currentUserId);
+    const ret = await User.select(['id', 'username', 'email', 'created_at']).where('id', currentUserId).run();
+    const user = ret.rows[0];
 
     if (!user) {
       return res.status(404).json({
@@ -30,6 +31,8 @@ async function getCurrentUser(req, res) {
         error: "User not found" 
       });
     }
+
+    console.log('=======----------------=======', user);
 
     res.json({ 
       success: true,

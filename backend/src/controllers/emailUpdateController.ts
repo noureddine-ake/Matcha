@@ -1,6 +1,7 @@
-import { getUserById, getUserAttr, updatePendingEmail, getUserByPendingEmailToken, confirmPendingEmail, clearPendingEmail, updateUser } from '../models/userModel.js';
+import { getUserAttr, updatePendingEmail, getUserByPendingEmailToken, confirmPendingEmail, clearPendingEmail, updateUser } from '../models/userModel.js';
 import nodemailer from 'nodemailer';
 import { randomBytes } from 'crypto';
+import { User } from '../../database/entities/users.entity.js';
 
 const getEmailUpdateContent = (username, verifyLink, newEmail) => {
   return `
@@ -54,13 +55,15 @@ export const requestEmailUpdate = async (req, res) => {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    const currentUser = await getUserById(user.id);
+    const ret = await User.select(['*']).where('id', user.id).run();
+
+    const currentUser = ret.rows[0];;
     if (newEmail.toLowerCase() === currentUser.email.toLowerCase()) {
       return res.status(400).json({ error: 'New email is the same as your current email' });
     }
 
     const existingEmail = await getUserAttr('email', newEmail.toLowerCase());
-    if (existingEmail.rowCount > 0) {
+    if (existingEmail.rowCount && existingEmail.rowCount > 0) {
       return res.status(400).json({ error: 'Email already in use' });
     }
 
@@ -85,7 +88,7 @@ export const requestEmailUpdate = async (req, res) => {
       html: getEmailUpdateContent(user.username, verifyLink, newEmail),
     });
 
-    res.status(200).json({ 
+    res.status(200).json({
       message: 'Verification link sent to your new email address',
       pendingEmail: newEmail
     });
@@ -129,7 +132,8 @@ export const cancelEmailUpdate = async (req, res) => {
   try {
     const user = req.user.data;
 
-    const currentUser = await getUserById(user.id);
+    const ret = await User.select(['*']).where('id', user.id).run();
+    const currentUser = ret.rows[0];
 
     if (!currentUser.pending_email) {
       return res.status(400).json({ error: 'No pending email change to cancel' });
@@ -147,7 +151,8 @@ export const cancelEmailUpdate = async (req, res) => {
 export const getPendingEmailStatus = async (req, res) => {
   try {
     const user = req.user.data;
-    const currentUser = await getUserById(user.id);
+    const ret = await User.select(['*']).where('id', user.id).run();
+    const currentUser = ret.rows[0];
 
     res.status(200).json({
       hasPendingEmail: !!currentUser.pending_email,

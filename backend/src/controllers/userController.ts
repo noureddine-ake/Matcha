@@ -1,5 +1,5 @@
-import { getUserById } from '../models/userModel.js';
 import { recordProfileView, getProfileViewCount } from '../models/profileViewModel.js';
+import { User } from '../../database/entities/users.entity.js';
 
 export const viewUserProfile = async (req, res) => {
   try {
@@ -10,7 +10,8 @@ export const viewUserProfile = async (req, res) => {
       return res.status(400).json({ message: 'Invalid user ID' });
     }
 
-    const user = await getUserById(viewedId);
+    const ret = await User.select(['id', 'username', 'email', 'created_at']).where('id', viewedId).run();
+    const user = ret.rows[0];
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }

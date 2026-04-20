@@ -221,8 +221,8 @@ async function handleChatMessage(senderId, data) {
 }
 
 // Send real-time message
-export const sendRealTimeMessage = (receiverId, messageData) => {
-  const receiverIdStr = receiverId.toString();
+export const sendRealTimeMessage = (receiverId: string, messageData: any) => {
+  const receiverIdStr = receiverId;
   const client = clients.get(receiverIdStr);
   
   if (client && client.readyState === 1) {
@@ -280,8 +280,8 @@ export const getOnlineUsersList = () => {
 };
 
 // Check if user is online
-export const isUserOnline = (userId) => {
-  const userIdStr = userId.toString();
+export const isUserOnline = (userId: string) => {
+  const userIdStr = userId;
   const client = clients.get(userIdStr);
   return client && client.readyState === 1;
 };

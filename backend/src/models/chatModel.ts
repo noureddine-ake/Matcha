@@ -1,26 +1,4 @@
-import { User } from "../../database/entities/users.entity.js";
 import { pool } from "../config/config.js";
-
-// ✅ User-related queries
-export async function getUserById(userId) {
-  try {
-    // const query = `
-    //   SELECT id, username, email, created_at
-    //   FROM users 
-    //   WHERE id = $1
-    // `;
-    // const result = await pool.query(query, [userId]);
-
-    console.log('=======dkhel');
-    const tt = User.select(['id', 'username', 'email', 'created_at']).where('id', userId).build();
-    console.log('============================', tt);
-
-    return {};
-  } catch (error) {
-    console.error("❌ Error in getUserById:", error);
-    throw error;
-  }
-}
 
 // ✅ Get messages with pagination
 export async function getMessagesPaginated(senderId, receiverId, cursor = null, limit = 20) {
