@@ -1,4 +1,4 @@
-import { getUserAttr, updatePendingEmail, getUserByPendingEmailToken, confirmPendingEmail, clearPendingEmail, updateUser } from '../models/userModel.js';
+import { getUserAttr, updatePendingEmail, getUserByPendingEmailToken, confirmPendingEmail, clearPendingEmail } from '../models/userModel.js';
 import nodemailer from 'nodemailer';
 import { randomBytes } from 'crypto';
 import { User } from '../../database/entities/users.entity.js';

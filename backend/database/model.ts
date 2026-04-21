@@ -24,7 +24,7 @@ abstract class Model<T> {
   }
 
   static update(set: Record<string, any>): QueryBuilder {
-    return this.querybuilder.insert(this.tableName, set);
+    return this.querybuilder.update(this.tableName, set);
   }
 
   static delete(): QueryBuilder {

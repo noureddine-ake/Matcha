@@ -2,43 +2,10 @@
 // this file contains all the models about users Tables
 // ====================================================
 
-
 import { pool } from '../config/config.js';
 
-// CREATE
-export async function createUser(user) {
-  const query = `
-    INSERT INTO users (email, username, first_name, last_name, password_hash)
-    VALUES ($1, $2, $3, $4, $5)
-    RETURNING *;
-  `;
-  const values = [user.email, user.username, user.first_name, user.last_name, user.password_hash];
-  const { rows } = await pool.query(query, values);
-  return rows[0];
-}
-
-export async function getUserByEmail(email: string) {
-  const { rows } = await pool.query(`SELECT * FROM users WHERE email=$1`, [email]);
-  return rows[0];
-}
-
-// UPDATE
-export async function updateUser(id, fields) {
-  const keys = Object.keys(fields);
-  const values = Object.values(fields);
-
-  const setString = keys.map((k, i) => `${k}=$${i + 1}`).join(', ');
-
-  const { rows } = await pool.query(
-    `UPDATE users SET ${setString}, updated_at=NOW() WHERE id=$${keys.length + 1} RETURNING *`,
-    [...values, id]
-  );
-
-  return rows[0];
-}
-
 // DELETE
-export async function deleteUser(id) {
+export async function deleteUser(id: number) {
   await pool.query(`DELETE FROM users WHERE id=$1`, [id]);
   return true;
 }
@@ -50,7 +17,7 @@ export async function getAllUsers() {
 }
 
 // GET A USER BY EMAIL
-export async function getUserAttr(attr, value) {
+export async function getUserAttr(attr: string, value: unknown  ) {
   const allowedFields = ["email", "id", "username"];
   if (!allowedFields.includes(attr)) {
     throw new Error("Sorry, Invalid attribute to get user");
@@ -63,7 +30,7 @@ export async function getUserAttr(attr, value) {
 }
 
 // PENDING EMAIL FUNCTIONS
-export async function updatePendingEmail(userId, pendingEmail, token) {
+export async function updatePendingEmail(userId: number, pendingEmail: string, token: string) {
   const { rows } = await pool.query(
     `UPDATE users SET pending_email = $1, pending_email_token = $2, updated_at = NOW() WHERE id = $3 RETURNING *`,
     [pendingEmail, token, userId]
@@ -71,7 +38,7 @@ export async function updatePendingEmail(userId, pendingEmail, token) {
   return rows[0];
 }
 
-export async function getUserByPendingEmailToken(token) {
+export async function getUserByPendingEmailToken(token: string) {
   const { rows } = await pool.query(
     `SELECT * FROM users WHERE pending_email_token = $1`,
     [token]
@@ -79,7 +46,7 @@ export async function getUserByPendingEmailToken(token) {
   return rows[0];
 }
 
-export async function confirmPendingEmail(userId) {
+export async function confirmPendingEmail(userId: number) {
   const { rows } = await pool.query(
     `UPDATE users SET 
       email = pending_email, 
@@ -95,7 +62,7 @@ export async function confirmPendingEmail(userId) {
   return rows[0];
 }
 
-export async function clearPendingEmail(userId) {
+export async function clearPendingEmail(userId: number) {
   const { rows } = await pool.query(
     `UPDATE users SET pending_email = NULL, pending_email_token = NULL, updated_at = NOW() WHERE id = $1 RETURNING *`,
     [userId]

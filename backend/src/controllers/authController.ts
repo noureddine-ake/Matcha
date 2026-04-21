@@ -1,53 +1,64 @@
-import { getUserAttr, createUser, updateUser } from '../models/userModel.js';
-import { getUserOTP, saveVerificationToken, getUserByVerificationToken, clearVerificationToken } from '../models/otpModals.ts';
+import type { CookieOptions, Request, Response } from 'express';
+import { getUserAttr } from '../models/userModel.js';
+import { getUserOTP, saveVerificationToken, getUserByVerificationToken, clearVerificationToken } from '../models/otpModals.js';
 import bcrypt from 'bcryptjs';
 import JWT from '../middlewares/authMiddleware.js';
 import nodemailer from 'nodemailer';
 import { randomBytes } from 'crypto';
 import redisClient from "../config/redisClient.js";
 import { validatePasswordWithRecommendations } from '../utils/passwordValidator.js';
+import { User } from '../../database/entities/users.entity.js';
+
+type AuthRequest = Request & {
+  user?: {
+    data: any;
+  };
+  cookies?: {
+    refreshToken?: string;
+  };
+};
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-const cookieOptions = {
+const cookieOptions: CookieOptions = {
   httpOnly: true,
   secure: isProduction,
   sameSite: isProduction ? 'strict' : 'lax',
   path: '/',
 };
 
-const getVerificationEmailContent = (username, verifyLink) => {
+const getVerificationEmailContent = (username: string, verifyLink: string) => {
   return `
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .button { display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }
-    .footer { margin-top: 20px; font-size: 12px; color: #666; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Welcome to Matcha, ${username}!</h1>
-    <p>Thank you for registering. Please verify your email address by clicking the button below:</p>
-    <p style="text-align: center; margin: 30px 0;">
-      <a href="${verifyLink}" class="button">Verify Email</a>
-    </p>
-    <p>Or copy and paste this link in your browser:</p>
-    <p style="word-break: break-all; color: #8b5cf6;">${verifyLink}</p>
-    <p>This link will expire in 24 hours.</p>
-    <div class="footer">
-      <p>If you didn't create an account, please ignore this email.</p>
-    </div>
-  </div>
-</body>
-</html>
+    <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .button { display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }
+          .footer { margin-top: 20px; font-size: 12px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Welcome to Matcha, ${username}!</h1>
+          <p>Thank you for registering. Please verify your email address by clicking the button below:</p>
+          <p style="text-align: center; margin: 30px 0;">
+            <a href="${verifyLink}" class="button">Verify Email</a>
+          </p>
+          <p>Or copy and paste this link in your browser:</p>
+          <p style="word-break: break-all; color: #8b5cf6;">${verifyLink}</p>
+          <p>This link will expire in 24 hours.</p>
+          <div class="footer">
+            <p>If you didn't create an account, please ignore this email.</p>
+          </div>
+        </div>
+      </body>
+    </html>
   `.trim();
 };
 
-export const registrationControler = async (req, res) => {
+export const registrationControler = async (req: AuthRequest, res: Response) => {
   try {
     const { email, username, password, firstName, lastName } = req.body;
 
@@ -73,9 +84,9 @@ export const registrationControler = async (req, res) => {
     // Validate password strength against best practices
     const passwordValidation = validatePasswordWithRecommendations(password);
     if (!passwordValidation.isValid) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Password does not meet security requirements',
-        details: passwordValidation.errors 
+        details: passwordValidation.errors
       });
     }
 
@@ -98,7 +109,7 @@ export const registrationControler = async (req, res) => {
       return res.status(400).json({ error: 'Username already exists' });
     }
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
-    
+
     const newUser = {
       email: req.body.email,
       username: req.body.username,
@@ -106,9 +117,13 @@ export const registrationControler = async (req, res) => {
       last_name: req.body.lastName,
       password_hash: hashedPassword,
     };
-    
-    const user = await createUser(newUser);
-    
+
+    const ret = await User.insert(newUser).returning(['*']).run();
+    const user = ret.rows[0];
+
+
+    console.log('New user created:', user); // Debug log
+
     // Create access token (15 minutes)
     const token = JWT.createJWToken({
       sessionData: {
@@ -165,8 +180,10 @@ export const registrationControler = async (req, res) => {
       html: getVerificationEmailContent(user.username, verifyLink),
     });
 
-    res.status(200).json({ 
-      message: 'User registered successfully', 
+    transporter.close();
+
+    res.status(200).json({
+      message: 'User registered successfully',
       user: {
         id: user.id,
         email: user.email,
@@ -182,7 +199,7 @@ export const registrationControler = async (req, res) => {
   }
 };
 
-export const loginController = async (req, res) => {
+export const loginController = async (req: AuthRequest, res: Response) => {
   console.log('Login request body:', req.body); // Debug log
   try {
     const { username, password } = req.body;
@@ -192,22 +209,22 @@ export const loginController = async (req, res) => {
     }
 
     const existingUser = await getUserAttr('username', username);
-    
+
     if (!existingUser.rowCount) {
       return res.status(400).json({ error: 'Invalid username or password' });
     }
 
     const user = existingUser.rows[0];
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    
+
     if (!isPasswordValid) {
       return res.status(400).json({ error: 'Invalid username or password' });
     }
     console.log('User found:', user.is_verified); // Debug log
     if (!user.is_verified) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'Email not verified. Please verify your email to login.',
-        requiresVerification: true 
+        requiresVerification: true
       });
     }
 
@@ -263,27 +280,27 @@ export const loginController = async (req, res) => {
   }
 };
 
-export const verifyEmailControler = async (req, res) => {
+export const verifyEmailControler = async (req: AuthRequest, res: Response) => {
   try {
-    const user = req.user.data;
+    const user = req.user!.data;
     const otpRecords = await getUserOTP(user.id);
-    
+
     if (!otpRecords.length || req.body.code != otpRecords[0].verification_code) {
       return res.status(403).json({ error: 'Invalid OTP' });
     }
 
     const fields = { is_verified: true };
-    await updateUser(user.id, fields);
+    await User.update(fields).where('id', user.id).run();
     user.is_verified = true;
 
     // Create new tokens with updated verification status
-    const token = JWT.createJWToken({ 
-      sessionData: user, 
-      maxAge: '15m' 
+    const token = JWT.createJWToken({
+      sessionData: user,
+      maxAge: '15m'
     });
 
-    const refreshToken = JWT.createRefreshToken({ 
-      sessionData: user 
+    const refreshToken = JWT.createRefreshToken({
+      sessionData: user
     });
 
     // Update both cookies
@@ -297,7 +314,7 @@ export const verifyEmailControler = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(200).json({ 
+    res.status(200).json({
       message: 'Email verified successfully',
       user: {
         id: user.id,
@@ -312,24 +329,24 @@ export const verifyEmailControler = async (req, res) => {
   }
 };
 
-export const verifyEmailByToken = async (req, res) => {
+export const verifyEmailByToken = async (req: AuthRequest, res: Response) => {
   try {
     const { token } = req.body;
-    
+
     if (!token) {
       return res.status(400).json({ error: 'Verification token is required' });
     }
 
     const users = await getUserByVerificationToken(token);
-    
+
     if (!users.length) {
       return res.status(400).json({ error: 'Invalid or expired verification token' });
     }
 
     const user = users[0];
-    
+
     if (user.is_verified) {
-      return res.status(200).json({ 
+      return res.status(200).json({
         message: 'Email already verified',
         user: {
           id: user.id,
@@ -340,21 +357,21 @@ export const verifyEmailByToken = async (req, res) => {
       });
     }
 
-    await updateUser(user.id, { is_verified: true });
+    await User.update({ is_verified: true }).where('id', user.id).run();
     await clearVerificationToken(user.id);
 
-    const tokenData = JWT.createJWToken({ 
+    const tokenData = JWT.createJWToken({
       sessionData: {
         id: user.id,
         username: user.username,
         email: user.email,
         is_verified: true,
         completed_profile: user.completed_profile,
-      }, 
-      maxAge: '15m' 
+      },
+      maxAge: '15m'
     });
 
-    const refreshToken = JWT.createRefreshToken({ 
+    const refreshToken = JWT.createRefreshToken({
       sessionData: {
         id: user.id,
         username: user.username,
@@ -374,7 +391,7 @@ export const verifyEmailByToken = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(200).json({ 
+    res.status(200).json({
       message: 'Email verified successfully',
       user: {
         id: user.id,
@@ -389,10 +406,10 @@ export const verifyEmailByToken = async (req, res) => {
   }
 };
 
-export const resendCode = async (req, res) => {
+export const resendCode = async (req: AuthRequest, res: Response) => {
   try {
-    const user = req.user.data;
-    
+    const user = req.user!.data;
+
     const verificationToken = randomBytes(32).toString('hex');
     const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
     const verifyLink = `${FRONTEND_URL}/auth/verify-email/verify?token=${verificationToken}`;
@@ -416,6 +433,8 @@ export const resendCode = async (req, res) => {
 
     await transporter.sendMail(mailOptions);
 
+    transporter.close();
+
     res.status(200).json({ message: 'Verification link sent successfully' });
   } catch (err) {
     console.error('Resend code error:', err);
@@ -423,10 +442,10 @@ export const resendCode = async (req, res) => {
   }
 };
 
-export const resendVerificationPublic = async (req, res) => {
+export const resendVerificationPublic = async (req: AuthRequest, res: Response) => {
   try {
     const { email } = req.body;
-    
+
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
     }
@@ -437,7 +456,7 @@ export const resendVerificationPublic = async (req, res) => {
     }
 
     const userResult = await getUserAttr('email', email.toLowerCase());
-    
+
     if (!userResult.rowCount) {
       return res.status(404).json({ error: 'No account found with this email' });
     }
@@ -471,6 +490,8 @@ export const resendVerificationPublic = async (req, res) => {
 
     await transporter.sendMail(mailOptions);
 
+    transporter.close();
+
     res.status(200).json({ message: 'Verification link sent successfully' });
   } catch (err) {
     console.error('Resend verification public error:', err);
@@ -478,7 +499,7 @@ export const resendVerificationPublic = async (req, res) => {
   }
 };
 
-export const requestPasswordReset = async (req, res) => {
+export const requestPasswordReset = async (req: AuthRequest, res: Response) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
@@ -500,9 +521,9 @@ export const requestPasswordReset = async (req, res) => {
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
-      auth: { 
-        user: process.env.MAIL_USER, 
-        pass: process.env.MAIL_PASS 
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS
       },
     });
 
@@ -513,6 +534,8 @@ export const requestPasswordReset = async (req, res) => {
       text: `Click this link to reset your password: ${resetLink}`,
     });
 
+    transporter.close();
+
     res.status(200).json({ message: 'Reset link sent to your email' });
   } catch (err) {
     console.error('Password reset request error:', err);
@@ -520,7 +543,7 @@ export const requestPasswordReset = async (req, res) => {
   }
 };
 
-export const confirmPasswordReset = async (req, res) => {
+export const confirmPasswordReset = async (req: AuthRequest, res: Response) => {
   try {
     const { token, newPassword } = req.body;
     if (!token || !newPassword) {
@@ -530,9 +553,9 @@ export const confirmPasswordReset = async (req, res) => {
     // Validate password strength
     const passwordValidation = validatePasswordWithRecommendations(newPassword);
     if (!passwordValidation.isValid) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Password does not meet security requirements',
-        details: passwordValidation.errors 
+        details: passwordValidation.errors
       });
     }
 
@@ -554,7 +577,7 @@ export const confirmPasswordReset = async (req, res) => {
 
     // Hash new password and update user
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await updateUser(userId, { password_hash: hashedPassword });
+    await User.update({ password_hash: hashedPassword }).where('id', userId).run();
 
     // Delete token from Redis (used once)
     await redisClient.del(`reset:${userId}`);
@@ -566,13 +589,13 @@ export const confirmPasswordReset = async (req, res) => {
   }
 };
 
-export const refreshTokenController = async (req, res) => {
+export const refreshTokenController = async (req: AuthRequest, res: Response) => {
   try {
     // Get refresh token from cookies
     const refreshToken = req.cookies?.refreshToken;
-    
-    
-    
+
+
+
     if (!refreshToken) {
       return res.status(401).json({ error: 'No refresh token provided' });
     }
@@ -608,7 +631,7 @@ export const refreshTokenController = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    res.status(200).json({ 
+    res.status(200).json({
       message: 'Token refreshed successfully',
       user: userData.data,
     });
@@ -618,12 +641,12 @@ export const refreshTokenController = async (req, res) => {
   }
 };
 
-export const logoutController = async (req, res) => {
+export const logoutController = async (_req: AuthRequest, res: Response) => {
   try {
     // Clear both cookies
     res.clearCookie('token', cookieOptions);
     res.clearCookie('refreshToken', cookieOptions);
-    
+
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (err) {
     console.error('Logout error:', err);
@@ -631,10 +654,10 @@ export const logoutController = async (req, res) => {
   }
 };
 
-export const getCurrentUser = async (req, res) => {
+export const getCurrentUser = async (req: AuthRequest, res: Response) => {
   try {
-    const user = req.user.data;
-    
+    const user = req.user!.data;
+
     // Get fresh user data from database
     const userResult = await getUserAttr('id', user.id);
     if (!userResult.rowCount) {
@@ -642,7 +665,7 @@ export const getCurrentUser = async (req, res) => {
     }
 
     const currentUser = userResult.rows[0];
-    
+
     res.status(200).json({
       user: {
         id: currentUser.id,

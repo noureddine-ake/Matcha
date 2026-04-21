@@ -20,7 +20,7 @@ import {
   getTagByName,
   isUserTagExisted,
 } from '../models/tagModel.js';
-import { updateUser, getUserAttr } from '../models/userModel.js';
+import { getUserAttr } from '../models/userModel.js';
 import { getUserTags } from '../models/tagModel.js';
 import { pool } from '../config/config.js';
 import fs from 'fs';
@@ -39,16 +39,17 @@ const isValidAge = (birthDateStr) => {
   }
   return age >= MIN_AGE;
 };
+
 import {
   recordProfileView,
   getProfileViewCount,
   getAllUniqueProfileViewers,
   getProfileTotalViews
-} from '../models/profileViewModel.ts'; 
-import {getUserLikesCount} from '../models/likesModel.ts'; 
-import {getMatchesCount} from '../models/matchModel.ts'; 
+} from '../models/profileViewModel.js'; 
+import {getMatchesCount} from '../models/matchModel.js'; 
 import { createAndSendNotification } from '../utils/notificationHelper.js';
-import { notificationTypes } from './matchingController.ts';
+import { notificationTypes } from './matchingController.js';
+import { Likes, User } from '../../database/entities/index.js';
 /**
  * Retrieves the complete user profile including personal information, photos, and tags
  * @param {Object} req - Express request object containing user authentication data
@@ -75,7 +76,8 @@ export const getProfile = async (req, res) => {
     const userResult = await getUserAttr('id', userId);
     const user = userResult.rows[0];
     const views = await getProfileTotalViews(userId);
-    const likes = await getUserLikesCount(userId);
+    const ret = await Likes.select(['COUNT(*)::int AS total_likes']).where('liked_user_id', userId).run();
+    const likes = ret.rows[0].total_likes;
     const matches = await getMatchesCount(userId)
     // Send comprehensive profile response
     res.status(200).json({
@@ -175,7 +177,8 @@ export const getProfileUser = async (req, res) => {
     const totalViews = await getProfileViewCount(viewedId); // ✅ Add total views
     // 
      const views = await getProfileTotalViews(viewedId);
-    const likes = await getUserLikesCount(viewedId);
+    const ret = await Likes.select(['COUNT(*)::int AS total_likes']).where('liked_user_id', viewedId).run();
+    const likes = ret.rows[0].total_likes;
     const matches = await getMatchesCount(viewedId)
     // 5. Return full profile
     res.status(200).json({
@@ -286,7 +289,7 @@ export const updateProfile = async (req, res) => {
 
     // Apply user account updates if any changes exist
     if (Object.keys(userUpdates).length > 0) {
-      await updateUser(userId, userUpdates);
+      await User.update(userUpdates).where('id', userId).run();
     }
 
     // Prepare updates for profile-specific information
@@ -679,7 +682,7 @@ export const completeProfile = async (req, res) => {
     }
 
     // Mark profile as completed in user record
-    await updateUser(userTokenData.id, { completed_profile: true });
+    await User.update({ completed_profile: true }).where('id', userTokenData.id).run();
     userTokenData.completed_profile = true;
 
     const token = JWT.createJWToken({

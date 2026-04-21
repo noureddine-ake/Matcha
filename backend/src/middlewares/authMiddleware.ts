@@ -69,7 +69,6 @@ const verifyRefreshToken = (token) => {
 };
 
 const verifyAndDecodeToken = (req, res, next) => {
-  console.log('======================', req.headers.cookie);
   const token = getTokeFromCookies(req);
   if (!token) {
     return res.status(401).json({ error: 'no token provided' });
