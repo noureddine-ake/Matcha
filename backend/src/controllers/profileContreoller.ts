@@ -7,21 +7,7 @@ import {
   getGalleryPhotoById,
   deletePhotoById,
 } from '../models/photosModal.js';
-import {
-  createProfile,
-  checkExistedProfiles,
-  getProfileByUserId,
-  updateUserLocation,
-} from '../models/profileModel.js';
 import { reverseGeocode } from '../utils/geocode.js';
-import {
-  createTag,
-  createUserTag,
-  getTagByName,
-  isUserTagExisted,
-} from '../models/tagModel.js';
-import { getUserAttr } from '../models/userModel.js';
-import { getUserTags } from '../models/tagModel.js';
 import { pool } from '../config/config.js';
 import fs from 'fs';
 import path from 'path';
@@ -39,17 +25,11 @@ const isValidAge = (birthDateStr) => {
   }
   return age >= MIN_AGE;
 };
-
-import {
-  recordProfileView,
-  getProfileViewCount,
-  getAllUniqueProfileViewers,
-  getProfileTotalViews
-} from '../models/profileViewModel.js'; 
-import {getMatchesCount} from '../models/matchModel.js'; 
+import { getMatchesCount } from '../models/matchModel.js';
 import { createAndSendNotification } from '../utils/notificationHelper.js';
 import { notificationTypes } from './matchingController.js';
-import { Likes, User } from '../../database/entities/index.js';
+import { Likes, User, Tags, UserTags, ProfileViews, Profiles } from '../../database/entities/index.js';
+import { Raw } from '../../database/raw.js';
 /**
  * Retrieves the complete user profile including personal information, photos, and tags
  * @param {Object} req - Express request object containing user authentication data
@@ -61,21 +41,26 @@ export const getProfile = async (req, res) => {
     const userId = req.user.data.id;
 
     // Fetch main profile data
-    const profile = await getProfileByUserId(userId);
+    const profile = await Profiles.select(['*']).where('user_id', userId).run().then(result => result.rows[0]);
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
     }
 
     // Fetch user's associated tags
-    const tags = await getUserTags(userId);
+    const tags = await UserTags.select(['t.id', 't.name']).from('user_tags ut')
+      .join('', 'tags t', 'ut.tag_id = t.id').where('ut.user_id', userId)
+      .run().then((result) => result.rows);
 
     // Fetch user's photo gallery
     const photos = await getPhotosByUserId(userId);
 
     // Fetch basic user account information
-    const userResult = await getUserAttr('id', userId);
+    const userResult = await User.select(['*']).where('id', userId).run();
     const user = userResult.rows[0];
-    const views = await getProfileTotalViews(userId);
+
+    const views = await ProfileViews.select(['COUNT(*)::int AS total_views'])
+      .where('viewed_user_id', userId)
+      .run().then((result) => result.rows[0].total_views);
     const ret = await Likes.select(['COUNT(*)::int AS total_likes']).where('liked_user_id', userId).run();
     const likes = ret.rows[0].total_likes;
     const matches = await getMatchesCount(userId)
@@ -134,7 +119,7 @@ export const getProfileUser = async (req, res) => {
     }
 
     // 1. Get user by username
-    const userResult = await getUserAttr('username', username);
+    const userResult = await User.select(['*']).where('username', username).run();
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -162,21 +147,34 @@ export const getProfileUser = async (req, res) => {
 
     if (viewerId && viewerId !== viewedId) {
       await createAndSendNotification(viewedId, notificationTypes.VIEW, viewerId);
-      await recordProfileView(viewerId, viewedId);
+
+      const lastviewscount = await ProfileViews.select(['viewed_at'])
+        .where('viewer_user_id', viewerId).where('viewed_user_id', viewedId)
+        .where('viewed_at', new Raw(`NOW() - INTERVAL '24 hours'`), '>')
+        .run().then(result => result.rowCount);
+      if (lastviewscount <= 0) {
+        await ProfileViews.insert({
+          viewer_user_id: viewerId,
+          viewed_user_id: viewedId,
+          viewed_at: new Raw('NOW()'),
+        }).run();
+      }
     }
 
     // 3. Get profile
-    const profile = await getProfileByUserId(viewedId);
+    const profile = await Profiles.select(['*']).where('user_id', viewedId).run().then(result => result.rows[0]);
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
     }
 
     // 4. Get tags, photos, and total views
-    const tags = await getUserTags(viewedId);
+    const tags = await UserTags.select(['t.id', 't.name']).from('user_tags ut')
+      .join('INNER', 'tags t', 'ut.tag_id = t.id').where('ut.user_id', viewedId)
+      .run().then((result) => result.rows);
     const photos = await getPhotosByUserId(viewedId);
-    const totalViews = await getProfileViewCount(viewedId); // ✅ Add total views
-    // 
-     const views = await getProfileTotalViews(viewedId);
+    const views = await ProfileViews.select(['COUNT(*)::int AS total_views'])
+      .where('viewed_user_id', viewedId)
+      .run().then((result) => result.rows[0].total_views);
     const ret = await Likes.select(['COUNT(*)::int AS total_likes']).where('liked_user_id', viewedId).run();
     const likes = ret.rows[0].total_likes;
     const matches = await getMatchesCount(viewedId)
@@ -205,7 +203,7 @@ export const getProfileUser = async (req, res) => {
       tags,
       photos,
       stats: {
-        // views: totalViews, // ✅ dynamic
+        views: views, // ✅ dynamic
         likes,
         matches,
         // messages: profile.messages || 0,
@@ -222,8 +220,16 @@ export const getWhoViewedYou = async (req, res) => {
   try {
     const userId = req.user.data.id;
 
+
     // Fetch all unique viewers
-    const viewers = await getAllUniqueProfileViewers(userId);
+    const viewers = await ProfileViews.select([
+      'DISTINCT ON (pv.viewer_user_id) u.id', 'u.username', 'u.first_name', 'u.last_name', 'u.completed_profile', 'p.photo_url AS profile_picture', ' pv.viewed_at'])
+      .from('profile_views pv')
+      .join('', 'users u', 'pv.viewer_user_id = u.id')
+      .join('LEFT', 'photos p', 'p.user_id = u.id AND p.is_profile_picture = TRUE')
+      .where('pv.viewed_user_id', userId)
+      .orderBy('pv.viewer_user_id, pv.viewed_at', 'DESC')
+      .run().then((result) => result.rows);
 
     res.status(200).json({
       totalViewers: viewers.length,
@@ -254,7 +260,7 @@ export const updateProfile = async (req, res) => {
     const userId = req.user.data.id;
 
     // Verify profile exists for the authenticated user
-    const existingProfile = await getProfileByUserId(userId);
+    const existingProfile = await Profiles.select(['*']).where('user_id', userId).run().then(result => result.rowCount > 0);
     if (!existingProfile) {
       return res.status(404).json({ error: 'Profile not found' });
     }
@@ -266,8 +272,8 @@ export const updateProfile = async (req, res) => {
 
     // Validate and update email if provided
     if (req.body.email) {
-      const emailResult = await getUserAttr('email', req.body.email);
-      if (emailResult.rows.length > 0 && emailResult.rows[0].id !== userId) {
+      const emailResult = await User.select(['*']).where('email', req.body.email.toLowerCase()).run();
+      if (emailResult.rowCount > 0 && emailResult.rows[0].id !== userId) {
         return res.status(400).json({ error: 'Email already in use' });
       }
       userUpdates.email = req.body.email;
@@ -277,7 +283,7 @@ export const updateProfile = async (req, res) => {
 
     // Validate and update username if provided
     if (req.body.username) {
-      const usernameResult = await getUserAttr('username', req.body.username);
+      const usernameResult = await User.select(['*']).where('username', req.body.username).run();
       if (
         usernameResult.rows.length > 0 &&
         usernameResult.rows[0].id !== userId
@@ -327,8 +333,8 @@ export const updateProfile = async (req, res) => {
       await pool.query(
         `UPDATE profiles
          SET ${Object.keys(profileUpdates)
-           .map((key, i) => `${key} = $${i + 1}`)
-           .join(', ')}
+          .map((key, i) => `${key} = $${i + 1}`)
+          .join(', ')}
          WHERE user_id = $${Object.keys(profileUpdates).length + 1}`,
         [...Object.values(profileUpdates), userId]
       );
@@ -343,14 +349,16 @@ export const updateProfile = async (req, res) => {
 
       // Process each interest tag
       for (const tagName of interests) {
-        let tag = await getTagByName(tagName);
+        const ref = await Tags.select(['*']).where('name', tagName).run();
+        let tag = ref.rows[0];
         // Create new tag if it doesn't exist
-        if (!tag) {
-          const now = new Date();
-          tag = await createTag({ name: tagName, create_at: now });
-        }
+         if (!tag) {
+           const now = new Date();
+           const ret = await Tags.insert({ name: tagName, created_at: now }).returning(['*']).run();
+           tag = ret.rows[0];
+         }
         // Associate user with the tag
-        await createUserTag({ user_id: userId, tag_id: tag.id });
+        await UserTags.insert({ user_id: userId, tag_id: tag.id }).run();
       }
     }
 
@@ -374,10 +382,12 @@ export const updateProfile = async (req, res) => {
     }
 
     // Fetch updated data to return to client
-    const updatedProfile = await getProfileByUserId(userId);
-    const tags = await getUserTags(userId);
+    const updatedProfile = await Profiles.select(['*']).where('user_id', userId).run().then(result => result.rows[0]);
+    const tags = await UserTags.select(['t.id', 't.name']).from('user_tags ut')
+      .join('INNER', 'tags t', 'ut.tag_id = t.id').where('ut.user_id', userId)
+      .run().then((result) => result.rows);
     const photos = await getPhotosByUserId(userId);
-    const userResult = await getUserAttr('id', userId);
+    const userResult = await User.select(['*']).where('id', userId).run();
     const user = userResult.rows[0];
 
     res.status(200).json({
@@ -584,7 +594,7 @@ export const deleteGalleryPicture = async (req, res) => {
  */
 export const logoutController = (req, res) => {
   const isProduction = process.env.NODE_ENV === 'production';
-  
+
   const cookieOptions = {
     httpOnly: true,
     secure: isProduction,
@@ -621,45 +631,43 @@ export const completeProfile = async (req, res) => {
     }
 
     // Check if profile already exists
-    const isProfileExisted = await checkExistedProfiles(userTokenData.id);
+    const isProfileExisted = await Profiles.select(['*']).where('user_id', userTokenData.id).run().then(result => result.rowCount > 0);
     if (isProfileExisted) {
       return res.status(403).json({
         error: 'Profile already created',
       });
     }
 
-    // Create initial profile record
-    await createProfile({
+    await Profiles.insert({
       user_id: userTokenData.id,
       gender: req.body.gender,
       sexual_preference:
         req.body.sexualPreference === 'men' ? 'male' : 'female',
       biography: req.body.biography,
       birth_date: req.body.birth_date,
-    });
+    }).run();
 
     // Process and create user interest tags
     const interests = JSON.parse(req.body.interests);
     for (const tag of interests) {
-      let existingTag = await getTagByName(tag);
+      let existingTag = await Tags.select(['*']).where('name', tag).run().then(result => result.rows[0]);
       const now = new Date(Date.now());
 
-      console.log('existingTag', existingTag);
       // Create new tag if it doesn't exist
       if (!existingTag) {
-        existingTag = await createTag({ name: tag, create_at: now });
+        const ret = await Tags.insert({ name: tag, created_at: now })
+          .returning(['*']).run();
+        existingTag = ret.rows[0];
       }
       // Check if user-tag association already exists
-      const UserTagExisted = await isUserTagExisted({
-        user_id: userTokenData.id,
-        tag_id: existingTag.id,
-      });
-      // Create user-tag association if it doesn't exist
+      const UserTagExisted =  await UserTags.select(['*'])
+        .where('user_id', userTokenData.id).where('tag_id', existingTag.id)
+        .run().then(result => result.rows[0]);
       if (!UserTagExisted) {
-        await createUserTag({
+        await UserTags.insert({
           user_id: userTokenData.id,
           tag_id: existingTag.id,
-        });
+        }).run();
       }
     }
 
@@ -728,13 +736,16 @@ export const addUserTag = async (req, res) => {
         .json({ error: 'Tag name too long (max 30 characters)' });
     tagName = tagName.trim();
     const tagNameWithHash = tagName.startsWith('#') ? tagName : `#${tagName}`;
-    let tag = await getTagByName(tagNameWithHash);
+    const ref = await Tags.select(['*']).where('name', tagNameWithHash).run();
+    let tag = ref.rows[0];
     if (!tag) {
-      try {
-        tag = await createTag({ name: tagNameWithHash, create_at: new Date() });
-      } catch (createErr) {
+       try {
+         const ret = await Tags.insert({ name: tagNameWithHash, created_at: new Date() }).returning(['*']).run();
+         tag = ret.rows[0];
+       } catch (createErr) {
         if (createErr.code === '23505') {
-          tag = await getTagByName(tagNameWithHash);
+          const ref = await Tags.select(['*']).where('name', tagNameWithHash).run();
+          tag = ref.rows[0];
           if (!tag) {
             return res.status(500).json({ error: 'Failed to create tag' });
           }
@@ -745,16 +756,16 @@ export const addUserTag = async (req, res) => {
     }
 
     // Check if user already has this tag
-    const userTagExists = await isUserTagExisted({
-      user_id: userId,
-      tag_id: tag.id,
-    });
+    const userTagExists = await UserTags.select(['*']).where('user_id', userId)
+      .where('tag_id', tag.id)
+      .run()
+      .then((result) => result.rows[0]);
     if (userTagExists) {
       return res.status(400).json({ error: 'User already has this tag' });
     }
 
     // Create user-tag association
-    await createUserTag({ user_id: userId, tag_id: tag.id });
+    await UserTags.insert({ user_id: userId, tag_id: tag.id }).run();
 
     res.status(200).json({ message: 'Tag added successfully', tag });
   } catch (err) {
@@ -774,7 +785,9 @@ export const removeUserTag = async (req, res) => {
     const { tagId } = req.params;
 
     // Verify tag exists and belongs to user
-    const userTags = await getUserTags(userId);
+    const userTags = await UserTags.select(['t.id', 't.name']).from('user_tags ut')
+      .join('INNER', 'tags t', 'ut.tag_id = t.id').where('ut.user_id', userId)
+      .run().then((result) => result.rows);
     const tagExists = userTags.some((tag) => tag.id == tagId);
 
     if (!tagExists) {
@@ -812,16 +825,20 @@ export const updateUserTags = async (req, res) => {
     await pool.query('DELETE FROM user_tags WHERE user_id = $1', [userId]);
 
     // Add new tags
-    for (const tagName of tags) {
-      let tag = await getTagByName(tagName);
-      if (!tag) {
-        tag = await createTag({ name: tagName, create_at: new Date() });
-      }
-      await createUserTag({ user_id: userId, tag_id: tag.id });
-    }
+     for (const tagName of tags) {
+       const ref = await Tags.select(['*']).where('name', tagName).run();
+       let tag = ref.rows[0];
+       if (!tag) {
+         const ret = await Tags.insert({ name: tagName, created_at: new Date() }).returning(['*']).run();
+         tag = ret.rows[0];
+       }
+       await UserTags.insert({ user_id: userId, tag_id: tag.id }).run();
+     }
 
     // Return updated tags
-    const updatedTags = await getUserTags(userId);
+    const updatedTags = await UserTags.select(['t.id', 't.name']).from('user_tags ut')
+      .join('INNER', 'tags t', 'ut.tag_id = t.id').where('ut.user_id', userId)
+      .run().then((result) => result.rows);
     res
       .status(200)
       .json({ message: 'Tags updated successfully', tags: updatedTags });
@@ -877,24 +894,22 @@ export const updateLocation = async (req, res) => {
   try {
     // Reverse geocode to get city and country
     const { city, country } = await reverseGeocode(latitude, longitude);
-    console.log('[updateLocation] reverseGeocode result:', { city, country });
-    // Update all fields in profile
-    const updatedUser = await updateUserLocation(
-      userId,
-      latitude,
-      longitude,
-      city,
-      country
-    );
-    
-    console.log('[updateLocation] updatedUser:', updatedUser);
+
+    const updatedUser = await Profiles.update({
+      latitude: latitude,
+      longitude: longitude,
+      city: city,
+      country: country,
+      updated_at: new Date(),
+    }).where('user_id', userId).returning(['*'])
+    .run().then(result => result.rows[0]);
+
     res
       .status(200)
       .json({ message: 'Location updated successfully', user: updatedUser });
   } catch (error) {
-    console.error('Error updating location:', error);
     res
       .status(500)
-      .json({ message: 'Error updating location', error: error.message });
+      .json({ message: 'Error updating location'});
   }
 };

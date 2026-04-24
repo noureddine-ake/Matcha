@@ -13,7 +13,8 @@ export type WhereCondition =
   | { type: 'exists'; subquery: string; negate: boolean }
   | { type: 'and'; conditions: WhereCondition[] }
   | { type: 'or'; conditions: WhereCondition[] }
-  | { type: 'raw'; sql: string };
+  | { type: 'raw'; sql: string }
+  | { type: 'grater_then'; field: string; value: any };
 
 export class WhereBuilder {
   private conditions: WhereCondition[] = [];
@@ -52,6 +53,11 @@ export class WhereBuilder {
     this.conditions.push({ type: 'raw', sql });
     return this;
   }
+
+  grater_then(field: string, value: any): this {
+    this.conditions.push({ type: 'grater_then', field, value });
+    return this;
+  }
   
   build(): WhereCondition[] {
     return this.conditions;
@@ -69,7 +75,7 @@ export class WhereBuilder {
 // ----------------------
 // JOIN Clause
 // ----------------------
-export type JoinType = 'INNER' | 'LEFT' | 'RIGHT' | 'CROSS';
+export type JoinType = 'INNER' | 'LEFT' | 'RIGHT' | 'CROSS' | '';
 
 export type JoinClause = {
   type: JoinType;

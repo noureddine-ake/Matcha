@@ -1,11 +1,11 @@
+import { Profiles } from '../../database/entities/profiles.entity.js';
 import { getUserLikes } from '../models/matchModel.js';
-import { getProfileByUserId } from '../models/profileModel.js'
 
 export const getLikes = async (req, res) => {
   try {
     const userId = req.user.data.id;
 
-    const existingProfile = await getProfileByUserId(userId);
+    const existingProfile = await Profiles.select(['*']).where('user_id', userId).run().then(result => result.rowCount > 0);
     if (!existingProfile) {
       return res.status(404).json({ error: 'Profile not found' });
     }

@@ -1,5 +1,4 @@
 import JWT from '../middlewares/authMiddleware.js';
-import { getUserAttr } from '../models/userModel.js';
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { User } from '../../database/entities/users.entity.js';
@@ -55,7 +54,7 @@ export const googleCallbackController = async (req: Request, res: Response) => {
     );
     const userData = await userResponse.json();
 
-    let rows = await getUserAttr("email", userData.email);
+    let rows = await User.select(['*']).where('email', userData.email.toLowerCase()).run();
     let user = rows.rows[0]
     if (!rows.rowCount) {
       const randomPassword = crypto.randomBytes(12).toString("base64");
@@ -64,11 +63,11 @@ export const googleCallbackController = async (req: Request, res: Response) => {
       let username = userData.name || userData.email.split('@')[0];
       username = username.replace(/\s+/g, '_').toLowerCase();
 
-      let existingUsername = await getUserAttr("username", username);
+      let existingUsername = await User.select(['*']).where('username', username).run();
       let counter = 1;
       while (existingUsername.rowCount && existingUsername.rowCount > 0) {
         username = `${username}_${counter}`;
-        existingUsername = await getUserAttr("username", username);
+        existingUsername = await User.select(['*']).where('username', username).run();
         counter++;
       }
 
@@ -83,8 +82,6 @@ export const googleCallbackController = async (req: Request, res: Response) => {
       const ret = await User.insert(newUser).returning(['*']).run();
       user = ret[0];
 
-      console.log('New user created via Google OAuth:', user); // Debug log
-      // TODO: add updatedat fielc change ...  updated_at=NOW()
       await User.update({ is_verified: true }).where('id', user.id).run();
     }
     const token = JWT.createJWToken({

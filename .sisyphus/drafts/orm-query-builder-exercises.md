@@ -565,6 +565,7 @@ After completing these exercises, your ORM will support every SQL pattern from y
 const suggestions = await new QueryBuilder()
   .cte('current_user_location', 'SELECT latitude, longitude FROM profiles WHERE user_id = $1')
   .select([...])
+  
   .from('users u')
   .innerJoin('profiles p', 'u.id = p.user_id')
   .leftJoin('photos ph', 'ph.user_id = u.id')

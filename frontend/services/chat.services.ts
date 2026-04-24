@@ -143,11 +143,14 @@ export class NotificationService {
     try {
       this.audio = new Audio('/sounds/message-notification.mp3');
       this.audio.volume = 0.3;
+      this.audio.addEventListener('error', () => {
+        console.warn('Notification sound file not found, continuing without audio');
+        this.audio = null;
+      });
 
       if ('Notification' in window) {
         this.permission = Notification.permission;
         if (this.permission === 'default') {
-          // Request permission on user interaction
           document.addEventListener('click', this.requestPermission.bind(this), { once: true });
         }
       }

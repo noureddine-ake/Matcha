@@ -1,6 +1,4 @@
 import type { CookieOptions, Request, Response } from 'express';
-import { getUserAttr } from '../models/userModel.js';
-import { getUserOTP, saveVerificationToken, getUserByVerificationToken, clearVerificationToken } from '../models/otpModals.js';
 import bcrypt from 'bcryptjs';
 import JWT from '../middlewares/authMiddleware.js';
 import nodemailer from 'nodemailer';
@@ -8,6 +6,8 @@ import { randomBytes } from 'crypto';
 import redisClient from "../config/redisClient.js";
 import { validatePasswordWithRecommendations } from '../utils/passwordValidator.js';
 import { User } from '../../database/entities/users.entity.js';
+import { EmailVerifications } from '../../database/entities/email_verifications.entity.js';
+import { Raw } from '../../database/raw.js';
 
 type AuthRequest = Request & {
   user?: {
@@ -100,11 +100,11 @@ export const registrationControler = async (req: AuthRequest, res: Response) => 
       return res.status(400).json({ error: 'Names must be less than 50 characters' });
     }
 
-    const existingUserEmail = await getUserAttr('email', req.body.email);
+    const existingUserEmail = await User.select(['*']).where('email', email.toLowerCase()).run();
     if (existingUserEmail.rowCount) {
       return res.status(400).json({ error: 'Email already exists' });
     }
-    const existingUsername = await getUserAttr('username', req.body.username);
+    const existingUsername = await User.select(['*']).where('username', username).run();
     if (existingUsername.rowCount) {
       return res.status(400).json({ error: 'Username already exists' });
     }
@@ -121,10 +121,6 @@ export const registrationControler = async (req: AuthRequest, res: Response) => 
     const ret = await User.insert(newUser).returning(['*']).run();
     const user = ret.rows[0];
 
-
-    console.log('New user created:', user); // Debug log
-
-    // Create access token (15 minutes)
     const token = JWT.createJWToken({
       sessionData: {
         id: user.id,
@@ -163,7 +159,7 @@ export const registrationControler = async (req: AuthRequest, res: Response) => 
     const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
     const verifyLink = `${FRONTEND_URL}/auth/verify-email/verify?token=${verificationToken}`;
 
-    await saveVerificationToken(user.id, verificationToken);
+    await User.update({ verification_token: verificationToken, updated_at: new Raw('CURRENT_TIMESTAMP') }).where('id', user.id).run();
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -208,7 +204,7 @@ export const loginController = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    const existingUser = await getUserAttr('username', username);
+    const existingUser = await User.select(['*']).where('username', username).run();
 
     if (!existingUser.rowCount) {
       return res.status(400).json({ error: 'Invalid username or password' });
@@ -220,7 +216,6 @@ export const loginController = async (req: AuthRequest, res: Response) => {
     if (!isPasswordValid) {
       return res.status(400).json({ error: 'Invalid username or password' });
     }
-    console.log('User found:', user.is_verified); // Debug log
     if (!user.is_verified) {
       return res.status(403).json({
         error: 'Email not verified. Please verify your email to login.',
@@ -283,7 +278,9 @@ export const loginController = async (req: AuthRequest, res: Response) => {
 export const verifyEmailControler = async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!.data;
-    const otpRecords = await getUserOTP(user.id);
+    const otpRecords = await EmailVerifications
+      .select(['*']).where('user_id', user.id)
+      .run().then(result => result.rows);
 
     if (!otpRecords.length || req.body.code != otpRecords[0].verification_code) {
       return res.status(403).json({ error: 'Invalid OTP' });
@@ -337,7 +334,7 @@ export const verifyEmailByToken = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Verification token is required' });
     }
 
-    const users = await getUserByVerificationToken(token);
+    const users = await User.select(['*']).where('verification_token', token).run().then(result => result.rows);
 
     if (!users.length) {
       return res.status(400).json({ error: 'Invalid or expired verification token' });
@@ -357,8 +354,10 @@ export const verifyEmailByToken = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    await User.update({ is_verified: true }).where('id', user.id).run();
-    await clearVerificationToken(user.id);
+    await User.update({
+      is_verified: null,
+      updated_at: new Raw('CURRENT_TIMESTAMP')})
+      .where('id', user.id).run();
 
     const tokenData = JWT.createJWToken({
       sessionData: {
@@ -414,7 +413,7 @@ export const resendCode = async (req: AuthRequest, res: Response) => {
     const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
     const verifyLink = `${FRONTEND_URL}/auth/verify-email/verify?token=${verificationToken}`;
 
-    await saveVerificationToken(user.id, verificationToken);
+    await User.update({ verification_token: verificationToken, updated_at: new Raw('CURRENT_TIMESTAMP') }).where('id', user.id).run();
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -455,7 +454,7 @@ export const resendVerificationPublic = async (req: AuthRequest, res: Response) 
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    const userResult = await getUserAttr('email', email.toLowerCase());
+    const userResult = await User.select(['*']).where('email', email.toLowerCase()).run();
 
     if (!userResult.rowCount) {
       return res.status(404).json({ error: 'No account found with this email' });
@@ -471,7 +470,7 @@ export const resendVerificationPublic = async (req: AuthRequest, res: Response) 
     const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
     const verifyLink = `${FRONTEND_URL}/auth/verify-email/verify?token=${verificationToken}`;
 
-    await saveVerificationToken(user.id, verificationToken);
+    await User.update({ verification_token: verificationToken, updated_at: new Raw('CURRENT_TIMESTAMP') }).where('id', user.id).run();
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -504,7 +503,7 @@ export const requestPasswordReset = async (req: AuthRequest, res: Response) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
-    const userResult = await getUserAttr('email', email);
+    const userResult = await User.select(['*']).where('email', email.toLowerCase()).run();
     if (!userResult.rowCount) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -659,7 +658,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
     const user = req.user!.data;
 
     // Get fresh user data from database
-    const userResult = await getUserAttr('id', user.id);
+    const userResult = await User.select(['*']).where('id', user.id).run();
     if (!userResult.rowCount) {
       return res.status(404).json({ error: 'User not found' });
     }

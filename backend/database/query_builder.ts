@@ -1,4 +1,5 @@
 import orm from "./orm.js";
+import { Raw } from "./raw.js";
 import { BuildResult, DeleteQuery, InsertQuery, JoinType, Query, SelectQuery, UpdateQuery, WhereBuilder } from "./types.js";
 
 export class QueryBuilder {
@@ -20,6 +21,13 @@ export class QueryBuilder {
             table,
         }
 
+        return this;
+    }
+
+    from(table: string) {
+        if (this.query && this.query.type === 'SELECT') {
+            this.query.table = table;
+        }
         return this;
     }
 
@@ -108,8 +116,24 @@ export class QueryBuilder {
     // ===================
     // WHERE methods
     // ===================
-    where(field: string, value: any) {
-        this.whereBuilder.equals(field, value);
+    where(field: string, value: any, type: 'equals' | 'in' | 'null' | 'exists' | '>' = 'equals') {
+        switch (type) {
+            case 'equals':
+                this.whereBuilder.equals(field, value);
+                break;
+            case 'in':
+                this.whereBuilder.in(field, value);
+                break;
+            case 'null':
+                this.whereBuilder.null(field, value);
+                break;
+            case 'exists':
+                this.whereBuilder.exists(field, value);
+                break;
+            case '>':
+                this.whereBuilder.grater_then(field, value);
+                break;
+        }
         return this;
     }
 
@@ -203,19 +227,19 @@ export class QueryBuilder {
             case 'SELECT':
                 ret = this.buildSelect();
                 this.reset();
-                break ;
+                break;
             case 'UPDATE':
                 ret = this.buildUpdate();
                 this.reset();
-                break ;
+                break;
             case 'INSERT':
                 ret = this.buildInsert();
                 this.reset();
-                break ;
+                break;
             case 'DELETE':
                 ret = this.buildDelete();
                 this.reset();
-                break ;
+                break;
             default: throw new Error('ouuups !!!');
         }
 
@@ -309,30 +333,33 @@ export class QueryBuilder {
         const parts: string[] = [];
         const params: any[] = [];
 
-        // WITH (CTEs) - not common for INSERT but supported
         if (q.ctes && q.ctes.length > 0) {
             const cteStrings = q.ctes.map(cte => `${cte.name} AS (${cte.query})`);
             parts.push(`WITH ${cteStrings.join(', ')}`);
         }
 
-        // INSERT INTO
         parts.push(`INSERT INTO ${q.table} (${q.columns.join(', ')})`);
 
-        // VALUES
+        let paramCounter = 1;
         const valuePlaceholders = q.values.map((_, rowIdx) => {
             const placeholders = q.columns.map((_, colIdx) => {
-                return `$${rowIdx * q.columns.length + colIdx + 1}`;
+                if (q.values[rowIdx][colIdx] instanceof Raw) {
+                    return (q.values[rowIdx][colIdx] as Raw).value;
+                }
+                return `$${paramCounter++}`;
             });
             return `(${placeholders.join(', ')})`;
         });
         parts.push(`VALUES ${valuePlaceholders.join(', ')}`);
 
-        // Flatten values for params
         for (const row of q.values) {
-            params.push(...row);
+            for (const value of row) {
+                if (!(value instanceof Raw)) {
+                    params.push(value);
+                }
+            }
         }
 
-        // RETURNING
         if (q.returning && q.returning.length > 0) {
             parts.push(`RETURNING ${q.returning.join(', ')}`);
         }
@@ -353,7 +380,11 @@ export class QueryBuilder {
 
         // SET
         const setParts = Object.entries(q.set).map(([key], idx) => {
-            params.push(Object.values(q.set)[idx]);
+            const value = Object.values(q.set)[idx];
+            if (value instanceof Raw) {
+                return `${key} = ${value.value}`;
+            }
+            params.push(value);
             return `${key} = $${params.length}`;
         });
         parts.push(`SET ${setParts.join(', ')}`);
@@ -430,6 +461,13 @@ export class QueryBuilder {
                         : `EXISTS (${cond.subquery})`;
                 case 'raw':
                     return cond.sql;
+                case 'grater_then':
+                    const value = cond.value;
+                    if (value instanceof Raw) {
+                        return `${cond.field} > ${value.value}`;
+                    }
+                    params.push(cond.value);
+                    return `${cond.field} > $${params.length}`;
                 default:
                     return '';
             }

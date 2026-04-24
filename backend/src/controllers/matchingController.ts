@@ -29,15 +29,12 @@ export const getSuggestions = async (req, res) => {
       maxFame,
     } = req.query;
 
-    console.log('[getSuggestions] Request params:', { userId, limit, offset, sortBy, maxDistance, minAge, maxAge, minFame, maxFame });
-
     const currentUserQuery = await getProfileDataforMatches(userId);
     if (!currentUserQuery.rowCount) {
       return res.status(404).json({ error: 'Profile not found' });
     }
 
     const currentUser = currentUserQuery.rows[0];
-    console.log('[getSuggestions] Current user profile:', currentUser);
 
     // Build gender filter
     let genderFilter = '';
@@ -87,9 +84,6 @@ export const getSuggestions = async (req, res) => {
       limit,
       offset,
     });
-
-    console.log('[getSuggestions] result rowCount:', result.rowCount);
-    console.log('[getSuggestions] suggestions:', JSON.stringify(result.rows, null, 2));
 
     res.json({
       suggestions: result.rows,

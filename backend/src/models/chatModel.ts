@@ -14,7 +14,7 @@ export async function getMessagesPaginated(senderId, receiverId, cursor = null, 
     const totalMessages = parseInt(countResult.rows[0].count);
 
     let query, params;
-    
+  
     if (cursor) {
       // Load older messages (before cursor)
       query = `

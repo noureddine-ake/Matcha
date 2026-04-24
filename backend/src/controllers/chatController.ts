@@ -32,8 +32,6 @@ async function getCurrentUser(req, res) {
       });
     }
 
-    console.log('=======----------------=======', user);
-
     res.json({ 
       success: true,
       user: {

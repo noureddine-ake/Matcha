@@ -67,7 +67,6 @@ export const searchSuggestions2 = async (userId, filters) => {
     AND u.is_verified = TRUE
     AND p.gender IS NOT NULL
     AND p.sexual_preference IS NOT NULL
-    AND p.biography IS NOT NULL
     AND p.latitude IS NOT NULL
     AND p.longitude IS NOT NULL
     AND curr.latitude IS NOT NULL
@@ -126,14 +125,7 @@ export const searchSuggestions2 = async (userId, filters) => {
     parseInt(filters.offset) || 0,
   ];
   
-  console.log('[searchSuggestions2] filters:', JSON.stringify(filters, null, 2));
-  console.log('[searchSuggestions2] values:', values);
-  console.log('[searchSuggestions2] full query:', query);
-  
   const ret = await pool.query(query, values);
-  
-  console.log('[searchSuggestions2] result rowCount:', ret.rowCount);
-  console.log('[searchSuggestions2] result rows:', JSON.stringify(ret.rows, null, 2));
   
   return ret;
 };
