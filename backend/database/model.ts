@@ -3,6 +3,7 @@ import { ColumnsMap } from "./define_types.js";
 import { TableConstraints } from "./define_types.js";
 import orm from "./orm.js";
 import { QueryBuilder } from "./query_builder.js";
+import { Raw } from "./raw.js";
 
 abstract class Model<T> {
   static tableName: string;
@@ -15,7 +16,7 @@ abstract class Model<T> {
   }
 
   // Methods to maniputate tables in DB
-  static select(columns: string[]): QueryBuilder {
+  static select(columns: (string | Raw)[]): QueryBuilder {
     return this.querybuilder.select(this.tableName, columns);
   }
 

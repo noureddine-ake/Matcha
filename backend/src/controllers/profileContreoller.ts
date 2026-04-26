@@ -1,12 +1,3 @@
-import {
-  createPhoto,
-  isPhotoExisted,
-  getPhotosByUserId,
-  getProfilePictureByUserId,
-  deleteProfilePictureByUserId,
-  getGalleryPhotoById,
-  deletePhotoById,
-} from '../models/photosModal.js';
 import { reverseGeocode } from '../utils/geocode.js';
 import { pool } from '../config/config.js';
 import fs from 'fs';
@@ -28,7 +19,7 @@ const isValidAge = (birthDateStr) => {
 import { getMatchesCount } from '../models/matchModel.js';
 import { createAndSendNotification } from '../utils/notificationHelper.js';
 import { notificationTypes } from './matchingController.js';
-import { Likes, User, Tags, UserTags, ProfileViews, Profiles } from '../../database/entities/index.js';
+import { Likes, User, Tags, UserTags, ProfileViews, Profiles, Photos } from '../../database/entities/index.js';
 import { Raw } from '../../database/raw.js';
 /**
  * Retrieves the complete user profile including personal information, photos, and tags
@@ -52,7 +43,7 @@ export const getProfile = async (req, res) => {
       .run().then((result) => result.rows);
 
     // Fetch user's photo gallery
-    const photos = await getPhotosByUserId(userId);
+    const photos = await Photos.select(['*']).where('user_id', userId).run().then(result => result.rows);
 
     // Fetch basic user account information
     const userResult = await User.select(['*']).where('id', userId).run();
@@ -171,7 +162,7 @@ export const getProfileUser = async (req, res) => {
     const tags = await UserTags.select(['t.id', 't.name']).from('user_tags ut')
       .join('INNER', 'tags t', 'ut.tag_id = t.id').where('ut.user_id', viewedId)
       .run().then((result) => result.rows);
-    const photos = await getPhotosByUserId(viewedId);
+    const photos = await Photos.select(['*']).where('user_id', viewedId).run().then(result => result.rows);
     const views = await ProfileViews.select(['COUNT(*)::int AS total_views'])
       .where('viewed_user_id', viewedId)
       .run().then((result) => result.rows[0].total_views);
@@ -352,11 +343,11 @@ export const updateProfile = async (req, res) => {
         const ref = await Tags.select(['*']).where('name', tagName).run();
         let tag = ref.rows[0];
         // Create new tag if it doesn't exist
-         if (!tag) {
-           const now = new Date();
-           const ret = await Tags.insert({ name: tagName, created_at: now }).returning(['*']).run();
-           tag = ret.rows[0];
-         }
+        if (!tag) {
+          const now = new Date();
+          const ret = await Tags.insert({ name: tagName, created_at: now }).returning(['*']).run();
+          tag = ret.rows[0];
+        }
         // Associate user with the tag
         await UserTags.insert({ user_id: userId, tag_id: tag.id }).run();
       }
@@ -367,16 +358,17 @@ export const updateProfile = async (req, res) => {
       for (const file of req.files) {
         const photoPath = `/uploads/${file.filename}`;
         const photoIndex = parseInt(file.fieldname.replace('photo', ''));
-        const existedPhoto = await isPhotoExisted(photoPath);
+        const existedPhoto = await Photos.select(['*'])
+          .where('photo_url', photoPath)
+          .run().then(result => result.rowCount > 0);
 
         // Only create new photo if it doesn't already exist
         if (!existedPhoto) {
-          await createPhoto({
+          await Photos.insert({
             user_id: userId,
             photo_url: photoPath,
-            is_profile_picture:
-              photoIndex === parseInt(req.body.profilePhotoIndex),
-          });
+            is_profile_picture: photoIndex === parseInt(req.body.profilePhotoIndex),
+          }).returning(['*']).run();
         }
       }
     }
@@ -386,7 +378,7 @@ export const updateProfile = async (req, res) => {
     const tags = await UserTags.select(['t.id', 't.name']).from('user_tags ut')
       .join('INNER', 'tags t', 'ut.tag_id = t.id').where('ut.user_id', userId)
       .run().then((result) => result.rows);
-    const photos = await getPhotosByUserId(userId);
+    const photos = await Photos.select(['*']).where('user_id', userId).run().then(result => result.rows);
     const userResult = await User.select(['*']).where('id', userId).run();
     const user = userResult.rows[0];
 
@@ -421,495 +413,518 @@ export const updateProfile = async (req, res) => {
         messages: updatedProfile.messages,
       },
     });
-  } catch (err) {
-    console.error('Error updating profile:', err);
-    res.status(400).json({ error: 'Internal server error' });
-  }
-};
-
-/**
- * Updates user's profile picture, replacing the existing one
- * @param {Object} req - Express request object containing the uploaded image file
- * @param {Object} res - Express response object to send success/error message
- * @returns {Object} JSON response indicating success or error
- */
-export const updateProfilePicture = async (req, res) => {
-  try {
-    const userId = req.user.data.id;
-
-    // Validate that a file was uploaded
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      res.status(400).json({ error: 'Internal server error' });
     }
+  };
 
-    const photoPath = `/uploads/${req.file.filename}`;
+  /**
+   * Updates user's profile picture, replacing the existing one
+   * @param {Object} req - Express request object containing the uploaded image file
+   * @param {Object} res - Express response object to send success/error message
+   * @returns {Object} JSON response indicating success or error
+   */
+  export const updateProfilePicture = async (req, res) => {
+    try {
+      const userId = req.user.data.id;
 
-    // Check if photo already exists in the system
-    const existedPhoto = await isPhotoExisted(photoPath);
-    if (existedPhoto) {
-      return res.status(400).json({ error: 'Photo already exists' });
+      // Validate that a file was uploaded
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const photoPath = `/uploads/${req.file.filename}`;
+
+      // Check if photo already exists in the system
+      const existedPhoto = await Photos.select(['*'])
+        .where('photo_url', photoPath)
+        .run().then(result => result.rowCount > 0);
+      if (existedPhoto) {
+        return res.status(400).json({ error: 'Photo already exists' });
+      }
+
+      // Retrieve current profile picture to clean up old file
+      const oldProfile = await Photos.select(['photo_url'])
+        .where('user_id', userId)
+        .where('is_profile_picture', true)
+        .run();
+
+      if (oldProfile.rows.length > 0) {
+        const oldPhotoPath = path.join(
+          process.cwd(),
+          oldProfile.rows[0].photo_url
+        );
+
+        // Remove old profile picture file from server
+        if (fs.existsSync(oldPhotoPath)) {
+          fs.unlinkSync(oldPhotoPath);
+        }
+      }
+
+      // Remove old profile picture from database
+      const isprofilePhotoExists = await Photos.select(['*']).where('user_id', userId).where('is_profile_picture', true).run().then(result => result.rowCount > 0);
+      if (isprofilePhotoExists) {
+        await Photos.delete().where('user_id', userId).where('is_profile_picture', true).run();
+      }
+
+
+      // Create new profile picture record
+      await Photos.insert({
+        user_id: userId,
+        photo_url: photoPath,
+        is_profile_picture: true,
+      }).returning(['*']).run();
+
+      res.status(200).json({ message: 'Profile picture updated successfully' });
+    } catch (err) {
+      console.error('Error updating profile picture:', err);
+      res.status(500).json({ error: 'Internal server error' });
     }
+  };
 
-    // Retrieve current profile picture to clean up old file
-    const oldProfile = await getProfilePictureByUserId(userId);
+  /**
+   * Deletes the user's current profile picture
+   * @param {Object} req - Express request object with user authentication
+   * @param {Object} res - Express response object to send success/error message
+   * @returns {Object} JSON response indicating success or error
+   */
+  export const deleteProfilePicture = async (req, res) => {
+    try {
+      const userId = req.user.data.id;
 
-    if (oldProfile.rows.length > 0) {
-      const oldPhotoPath = path.join(
-        process.cwd(),
-        oldProfile.rows[0].photo_url
-      );
+      // Retrieve current profile picture
+      const oldProfile = await Photos.select(['photo_url'])
+        .where('user_id', userId)
+        .where('is_profile_picture', true)
+        .run();
+      if (oldProfile.rows.length === 0) {
+        return res.status(404).json({ error: 'No profile picture to delete' });
+      }
 
-      // Remove old profile picture file from server
+      const oldPhotoPath = path.join(process.cwd(), oldProfile.rows[0].photo_url);
+
+      // Remove profile picture file from server
       if (fs.existsSync(oldPhotoPath)) {
         fs.unlinkSync(oldPhotoPath);
       }
+
+      // Remove profile picture record from database
+      const isprofilePhotoExists = await Photos.select(['*']).where('user_id', userId).where('is_profile_picture', true).run().then(result => result.rowCount > 0);
+      if (isprofilePhotoExists) {
+        await Photos.delete().where('user_id', userId).where('is_profile_picture', true).run();
+      }
+
+      res.status(200).json({ message: 'Profile picture deleted successfully' });
+    } catch (err) {
+      console.error('Error deleting profile picture:', err);
+      res.status(500).json({ error: 'Internal server error' });
     }
-
-    // Remove old profile picture from database
-    await deleteProfilePictureByUserId(userId);
-
-    // Create new profile picture record
-    await createPhoto({
-      user_id: userId,
-      photo_url: photoPath,
-      is_profile_picture: true,
-    });
-
-    res.status(200).json({ message: 'Profile picture updated successfully' });
-  } catch (err) {
-    console.error('Error updating profile picture:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-/**
- * Deletes the user's current profile picture
- * @param {Object} req - Express request object with user authentication
- * @param {Object} res - Express response object to send success/error message
- * @returns {Object} JSON response indicating success or error
- */
-export const deleteProfilePicture = async (req, res) => {
-  try {
-    const userId = req.user.data.id;
-
-    // Retrieve current profile picture
-    const oldProfile = await getProfilePictureByUserId(userId);
-    if (oldProfile.rows.length === 0) {
-      return res.status(404).json({ error: 'No profile picture to delete' });
-    }
-
-    const oldPhotoPath = path.join(process.cwd(), oldProfile.rows[0].photo_url);
-
-    // Remove profile picture file from server
-    if (fs.existsSync(oldPhotoPath)) {
-      fs.unlinkSync(oldPhotoPath);
-    }
-
-    // Remove profile picture record from database
-    await deleteProfilePictureByUserId(userId);
-
-    res.status(200).json({ message: 'Profile picture deleted successfully' });
-  } catch (err) {
-    console.error('Error deleting profile picture:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-/**
- * Adds a new photo to user's gallery
- * @param {Object} req - Express request object containing the uploaded image file
- * @param {Object} res - Express response object to send success/error message
- * @returns {Object} JSON response indicating success or error
- */
-export const addGalleryPicture = async (req, res) => {
-  try {
-    const userId = req.user.data.id;
-
-    // Validate that a file was uploaded
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    const photoPath = `/uploads/${req.file.filename}`;
-
-    // Check if photo already exists in the system
-    const existedPhoto = await isPhotoExisted(photoPath);
-    if (existedPhoto) {
-      return res.status(400).json({ error: 'Photo already exists' });
-    }
-
-    // Create new gallery photo record
-    await createPhoto({
-      user_id: userId,
-      photo_url: photoPath,
-      is_profile_picture: false,
-    });
-
-    res.status(200).json({ message: 'Gallery picture added successfully' });
-  } catch (err) {
-    console.error('Error adding gallery picture:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-/**
- * Deletes a specific gallery photo by ID
- * @param {Object} req - Express request object with photo ID parameter
- * @param {Object} res - Express response object to send success/error message
- * @returns {Object} JSON response indicating success or error
- */
-export const deleteGalleryPicture = async (req, res) => {
-  try {
-    const userId = req.user.data.id;
-    const photoId = req.params.pictureId;
-
-    // Retrieve the photo to verify ownership and existence
-    const photoResult = await getGalleryPhotoById(photoId, userId);
-    if (!photoResult) {
-      return res.status(404).json({ error: 'Gallery picture not found' });
-    }
-
-    const photoPath = path.join(process.cwd(), photoResult.photo_url);
-
-    // Remove photo file from server if it exists
-    if (fs.existsSync(photoPath)) {
-      fs.unlinkSync(photoPath);
-    }
-
-    // Remove photo record from database
-    await deletePhotoById(photoId);
-
-    res.status(200).json({ message: 'Gallery picture deleted successfully' });
-  } catch (err) {
-    console.error('Error deleting gallery picture:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-/**
- * Handles user logout by clearing authentication cookie
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object to clear cookie and send success message
- * @returns {Object} JSON response confirming logout
- */
-export const logoutController = (req, res) => {
-  const isProduction = process.env.NODE_ENV === 'production';
-
-  const cookieOptions = {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'strict' : 'lax',
-    path: '/',
   };
 
-  // Clear the JWT authentication cookie
-  res.clearCookie('token', cookieOptions);
+  /**
+   * Adds a new photo to user's gallery
+   * @param {Object} req - Express request object containing the uploaded image file
+   * @param {Object} res - Express response object to send success/error message
+   * @returns {Object} JSON response indicating success or error
+   */
+  export const addGalleryPicture = async (req, res) => {
+    try {
+      const userId = req.user.data.id;
 
-  // Clear the refresh token cookie
-  res.clearCookie('refreshToken', cookieOptions);
-
-  res.status(200).json({ message: 'Logged out successfully' });
-};
-
-/**
- * Completes user profile setup with initial data, tags, and photos
- * @param {Object} req - Express request object containing profile data and files
- * @param {Object} res - Express response object to send success/error message
- * @returns {Object} JSON response indicating success or error
- */
-export const completeProfile = async (req, res) => {
-  try {
-    const userTokenData = req.user.data;
-
-    // Validate age
-    if (req.body.birth_date) {
-      if (!isValidAge(req.body.birth_date)) {
-        return res.status(400).json({
-          error: `You must be at least ${MIN_AGE} years old`,
-        });
+      // Validate that a file was uploaded
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
       }
-    }
 
-    // Check if profile already exists
-    const isProfileExisted = await Profiles.select(['*']).where('user_id', userTokenData.id).run().then(result => result.rowCount > 0);
-    if (isProfileExisted) {
-      return res.status(403).json({
-        error: 'Profile already created',
-      });
-    }
+      const photoPath = `/uploads/${req.file.filename}`;
 
-    await Profiles.insert({
-      user_id: userTokenData.id,
-      gender: req.body.gender,
-      sexual_preference:
-        req.body.sexualPreference === 'men' ? 'male' : 'female',
-      biography: req.body.biography,
-      birth_date: req.body.birth_date,
-    }).run();
-
-    // Process and create user interest tags
-    const interests = JSON.parse(req.body.interests);
-    for (const tag of interests) {
-      let existingTag = await Tags.select(['*']).where('name', tag).run().then(result => result.rows[0]);
-      const now = new Date(Date.now());
-
-      // Create new tag if it doesn't exist
-      if (!existingTag) {
-        const ret = await Tags.insert({ name: tag, created_at: now })
-          .returning(['*']).run();
-        existingTag = ret.rows[0];
+      // Check if photo already exists in the system
+      const existedPhoto = await Photos.select(['*'])
+        .where('photo_url', photoPath)
+        .run().then(result => result.rowCount > 0);
+      if (existedPhoto) {
+        return res.status(400).json({ error: 'Photo already exists' });
       }
-      // Check if user-tag association already exists
-      const UserTagExisted =  await UserTags.select(['*'])
-        .where('user_id', userTokenData.id).where('tag_id', existingTag.id)
+
+      // Create new gallery photo record
+      await Photos.insert({
+        user_id: userId,
+        photo_url: photoPath,
+        is_profile_picture: false,
+      }).returning(['*']).run();
+
+      res.status(200).json({ message: 'Gallery picture added successfully' });
+    } catch (err) {
+      console.error('Error adding gallery picture:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+
+  /**
+   * Deletes a specific gallery photo by ID
+   * @param {Object} req - Express request object with photo ID parameter
+   * @param {Object} res - Express response object to send success/error message
+   * @returns {Object} JSON response indicating success or error
+   */
+  export const deleteGalleryPicture = async (req, res) => {
+    try {
+      const userId = req.user.data.id;
+      const photoId = req.params.pictureId;
+
+      // Retrieve the photo to verify ownership and existence
+      const photoResult = await Photos.select(['photo_url'])
+        .where('id', photoId)
+        .where('user_id', userId)
+        .where('is_profile_picture', false)
         .run().then(result => result.rows[0]);
-      if (!UserTagExisted) {
-        await UserTags.insert({
-          user_id: userTokenData.id,
-          tag_id: existingTag.id,
-        }).run();
+      if (!photoResult) {
+        return res.status(404).json({ error: 'Gallery picture not found' });
       }
+
+      const photoPath = path.join(process.cwd(), photoResult.photo_url);
+
+      // Remove photo file from server if it exists
+      if (fs.existsSync(photoPath)) {
+        fs.unlinkSync(photoPath);
+      }
+
+      // Remove photo record from database
+      await Photos.delete().where('id', photoId).run();
+
+      res.status(200).json({ message: 'Gallery picture deleted successfully' });
+    } catch (err) {
+      console.error('Error deleting gallery picture:', err);
+      res.status(500).json({ error: 'Internal server error' });
     }
+  };
 
-    // Handle profile photo uploads
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const photoPath = `/uploads/${file.filename}`;
-        const photoIndex = parseInt(file.fieldname.replace('photo', ''));
+  /**
+   * Handles user logout by clearing authentication cookie
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object to clear cookie and send success message
+   * @returns {Object} JSON response confirming logout
+   */
+  export const logoutController = (req, res) => {
+    const isProduction = process.env.NODE_ENV === 'production';
 
-        const existedPhoto = await isPhotoExisted(photoPath);
-        if (!existedPhoto) {
-          await createPhoto({
-            user_id: userTokenData.id,
-            photo_url: photoPath,
-            is_profile_picture:
-              photoIndex === parseInt(req.body.profilePhotoIndex),
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
+      path: '/',
+    };
+
+    // Clear the JWT authentication cookie
+    res.clearCookie('token', cookieOptions);
+
+    // Clear the refresh token cookie
+    res.clearCookie('refreshToken', cookieOptions);
+
+    res.status(200).json({ message: 'Logged out successfully' });
+  };
+
+  /**
+   * Completes user profile setup with initial data, tags, and photos
+   * @param {Object} req - Express request object containing profile data and files
+   * @param {Object} res - Express response object to send success/error message
+   * @returns {Object} JSON response indicating success or error
+   */
+  export const completeProfile = async (req, res) => {
+    try {
+      const userTokenData = req.user.data;
+
+      // Validate age
+      if (req.body.birth_date) {
+        if (!isValidAge(req.body.birth_date)) {
+          return res.status(400).json({
+            error: `You must be at least ${MIN_AGE} years old`,
           });
         }
       }
-    }
 
-    // Mark profile as completed in user record
-    await User.update({ completed_profile: true }).where('id', userTokenData.id).run();
-    userTokenData.completed_profile = true;
+      // Check if profile already exists
+      const isProfileExisted = await Profiles.select(['*']).where('user_id', userTokenData.id).run().then(result => result.rowCount > 0);
+      if (isProfileExisted) {
+        return res.status(403).json({
+          error: 'Profile already created',
+        });
+      }
 
-    const token = JWT.createJWToken({
-      sessionData: userTokenData,
-      maxAge: '2 days',
-    });
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-    });
+      await Profiles.insert({
+        user_id: userTokenData.id,
+        gender: req.body.gender,
+        sexual_preference:
+          req.body.sexualPreference === 'men' ? 'male' : 'female',
+        biography: req.body.biography,
+        birth_date: req.body.birth_date,
+      }).run();
 
-    res.status(200).json({
-      message: 'profile completed',
-      username: userTokenData.username,
-    });
-  } catch (err) {
-    res.status(500).json({
-      err: 'Internal server error',
-    });
-  }
-};
+      // Process and create user interest tags
+      const interests = JSON.parse(req.body.interests);
+      for (const tag of interests) {
+        let existingTag = await Tags.select(['*']).where('name', tag).run().then(result => result.rows[0]);
+        const now = new Date(Date.now());
 
-// users tags routes handled in tagController.js
-
-/**
- * Add a new tag to user's profile
- * @route POST /profile/add-tag
- * @access Protected
- */
-export const addUserTag = async (req, res) => {
-  try {
-    const userId = req.user.data.id;
-    let { tagName } = req.body;
-
-    if (!tagName)
-      return res.status(400).json({ error: 'Tag name is required' });
-    if (typeof tagName !== 'string' || tagName.trim() === '')
-      return res.status(400).json({ error: 'Invalid tag name' });
-    if (tagName.length > 30)
-      return res
-        .status(400)
-        .json({ error: 'Tag name too long (max 30 characters)' });
-    tagName = tagName.trim();
-    const tagNameWithHash = tagName.startsWith('#') ? tagName : `#${tagName}`;
-    const ref = await Tags.select(['*']).where('name', tagNameWithHash).run();
-    let tag = ref.rows[0];
-    if (!tag) {
-       try {
-         const ret = await Tags.insert({ name: tagNameWithHash, created_at: new Date() }).returning(['*']).run();
-         tag = ret.rows[0];
-       } catch (createErr) {
-        if (createErr.code === '23505') {
-          const ref = await Tags.select(['*']).where('name', tagNameWithHash).run();
-          tag = ref.rows[0];
-          if (!tag) {
-            return res.status(500).json({ error: 'Failed to create tag' });
-          }
-        } else {
-          throw createErr;
+        // Create new tag if it doesn't exist
+        if (!existingTag) {
+          const ret = await Tags.insert({ name: tag, created_at: now })
+            .returning(['*']).run();
+          existingTag = ret.rows[0];
+        }
+        // Check if user-tag association already exists
+        const UserTagExisted = await UserTags.select(['*'])
+          .where('user_id', userTokenData.id).where('tag_id', existingTag.id)
+          .run().then(result => result.rows[0]);
+        if (!UserTagExisted) {
+          await UserTags.insert({
+            user_id: userTokenData.id,
+            tag_id: existingTag.id,
+          }).run();
         }
       }
+
+      // Handle profile photo uploads
+      if (req.files && req.files.length > 0) {
+        for (const file of req.files) {
+          const photoPath = `/uploads/${file.filename}`;
+          const photoIndex = parseInt(file.fieldname.replace('photo', ''));
+
+          const existedPhoto = await Photos.select(['*'])
+            .where('photo_url', photoPath)
+            .run().then(result => result.rowCount > 0);
+          if (!existedPhoto) {
+            await Photos.insert({
+              user_id: userTokenData.id,
+              photo_url: photoPath,
+              is_profile_picture:
+                photoIndex === parseInt(req.body.profilePhotoIndex),
+            }).returning(['*']).run();
+          }
+        }
+      }
+
+      // Mark profile as completed in user record
+      await User.update({ completed_profile: true }).where('id', userTokenData.id).run();
+      userTokenData.completed_profile = true;
+
+      const token = JWT.createJWToken({
+        sessionData: userTokenData,
+        maxAge: '2 days',
+      });
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      });
+
+      res.status(200).json({
+        message: 'profile completed',
+        username: userTokenData.username,
+      });
+    } catch (err) {
+      res.status(500).json({
+        err: 'Internal server error',
+      });
     }
+  };
 
-    // Check if user already has this tag
-    const userTagExists = await UserTags.select(['*']).where('user_id', userId)
-      .where('tag_id', tag.id)
-      .run()
-      .then((result) => result.rows[0]);
-    if (userTagExists) {
-      return res.status(400).json({ error: 'User already has this tag' });
+  // users tags routes handled in tagController.js
+
+  /**
+   * Add a new tag to user's profile
+   * @route POST /profile/add-tag
+   * @access Protected
+   */
+  export const addUserTag = async (req, res) => {
+    try {
+      const userId = req.user.data.id;
+      let { tagName } = req.body;
+
+      if (!tagName)
+        return res.status(400).json({ error: 'Tag name is required' });
+      if (typeof tagName !== 'string' || tagName.trim() === '')
+        return res.status(400).json({ error: 'Invalid tag name' });
+      if (tagName.length > 30)
+        return res
+          .status(400)
+          .json({ error: 'Tag name too long (max 30 characters)' });
+      tagName = tagName.trim();
+      const tagNameWithHash = tagName.startsWith('#') ? tagName : `#${tagName}`;
+      const ref = await Tags.select(['*']).where('name', tagNameWithHash).run();
+      let tag = ref.rows[0];
+      if (!tag) {
+        try {
+          const ret = await Tags.insert({ name: tagNameWithHash, created_at: new Date() }).returning(['*']).run();
+          tag = ret.rows[0];
+        } catch (createErr) {
+          if (createErr.code === '23505') {
+            const ref = await Tags.select(['*']).where('name', tagNameWithHash).run();
+            tag = ref.rows[0];
+            if (!tag) {
+              return res.status(500).json({ error: 'Failed to create tag' });
+            }
+          } else {
+            throw createErr;
+          }
+        }
+      }
+
+      // Check if user already has this tag
+      const userTagExists = await UserTags.select(['*']).where('user_id', userId)
+        .where('tag_id', tag.id)
+        .run()
+        .then((result) => result.rows[0]);
+      if (userTagExists) {
+        return res.status(400).json({ error: 'User already has this tag' });
+      }
+
+      // Create user-tag association
+      await UserTags.insert({ user_id: userId, tag_id: tag.id }).run();
+
+      res.status(200).json({ message: 'Tag added successfully', tag });
+    } catch (err) {
+      console.error('Error adding tag:', err);
+      res.status(500).json({ error: 'Internal server error' });
     }
+  };
 
-    // Create user-tag association
-    await UserTags.insert({ user_id: userId, tag_id: tag.id }).run();
+  /**
+   * Remove a tag from user's profile
+   * @route DELETE /profile/remove-tag/:tagId
+   * @access Protected
+   */
+  export const removeUserTag = async (req, res) => {
+    try {
+      const userId = req.user.data.id;
+      const { tagId } = req.params;
 
-    res.status(200).json({ message: 'Tag added successfully', tag });
-  } catch (err) {
-    console.error('Error adding tag:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
+      // Verify tag exists and belongs to user
+      const userTags = await UserTags.select(['t.id', 't.name']).from('user_tags ut')
+        .join('INNER', 'tags t', 'ut.tag_id = t.id').where('ut.user_id', userId)
+        .run().then((result) => result.rows);
+      const tagExists = userTags.some((tag) => tag.id == tagId);
 
-/**
- * Remove a tag from user's profile
- * @route DELETE /profile/remove-tag/:tagId
- * @access Protected
- */
-export const removeUserTag = async (req, res) => {
-  try {
+      if (!tagExists) {
+        return res.status(404).json({ error: 'Tag not found in user profile' });
+      }
+
+      // Remove user-tag association
+      await pool.query(
+        'DELETE FROM user_tags WHERE user_id = $1 AND tag_id = $2',
+        [userId, tagId]
+      );
+
+      res.status(200).json({ message: 'Tag removed successfully' });
+    } catch (err) {
+      console.error('Error removing tag:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+
+  /**
+   * Update user's tags (replace all current tags with new ones)
+   * @route PUT /profile/update-tags
+   * @access Protected
+   */
+  export const updateUserTags = async (req, res) => {
+    try {
+      const userId = req.user.data.id;
+      const { tags } = req.body; // Array of tag names
+
+      if (!Array.isArray(tags)) {
+        return res.status(400).json({ error: 'Tags must be an array' });
+      }
+
+      // Remove all existing user tags
+      await pool.query('DELETE FROM user_tags WHERE user_id = $1', [userId]);
+
+      // Add new tags
+      for (const tagName of tags) {
+        const ref = await Tags.select(['*']).where('name', tagName).run();
+        let tag = ref.rows[0];
+        if (!tag) {
+          const ret = await Tags.insert({ name: tagName, created_at: new Date() }).returning(['*']).run();
+          tag = ret.rows[0];
+        }
+        await UserTags.insert({ user_id: userId, tag_id: tag.id }).run();
+      }
+
+      // Return updated tags
+      const updatedTags = await UserTags.select(['t.id', 't.name']).from('user_tags ut')
+        .join('INNER', 'tags t', 'ut.tag_id = t.id').where('ut.user_id', userId)
+        .run().then((result) => result.rows);
+      res
+        .status(200)
+        .json({ message: 'Tags updated successfully', tags: updatedTags });
+    } catch (err) {
+      console.error('Error updating tags:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+
+  /**
+   * Get all available tags (for tag suggestions)
+   * @route GET /profile/available-tags
+   * @access Protected
+   */
+  export const getAvailableTags = async (req, res) => {
+    try {
+      const result = await pool.query('SELECT id, name FROM tags ORDER BY name');
+      res.status(200).json(result.rows);
+    } catch (err) {
+      console.error('Error fetching available tags:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+
+  // // =============================================================================
+  // // LOCATION MANAGEMENT ROUTES
+  // // =============================================================================
+
+  /**
+   * Updates the user's location (latitude, longitude) and reverse geocodes to get city and country
+   * @route PUT /profile/location
+   * @access Protected
+   */
+  export const updateLocation = async (req, res) => {
+    const { latitude, longitude } = req.body;
     const userId = req.user.data.id;
-    const { tagId } = req.params;
 
-    // Verify tag exists and belongs to user
-    const userTags = await UserTags.select(['t.id', 't.name']).from('user_tags ut')
-      .join('INNER', 'tags t', 'ut.tag_id = t.id').where('ut.user_id', userId)
-      .run().then((result) => result.rows);
-    const tagExists = userTags.some((tag) => tag.id == tagId);
-
-    if (!tagExists) {
-      return res.status(404).json({ error: 'Tag not found in user profile' });
-    }
-
-    // Remove user-tag association
-    await pool.query(
-      'DELETE FROM user_tags WHERE user_id = $1 AND tag_id = $2',
-      [userId, tagId]
+    console.log(
+      '[updateLocation] userId:',
+      userId,
+      'latitude:',
+      latitude,
+      'longitude:',
+      longitude
     );
 
-    res.status(200).json({ message: 'Tag removed successfully' });
-  } catch (err) {
-    console.error('Error removing tag:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-/**
- * Update user's tags (replace all current tags with new ones)
- * @route PUT /profile/update-tags
- * @access Protected
- */
-export const updateUserTags = async (req, res) => {
-  try {
-    const userId = req.user.data.id;
-    const { tags } = req.body; // Array of tag names
-
-    if (!Array.isArray(tags)) {
-      return res.status(400).json({ error: 'Tags must be an array' });
+    if (latitude == null || longitude == null) {
+      return res
+        .status(400)
+        .json({ message: 'Latitude and longitude are required' });
     }
 
-    // Remove all existing user tags
-    await pool.query('DELETE FROM user_tags WHERE user_id = $1', [userId]);
+    try {
+      // Reverse geocode to get city and country
+      const { city, country } = await reverseGeocode(latitude, longitude);
 
-    // Add new tags
-     for (const tagName of tags) {
-       const ref = await Tags.select(['*']).where('name', tagName).run();
-       let tag = ref.rows[0];
-       if (!tag) {
-         const ret = await Tags.insert({ name: tagName, created_at: new Date() }).returning(['*']).run();
-         tag = ret.rows[0];
-       }
-       await UserTags.insert({ user_id: userId, tag_id: tag.id }).run();
-     }
+      const updatedUser = await Profiles.update({
+        latitude: latitude,
+        longitude: longitude,
+        city: city,
+        country: country,
+        updated_at: new Date(),
+      }).where('user_id', userId).returning(['*'])
+        .run().then(result => result.rows[0]);
 
-    // Return updated tags
-    const updatedTags = await UserTags.select(['t.id', 't.name']).from('user_tags ut')
-      .join('INNER', 'tags t', 'ut.tag_id = t.id').where('ut.user_id', userId)
-      .run().then((result) => result.rows);
-    res
-      .status(200)
-      .json({ message: 'Tags updated successfully', tags: updatedTags });
-  } catch (err) {
-    console.error('Error updating tags:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-/**
- * Get all available tags (for tag suggestions)
- * @route GET /profile/available-tags
- * @access Protected
- */
-export const getAvailableTags = async (req, res) => {
-  try {
-    const result = await pool.query('SELECT id, name FROM tags ORDER BY name');
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error('Error fetching available tags:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-// // =============================================================================
-// // LOCATION MANAGEMENT ROUTES
-// // =============================================================================
-
-/**
- * Updates the user's location (latitude, longitude) and reverse geocodes to get city and country
- * @route PUT /profile/location
- * @access Protected
- */
-export const updateLocation = async (req, res) => {
-  const { latitude, longitude } = req.body;
-  const userId = req.user.data.id;
-
-  console.log(
-    '[updateLocation] userId:',
-    userId,
-    'latitude:',
-    latitude,
-    'longitude:',
-    longitude
-  );
-
-  if (latitude == null || longitude == null) {
-    return res
-      .status(400)
-      .json({ message: 'Latitude and longitude are required' });
-  }
-
-  try {
-    // Reverse geocode to get city and country
-    const { city, country } = await reverseGeocode(latitude, longitude);
-
-    const updatedUser = await Profiles.update({
-      latitude: latitude,
-      longitude: longitude,
-      city: city,
-      country: country,
-      updated_at: new Date(),
-    }).where('user_id', userId).returning(['*'])
-    .run().then(result => result.rows[0]);
-
-    res
-      .status(200)
-      .json({ message: 'Location updated successfully', user: updatedUser });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: 'Error updating location'});
-  }
-};
+      res
+        .status(200)
+        .json({ message: 'Location updated successfully', user: updatedUser });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ message: 'Error updating location' });
+    }
+  };

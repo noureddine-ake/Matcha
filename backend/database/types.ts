@@ -2,14 +2,18 @@
 // STEP 1: Define all query type variants
 // ============================================================
 
+import { Raw } from "./raw.js";
+
 // ----------------------
 // WHERE Clause Builder
 // ----------------------
 export type WhereCondition = 
-  | { type: 'equals'; field: string; value: any }
+  | { type: 'equals'; field: string; value: any, equals: boolean }
+  // | { type: 'not_equals'; field: string; value: any }
   | { type: 'in'; field: string; values: any[] }
   | { type: 'like'; field: string; value: string }
   | { type: 'null'; field: string; notNull: boolean }
+  // | { type: 'not_null'; field: string; notNull: boolean }
   | { type: 'exists'; subquery: string; negate: boolean }
   | { type: 'and'; conditions: WhereCondition[] }
   | { type: 'or'; conditions: WhereCondition[] }
@@ -19,8 +23,13 @@ export type WhereCondition =
 export class WhereBuilder {
   private conditions: WhereCondition[] = [];
 
-  equals(field: string, value: any): this {
-    this.conditions.push({ type: 'equals', field, value });
+  equals(field: string, value: any, equals: boolean = true): this {
+    this.conditions.push({ type: 'equals', field, value, equals });
+    return this;
+  }
+
+  not_equals(field: string, value: any): this {
+    this.conditions.push({ type: 'equals', field, value, equals: false });
     return this;
   }
 
@@ -113,7 +122,7 @@ export type BaseQuery = {
 
 export type SelectQuery = BaseQuery & {
   type: 'SELECT';
-  columns: string[];
+  columns: (string | Raw)[];
   joins?: JoinClause[];
   groupBy?: string[];
   having?: WhereBuilder;

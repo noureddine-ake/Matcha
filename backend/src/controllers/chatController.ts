@@ -1,3 +1,4 @@
+import { Photos } from "../../database/entities/photos.entity.js";
 import { User } from "../../database/entities/users.entity.js";
 import { isUserOnline, sendRealTimeMessage } from "../config/websocket.js";
 import {
@@ -8,7 +9,6 @@ import {
   createNotification,
   getMessagesPaginated
 } from "../models/chatModel.js";
-import {getProfilePictureByUserId} from "../models/photosModal.js";
 
 // ✅ Get current user info
 async function getCurrentUser(req, res) {
@@ -71,7 +71,11 @@ async function getChatUsers(req, res) {
       users.map(async (user) => {
         try {
           // Get profile picture for this user
-          const profilePicResult = await getProfilePictureByUserId(user.id);
+          // SELECT photo_url FROM photos WHERE user_id = $1 AND is_profile_picture = true
+          const profilePicResult = await Photos.select(['photo_url'])
+            .where('user_id', user.id)
+            .where('is_profile_picture', true)
+            .run();
           
           let profile_photo = null;
           

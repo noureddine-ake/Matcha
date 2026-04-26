@@ -1,3 +1,4 @@
+import { equal } from "node:assert";
 import orm from "./orm.js";
 import { Raw } from "./raw.js";
 import { BuildResult, DeleteQuery, InsertQuery, JoinType, Query, SelectQuery, UpdateQuery, WhereBuilder } from "./types.js";
@@ -14,7 +15,7 @@ export class QueryBuilder {
         this.havingBuilder = new WhereBuilder();
     };
 
-    select(table: string, columns: string[]) {
+    select(table: string, columns: (string | Raw)[]) {
         this.query = {
             type: 'SELECT',
             columns,
@@ -116,16 +117,22 @@ export class QueryBuilder {
     // ===================
     // WHERE methods
     // ===================
-    where(field: string, value: any, type: 'equals' | 'in' | 'null' | 'exists' | '>' = 'equals') {
+    where(field: string, value: any, type: '=' | '!=' | 'in' | 'null' | 'not null' | 'exists' | '>' = '=') {
         switch (type) {
-            case 'equals':
+            case '=':
                 this.whereBuilder.equals(field, value);
                 break;
+            case '!=':
+                this.whereBuilder.not_equals(field, value);
+                break
             case 'in':
                 this.whereBuilder.in(field, value);
                 break;
             case 'null':
-                this.whereBuilder.null(field, value);
+                this.whereBuilder.null(field, false);
+                break;
+            case 'not null':
+                this.whereBuilder.null(field, true);
                 break;
             case 'exists':
                 this.whereBuilder.exists(field, value);
@@ -141,7 +148,8 @@ export class QueryBuilder {
         const condis = Object.entries(conditions).map(([field, value]: [field: string, value: any]) => ({
             type: 'equals' as const,
             field,
-            value
+            value,
+            equals: true,
         }));
 
         this.whereBuilder.and(condis)
@@ -268,7 +276,13 @@ export class QueryBuilder {
 
         // select
         if (q.columns && q.columns.length > 0) {
-            parts.push(`SELECT ${q.columns.join(', ')}`)
+            const columnStrings = q.columns.map(col => {
+                if (col instanceof Raw) {
+                    return col.value;
+                }
+                return col;
+            });
+            parts.push(`SELECT ${columnStrings.join(', ')}`);
         }
 
         // from
@@ -444,7 +458,7 @@ export class QueryBuilder {
             switch (cond.type) {
                 case 'equals':
                     params.push(cond.value);
-                    return `${cond.field} = $${params.length}`;
+                    return `${cond.field} ${cond.equals ? '=' : '!='} $${params.length}`;
                 case 'in':
                     const placeholders = cond.values.map((_, idx) => {
                         params.push(cond.values[idx]);

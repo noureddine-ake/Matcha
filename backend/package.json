@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node ./dist/server.js",
-    "dev": "node --trace-warnings --import tsx --watch server.ts"
+    "dev": "node --trace-warnings --import tsx --watch server.ts",
+    "seed:test": "tsx scripts/seedTestData.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
