@@ -42,10 +42,10 @@ interface SuggestionResult {
 
 // -- Interfaces for TypeScript type safety============
 
-export const searchSuggestions2 = async (
+export const searchSuggestions = async (
   userId: number,
   filters: SuggestionFilters
-): Promise<any> => {
+): Promise<{ rows: SuggestionResult[] }> => {
   const { latitude: userLat, longitude: userLon } = await Profiles
     .select(['latitude', 'longitude']).where('user_id', userId).run()
     .then(result => result.rows[0]) || { latitude: null, longitude: null };

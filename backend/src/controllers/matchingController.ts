@@ -1,6 +1,7 @@
+import { Request, Response } from 'express';
 import { pool } from '../config/config.js';
 import {
-  searchSuggestions2,
+  searchSuggestions,
   getProfileDataforMatches,
   getAllMatches,
 } from '../models/matchModel.js';
@@ -15,14 +16,14 @@ export const notificationTypes = {
 };
 
 // suggestions list
-export const getSuggestions = async (req, res) => {
+export const getSuggestions = async (req: Request, res: Response) => {
   try {
-    const userId = req.user.data.id;
+    const userId = req.user.data.id as number;
     const {
-      limit = 20,
-      offset = 0,
+      limit = '20',
+      offset = '0',
       sortBy = 'distance',
-      maxDistance = 500,
+      maxDistance = '500',
       minAge,
       maxAge,
       minFame,
@@ -34,22 +35,22 @@ export const getSuggestions = async (req, res) => {
       return res.status(404).json({ error: 'Profile not found' });
     }
 
-    const result = await searchSuggestions2(userId, {
-      minAge,
-      maxAge,
-      minFame,
-      maxFame,
-      sortBy,
-      maxDistance,
-      limit,
-      offset,
+    const result = await searchSuggestions(userId, {
+      minAge: minAge ? parseInt(minAge as string) : undefined,
+      maxAge: maxAge ? parseInt(maxAge as string) : undefined,
+      minFame: minFame ? parseInt(minFame as string) : undefined,
+      maxFame: maxFame ? parseInt(maxFame as string) : undefined,
+      sortBy: sortBy as string,
+      maxDistance: parseInt(maxDistance as string),
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
     });
 
     res.json({
       suggestions: result.rows,
       count: result.rows.length,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
     });
   } catch (err) {
     console.error('Error fetching profile:', err);
@@ -59,9 +60,9 @@ export const getSuggestions = async (req, res) => {
 
 // ================================================================================================================================================================================================================================================================================================================================================
 
-export const likeUser = async (req, res) => {
+export const likeUser = async (req: Request, res: Response) => {
   try {
-    const likerId = req.user.data.id;
+    const likerId = req.user.data.id as number;
     const username = req.params.userId;
 
     // Look up user ID by username
@@ -117,7 +118,7 @@ export const likeUser = async (req, res) => {
       [likerId, likedId]
     );
 
-    if (existingLike.rowCount > 0) {
+    if (existingLike.rowCount && existingLike.rowCount > 0) {
       await pool.query('ROLLBACK');
       return res.status(400).json({ error: 'You already liked this user' });
     }
@@ -134,7 +135,7 @@ export const likeUser = async (req, res) => {
       [likedId, likerId]
     );
 
-    const isMatch = mutualLike.rowCount > 0;
+    const isMatch = mutualLike.rowCount && mutualLike.rowCount > 0;
 
     // Create notification for the liked user
     await createAndSendNotification(likedId, notificationTypes.LIKE, likerId);
@@ -184,9 +185,9 @@ export const likeUser = async (req, res) => {
   }
 };
 
-export const unlikeUser = async (req, res) => {
+export const unlikeUser = async (req: Request, res: Response) => {
   try {
-    const unlikerId = req.user.data.id;
+    const unlikerId = req.user.data.id as number;
     const username = req.params.userId;
 
     const userLookup = await pool.query(
@@ -226,7 +227,7 @@ export const unlikeUser = async (req, res) => {
       [unlikerId, unlikedId]
     );
 
-    if (wasMatch.rowCount > 0) {
+    if (wasMatch.rowCount && wasMatch.rowCount > 0) {
       await createAndSendNotification(unlikedId, notificationTypes.UNLIKE, unlikerId);
     }
 
@@ -246,7 +247,7 @@ export const unlikeUser = async (req, res) => {
 
     res.json({
       message: 'Successfully unliked',
-      wasMatch: wasMatch.rowCount > 0,
+      wasMatch: wasMatch.rowCount && wasMatch.rowCount > 0,
     });
   } catch (error) {
     await pool.query('ROLLBACK');
@@ -255,9 +256,9 @@ export const unlikeUser = async (req, res) => {
   }
 };
 
-export const getLikeStatus = async (req, res) => {
+export const getLikeStatus = async (req: Request, res: Response) => {
   try {
-    const currentUserId = req.user.data.id;
+    const currentUserId = req.user.data.id as number;
     const username = req.params.userId;
 
     const userLookup = await pool.query(
@@ -291,7 +292,7 @@ export const getLikeStatus = async (req, res) => {
   }
 };
 
-export const getMatches = async (req, res) => {
+export const getMatches = async (req: Request, res: Response) => {
   try {
     const userId = req.user.data.id;
     const { limit = 50, offset = 0 } = req.query;
@@ -301,8 +302,8 @@ export const getMatches = async (req, res) => {
     res.json({
       matches: result.rows,
       count: result.rows.length,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
     });
   } catch (error) {
     console.error('Get matches error:', error);

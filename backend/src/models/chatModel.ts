@@ -1,68 +1,97 @@
-import { pool } from "../config/config.js";
+import { Messages, User, Notifications } from "../../database/entities/index.js";
 
 // ✅ Get messages with pagination
-export async function getMessagesPaginated(senderId, receiverId, cursor = null, limit = 20) {
+export async function getMessagesPaginated(senderId: any, receiverId: any, cursor = null, limit = 20) {
   try {
-    // Get total count for pagination info
-    const countQuery = `
-      SELECT COUNT(*) 
-      FROM messages 
-      WHERE (sender_user_id = $1 AND receiver_user_id = $2) 
-         OR (sender_user_id = $2 AND receiver_user_id = $1)
-    `;
-    const countResult = await pool.query(countQuery, [senderId, receiverId]);
-    const totalMessages = parseInt(countResult.rows[0].count);
+    const countResult = await Messages.select(['COUNT(*) as count'])
+      .whereAnd({
+        sender_user_id: senderId,
+        receiver_user_id: receiverId
+      })
+      .run();
+    
+    const countResult2 = await Messages.select(['COUNT(*) as count'])
+      .whereAnd({
+        sender_user_id: receiverId,
+        receiver_user_id: senderId
+      })
+      .run();
+    
+    const totalMessages = (parseInt(countResult.rows[0].count) || 0) + (parseInt(countResult2.rows[0].count) || 0);
 
-    let query, params;
-  
+    let messages: any[] = [];
+    
     if (cursor) {
-      // Load older messages (before cursor)
-      query = `
-        SELECT 
-          id,
-          sender_user_id as "senderId",
-          receiver_user_id as "receiverId", 
-          content,
-          sent_at as timestamp,
-          is_read as read
-        FROM messages 
-        WHERE ((sender_user_id = $1 AND receiver_user_id = $2) 
-           OR (sender_user_id = $2 AND receiver_user_id = $1))
-          AND sent_at < (SELECT sent_at FROM messages WHERE id = $3)
-        ORDER BY sent_at DESC
-        LIMIT $4
-      `;
-      params = [senderId, receiverId, cursor, limit];
+      const cursorMsg = await Messages.select(['sent_at'])
+        .where('id', cursor)
+        .run();
+      
+      if (cursorMsg.rows.length === 0) {
+        return { messages: [], hasMore: false, nextCursor: null, totalMessages };
+      }
+      
+      const cursorTimestamp = cursorMsg.rows[0].sent_at;
+      
+      const query1 = Messages.select(['id', 'sender_user_id', 'receiver_user_id', 'content', 'sent_at', 'is_read'])
+        .whereAnd({
+          sender_user_id: senderId,
+          receiver_user_id: receiverId
+        });
+      query1.whereBuilder.raw(`sent_at < '${new Date(cursorTimestamp).toISOString()}'`);
+      const olderResult1Final = await query1.orderBy('sent_at', 'DESC').limit(limit).run();
+
+      const query2 = Messages.select(['id', 'sender_user_id', 'receiver_user_id', 'content', 'sent_at', 'is_read'])
+        .whereAnd({
+          sender_user_id: receiverId,
+          receiver_user_id: senderId
+        });
+      query2.whereBuilder.raw(`sent_at < '${new Date(cursorTimestamp).toISOString()}'`);
+      const olderResult2Final = await query2.orderBy('sent_at', 'DESC').limit(limit).run();
+      
+      messages = [...olderResult1Final.rows, ...olderResult2Final.rows]
+        .sort((a: any, b: any) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
+        .slice(0, limit);
     } else {
-      // Load latest messages
-      query = `
-        SELECT 
-          id,
-          sender_user_id as "senderId",
-          receiver_user_id as "receiverId", 
-          content,
-          sent_at as timestamp,
-          is_read as read
-        FROM messages 
-        WHERE (sender_user_id = $1 AND receiver_user_id = $2) 
-           OR (sender_user_id = $2 AND receiver_user_id = $1)
-        ORDER BY sent_at DESC
-        LIMIT $3
-      `;
-      params = [senderId, receiverId, limit];
+      const latestResult1 = await Messages.select(['id', 'sender_user_id', 'receiver_user_id', 'content', 'sent_at', 'is_read'])
+        .whereAnd({
+          sender_user_id: senderId,
+          receiver_user_id: receiverId
+        })
+        .orderBy('sent_at', 'DESC')
+        .limit(limit)
+        .run();
+      
+      const latestResult2 = await Messages.select(['id', 'sender_user_id', 'receiver_user_id', 'content', 'sent_at', 'is_read'])
+        .whereAnd({
+          sender_user_id: receiverId,
+          receiver_user_id: senderId
+        })
+        .orderBy('sent_at', 'DESC')
+        .limit(limit)
+        .run();
+      
+      messages = [...latestResult1.rows, ...latestResult2.rows]
+        .sort((a: any, b: any) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
+        .slice(0, limit);
     }
 
-    const result = await pool.query(query, params);
-    const messages = result.rows.reverse(); // Reverse to get chronological order
-    
+    messages = messages.reverse();
+
     const hasMore = cursor 
-      ? messages.length === limit // If loading older messages and we got a full page
-      : totalMessages > limit; // If initial load and there are more messages
-    
+      ? messages.length === limit
+      : totalMessages > limit;
+
     const nextCursor = messages.length > 0 ? messages[0].id : null;
 
     return {
-      messages,
+      messages: messages.map((msg: any) => ({
+        id: msg.id,
+        senderId: msg.sender_user_id,
+        receiverId: msg.receiver_user_id,
+        content: msg.content,
+        timestamp: msg.sent_at,
+        read: msg.is_read
+      })),
       hasMore,
       nextCursor,
       totalMessages
@@ -73,23 +102,15 @@ export async function getMessagesPaginated(senderId, receiverId, cursor = null, 
   }
 }
 
-export async function getAllUsersExcept(currentUserId) {
+export async function getAllUsersExcept(currentUserId: any) {
   try {
-    const query = `
-      SELECT 
-        u.id,
-        u.username,
-        u.email,
-        u.created_at
-      FROM users u
-      JOIN likes l1 
-        ON l1.liker_user_id = $1 AND l1.liked_user_id = u.id
-      JOIN likes l2 
-        ON l2.liker_user_id = u.id AND l2.liked_user_id = $1
-      ORDER BY u.username ASC
-    `;
-
-    const result = await pool.query(query, [currentUserId]);
+    const result = await User.select(['u.id', 'u.username', 'u.email', 'u.created_at'])
+      .from('users u')
+      .join('INNER', 'likes l1', `l1.liker_user_id = ${currentUserId} AND l1.liked_user_id = u.id`)
+      .join('INNER', 'likes l2', `l2.liker_user_id = u.id AND l2.liked_user_id = ${currentUserId}`)
+      .orderBy('u.username', 'ASC')
+      .run();
+    
     return result.rows;
   } catch (error) {
     console.error("❌ Error in getMatchedUsers:", error);
@@ -97,13 +118,15 @@ export async function getAllUsersExcept(currentUserId) {
   }
 }
 
-export async function userExists(userId) {
+export async function userExists(userId: any) {
   try {
     if (!userId || isNaN(userId)) {
       console.log("❌ Invalid user ID:", userId);
       return false;
     }
-    const result = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+    const result = await User.select(['id'])
+      .where('id', userId)
+      .run();
     return result.rows.length > 0;
   } catch (error) {
     console.error("❌ Error checking user existence for ID", userId, ":", error);
@@ -111,73 +134,92 @@ export async function userExists(userId) {
   }
 }
 
-// ✅ Message-related queries
-export async function getMessages(senderId, receiverId) {
+export async function getMessages(senderId: any, receiverId: any) {
   try {
-    const query = `
-      SELECT 
-        id,
-        sender_user_id as "senderId",
-        receiver_user_id as "receiverId", 
-        content,
-        sent_at as timestamp,
-        is_read as read
-      FROM messages 
-      WHERE (sender_user_id = $1 AND receiver_user_id = $2) 
-         OR (sender_user_id = $2 AND receiver_user_id = $1)
-      ORDER BY sent_at ASC
-    `;
-    const result = await pool.query(query, [senderId, receiverId]);
-    return result.rows;
+    const result = await Messages.select(['id', 'sender_user_id', 'receiver_user_id', 'content', 'sent_at', 'is_read'])
+      .whereAnd({
+        sender_user_id: senderId,
+        receiver_user_id: receiverId
+      })
+      .run();
+    
+    const result2 = await Messages.select(['id', 'sender_user_id', 'receiver_user_id', 'content', 'sent_at', 'is_read'])
+      .whereAnd({
+        sender_user_id: receiverId,
+        receiver_user_id: senderId
+      })
+      .run();
+    
+    const allMessages = [...result.rows, ...result2.rows];
+    allMessages.sort((a: any, b: any) => 
+      new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+    );
+    
+    return allMessages.map((msg: any) => ({
+      id: msg.id,
+      senderId: msg.sender_user_id,
+      receiverId: msg.receiver_user_id,
+      content: msg.content,
+      timestamp: msg.sent_at,
+      read: msg.is_read
+    }));
   } catch (error) {
     console.error("❌ Error fetching messages:", error);
     throw error;
   }
 }
 
-export async function saveMessage(senderId, receiverId, content) {
+export async function saveMessage(senderId: any, receiverId: any, content: any) {
   try {
-    const query = `
-      INSERT INTO messages (sender_user_id, receiver_user_id, content, sent_at, is_read)
-      VALUES ($1, $2, $3, NOW(), false)
-      RETURNING 
-        id,
-        sender_user_id as "senderId",
-        receiver_user_id as "receiverId",
-        content,
-        sent_at as timestamp,
-        is_read as read
-    `;
-    const result = await pool.query(query, [senderId, receiverId, content]);
-    return result.rows[0];
+    const result = await Messages.insert({
+      sender_user_id: senderId,
+      receiver_user_id: receiverId,
+      content: content,
+      sent_at: new Date(),
+      is_read: false
+    })
+      .returning(['id', 'sender_user_id', 'receiver_user_id', 'content', 'sent_at', 'is_read'])
+      .run();
+    
+    const message = result.rows[0];
+    return {
+      id: message.id,
+      senderId: message.sender_user_id,
+      receiverId: message.receiver_user_id,
+      content: message.content,
+      timestamp: message.sent_at,
+      read: message.is_read
+    };
   } catch (error) {
     console.error("❌ Error saving message:", error);
     throw error;
   }
 }
 
-export async function markMessagesAsRead(senderId, receiverId) {
+export async function markMessagesAsRead(senderId: any, receiverId: any) {
   try {
-    const query = `
-      UPDATE messages 
-      SET is_read = true 
-      WHERE sender_user_id = $1 AND receiver_user_id = $2 AND is_read = false
-    `;
-    await pool.query(query, [senderId, receiverId]);
+    await Messages.update({
+      is_read: true
+    })
+      .where('sender_user_id', senderId)
+      .whereAnd({ receiver_user_id: receiverId, is_read: false })
+      .run();
   } catch (error) {
     console.error("❌ Error marking messages as read:", error);
     throw error;
   }
 }
 
-// ✅ Notification-related queries
-export async function createNotification(userId, fromUserId) {
+export async function createNotification(userId: any, fromUserId: any) {
   try {
-    const query = `
-      INSERT INTO notifications (user_id, from_user_id, type, is_read, created_at)
-      VALUES ($1, $2, 'message', false, NOW())
-    `;
-    await pool.query(query, [userId, fromUserId]);
+    await Notifications.insert({
+      user_id: userId,
+      from_user_id: fromUserId,
+      type: 'message',
+      is_read: false,
+      created_at: new Date()
+    })
+      .run();
   } catch (error) {
     console.error("❌ Error creating notification:", error);
     throw error;
