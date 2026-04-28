@@ -36,16 +36,16 @@ export async function getMessagesPaginated(senderId: any, receiverId: any, curso
         .whereAnd({
           sender_user_id: senderId,
           receiver_user_id: receiverId
-        });
-      query1.whereBuilder.raw(`sent_at < '${new Date(cursorTimestamp).toISOString()}'`);
+        })
+        .where('sent_at', cursorTimestamp, '<');
       const olderResult1Final = await query1.orderBy('sent_at', 'DESC').limit(limit).run();
 
       const query2 = Messages.select(['id', 'sender_user_id', 'receiver_user_id', 'content', 'sent_at', 'is_read'])
         .whereAnd({
           sender_user_id: receiverId,
           receiver_user_id: senderId
-        });
-      query2.whereBuilder.raw(`sent_at < '${new Date(cursorTimestamp).toISOString()}'`);
+        })
+        .where('sent_at', cursorTimestamp, '<');
       const olderResult2Final = await query2.orderBy('sent_at', 'DESC').limit(limit).run();
       
       const combinedRows = [...olderResult1Final.rows, ...olderResult2Final.rows];

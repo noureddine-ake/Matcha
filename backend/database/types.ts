@@ -18,7 +18,8 @@ export type WhereCondition =
   | { type: 'and'; conditions: WhereCondition[] }
   | { type: 'or'; conditions: WhereCondition[] }
   | { type: 'raw'; sql: string }
-  | { type: 'grater_then'; field: string; value: any };
+  | { type: 'grater_then'; field: string; value: any }
+  | { type: 'less_then'; field: string; value: any };
 
 export class WhereBuilder {
   private conditions: WhereCondition[] = [];
@@ -65,6 +66,11 @@ export class WhereBuilder {
 
   grater_then(field: string, value: any): this {
     this.conditions.push({ type: 'grater_then', field, value });
+    return this;
+  }
+
+  less_then(field: string, value: any): this {
+    this.conditions.push({ type: 'less_then', field, value });
     return this;
   }
   

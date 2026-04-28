@@ -117,7 +117,7 @@ export class QueryBuilder {
     // ===================
     // WHERE methods
     // ===================
-    where(field: string, value: any, type: '=' | '!=' | 'in' | 'null' | 'not null' | 'exists' | '>' = '=') {
+    where(field: string, value: any, type: '=' | '!=' | 'in' | 'null' | 'not null' | 'exists' | '>' | '<' = '=') {
         switch (type) {
             case '=':
                 this.whereBuilder.equals(field, value);
@@ -139,6 +139,9 @@ export class QueryBuilder {
                 break;
             case '>':
                 this.whereBuilder.grater_then(field, value);
+                break;
+            case '<':
+                this.whereBuilder.less_then(field, value);
                 break;
         }
         return this;
@@ -482,6 +485,13 @@ export class QueryBuilder {
                     }
                     params.push(cond.value);
                     return `${cond.field} > $${params.length}`;
+                case 'less_then':
+                    const ltValue = cond.value;
+                    if (ltValue instanceof Raw) {
+                        return `${cond.field} < ${ltValue.value}`;
+                    }
+                    params.push(cond.value);
+                    return `${cond.field} < $${params.length}`;
                 default:
                     return '';
             }
