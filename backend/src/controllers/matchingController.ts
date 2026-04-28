@@ -34,52 +34,12 @@ export const getSuggestions = async (req, res) => {
       return res.status(404).json({ error: 'Profile not found' });
     }
 
-    const currentUser = currentUserQuery.rows[0];
-
-    // Build gender filter
-    let genderFilter = '';
-    if (currentUser.sexual_preference === 'male') {
-      genderFilter = "AND p.gender = 'male'";
-    } else if (currentUser.sexual_preference === 'female') {
-      genderFilter = "AND p.gender = 'female'";
-    }
-
-    let mutualPreferenceFilter = '';
-    if (currentUser.gender) {
-      mutualPreferenceFilter = `
-        AND (
-          p.sexual_preference = '${currentUser.gender}'
-          OR p.sexual_preference = 'bisexual'
-          OR p.sexual_preference IS NULL
-        )
-      `;
-    }
-
-    // Build sorting
-    let orderByClause = '';
-    switch (sortBy) {
-      case 'fame':
-        orderByClause = 'ORDER BY p.fame_rating DESC, distance ASC';
-        break;
-      case 'age':
-        orderByClause = 'ORDER BY age ASC, distance ASC';
-        break;
-      case 'tags':
-        orderByClause = 'ORDER BY common_tags DESC, distance ASC';
-        break;
-      case 'distance':
-      default:
-        orderByClause = 'ORDER BY distance ASC, p.fame_rating DESC';
-    }
-
     const result = await searchSuggestions2(userId, {
-      genderFilter,
-      mutualPreferenceFilter,
       minAge,
       maxAge,
       minFame,
       maxFame,
-      orderByClause,
+      sortBy,
       maxDistance,
       limit,
       offset,

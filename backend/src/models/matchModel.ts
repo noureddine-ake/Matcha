@@ -1,4 +1,4 @@
-import { UserTags, Photos, Blocks, Likes, Tags } from '../../database/entities/index.js';
+import { UserTags, Photos, Blocks, Likes } from '../../database/entities/index.js';
 import { Profiles } from '../../database/entities/profiles.entity.js';
 import { User } from '../../database/entities/users.entity.js';
 import { Raw } from '../../database/raw.js';
@@ -12,9 +12,7 @@ interface SuggestionFilters {
   maxAge?: number;
   minFame?: number;
   maxFame?: number;
-  genderFilter: string;
-  mutualPreferenceFilter: string;
-  orderByClause: string;
+  sortBy: string;
   limit?: number;
   offset?: number;
 }
@@ -44,8 +42,6 @@ interface SuggestionResult {
 }
 
 // -- Interfaces for TypeScript type safety============
-
-// suggested profiles 2
 
 export const searchSuggestions2 = async (
   userId: number,
@@ -126,13 +122,16 @@ export const searchSuggestions2 = async (
   // 1. Filter out blocked/blocking users
   users = users.filter(u => !blockedUserIds.has(u.id));
 
+  console.log('Users after block filtering:', users.length);
   // 2. Filter out already liked users
   users = users.filter(u => !likedUserIds.has(u.id));
 
+  console.log('Users after like filtering:', users.length);
   // 3. Distance filter
   const maxDist = parseInt(filters.maxDistance as any) || 500;
   users = users.filter(u => u.distance <= maxDist);
 
+  console.log('Users after distance filtering:', users.length);
   // 4. Gender and preference filtering
   users = users.filter(u => {
     // Current user preference check
@@ -146,13 +145,16 @@ export const searchSuggestions2 = async (
     return true;
   });
 
+  console.log('Users after gender and preference filtering:', users.length);
   // 5. Age and Fame filtering
-  if (filters.minAge) users = users.filter(u => u.age >= filters.minAge!);
-  if (filters.maxAge) users = users.filter(u => u.age <= filters.maxAge!);
-  if (filters.minFame) users = users.filter(u => u.fame_rating >= filters.minFame!);
-  if (filters.maxFame) users = users.filter(u => u.fame_rating <= filters.maxFame!);
+  if (filters.minAge) users = users.filter(u => parseInt(u.age) >= (filters.minAge || 0));
+  if (filters.maxAge) users = users.filter(u => parseInt(u.age) <= (filters.maxAge || 1000));
+  console.log('Users after age filtering:', users.length, filters.minAge, filters.maxAge);
+  if (filters.minFame) users = users.filter(u => u.fame_rating >= (filters.minFame || 0));
+  if (filters.maxFame) users = users.filter(u => u.fame_rating <= (filters.maxFame || 5));
 
-  // 6. Batch fetch tags and photos
+  console.log('Users after fame filtering:', users.length);
+  // 6. Batch fetch tags and photos``
   const candidateIds = users.map(u => u.id);
   if (candidateIds.length > 0) {
     const allTags = await UserTags.select(['ut.user_id', 't.name', 't.id'])
@@ -190,16 +192,12 @@ export const searchSuggestions2 = async (
   }
 
   // 8. Sorting
-  // We already have some sorting logic passed from controller, but since we are in TS, let's just use it if possible or implement here.
-  // The controller sends an orderByClause which is for SQL. Since we have all users in memory, we can sort here.
-  // But wait, the controller expects result.rows.
-  
-  // Re-implement sorting in memory based on orderByClause logic
-  if (filters.orderByClause.includes('fame')) {
+  // Re-implement sorting in memory based on sortBy logic
+  if (filters.sortBy == 'fame') {
     users.sort((a, b) => b.fame_rating - a.fame_rating || a.distance - b.distance);
-  } else if (filters.orderByClause.includes('age')) {
+  } else if (filters.sortBy == 'age') {
     users.sort((a, b) => a.age - b.age || a.distance - b.distance);
-  } else if (filters.orderByClause.includes('common_tags')) {
+  } else if (filters.sortBy == 'tags') {
     users.sort((a, b) => b.common_tags - a.common_tags || a.distance - b.distance);
   } else {
     users.sort((a, b) => a.distance - b.distance || b.fame_rating - a.fame_rating);
@@ -213,197 +211,98 @@ export const searchSuggestions2 = async (
   return { rows: paginatedUsers };
 }
 
-// export const searchSuggestions2 = async (userId, filters) => {
-//   const query = `
-//   WITH current_user_location AS (
-//     SELECT latitude, longitude FROM profiles WHERE user_id = $1
-//   ),
-//   current_user_tags AS (
-//     SELECT tag_id FROM user_tags WHERE user_id = $1
-//   )
-//   SELECT 
-//     u.id,
-//     u.username,
-//     u.first_name,
-//     u.last_name,
-//     p.gender,
-//     p.biography,
-//     p.fame_rating,
-//     p.city,
-//     p.country,
-//     p.is_online,
-//     p.last_seen,
-//     p.latitude,
-//     p.longitude,
-//     EXTRACT(YEAR FROM AGE(p.birth_date)) as age,
-//     -- Calculate distance in km using Haversine formula
-//     ROUND(
-//       6371 * acos(
-//         cos(radians(curr.latitude)) * cos(radians(p.latitude)) * 
-//         cos(radians(p.longitude) - radians(curr.longitude)) + 
-//         sin(radians(curr.latitude)) * sin(radians(p.latitude))
-//       )
-//     ) as distance,
-//     -- Count common tags
-//     (SELECT COUNT(*) 
-//      FROM user_tags ut_current 
-//      WHERE ut_current.user_id = u.id 
-//      AND ut_current.tag_id IN (SELECT tag_id FROM current_user_tags)
-//     ) as common_tags,
-//     -- Get user's tags
-//     (SELECT array_agg(DISTINCT t.name)
-//      FROM user_tags ut_tags
-//      INNER JOIN tags t ON ut_tags.tag_id = t.id
-//      WHERE ut_tags.user_id = u.id
-//     ) as tags,
-//     -- Get pictures
-//     (
-//       SELECT json_agg(
-//         json_build_object(
-//           'id', ph.id,
-//           'photo_url', ph.photo_url,
-//           'is_profile_picture', ph.is_profile_picture
-//         )
-//       )
-//       FROM photos ph
-//       WHERE ph.user_id = u.id
-//     ) AS photos,
-//     -- Check if already liked
-//     EXISTS(SELECT 1 FROM likes WHERE liker_user_id = $1 AND liked_user_id = u.id) as already_liked,
-//     -- Check if they liked us
-//     EXISTS(SELECT 1 FROM likes WHERE liker_user_id = u.id AND liked_user_id = $1) as they_liked_us
-//   FROM users u
-//   INNER JOIN profiles p ON u.id = p.user_id
-//   CROSS JOIN current_user_location curr
-//   WHERE u.id != $1
-//     AND u.is_verified = TRUE
-//     AND p.gender IS NOT NULL
-//     AND p.sexual_preference IS NOT NULL
-//     AND p.latitude IS NOT NULL
-//     AND p.longitude IS NOT NULL
-//     AND curr.latitude IS NOT NULL
-//     AND curr.longitude IS NOT NULL
-//     AND EXISTS(SELECT 1 FROM photos WHERE user_id = u.id AND is_profile_picture = TRUE)
-//     -- Not blocked by current user or blocking current user
-//     AND NOT EXISTS(SELECT 1 FROM blocks WHERE blocker_user_id = $1 AND blocked_user_id = u.id)
-//     AND NOT EXISTS(SELECT 1 FROM blocks WHERE blocker_user_id = u.id AND blocked_user_id = $1)
-//     -- Not already liked
-//     AND NOT EXISTS(SELECT 1 FROM likes WHERE liker_user_id = $1 AND liked_user_id = u.id)
-//     -- Distance filter in WHERE
-//     AND (
-//       6371 * acos(
-//         cos(radians(curr.latitude)) * cos(radians(p.latitude)) * 
-//         cos(radians(p.longitude) - radians(curr.longitude)) + 
-//         sin(radians(curr.latitude)) * sin(radians(p.latitude))
-//       )
-//     ) <= $2
-//     -- Apply gender filter
-//     ${filters.genderFilter}
-//     -- Apply mutual preference filter
-//     ${filters.mutualPreferenceFilter}
-//     -- Age filters
-//     ${
-//       filters.minAge
-//         ? `AND EXTRACT(YEAR FROM AGE(p.birth_date)) >= ${parseInt(filters.minAge)}`
-//         : ''
-//     }
-//     ${
-//       filters.maxAge
-//         ? `AND EXTRACT(YEAR FROM AGE(p.birth_date)) <= ${parseInt(filters.maxAge)}`
-//         : ''
-//     }
-//     -- Fame filters
-//     ${
-//       filters.minFame
-//         ? `AND p.fame_rating >= ${parseFloat(filters.minFame)}`
-//         : ''
-//     }
-//     ${
-//       filters.maxFame
-//         ? `AND p.fame_rating <= ${parseFloat(filters.maxFame)}`
-//         : ''
-//     }
-//   GROUP BY u.id, u.username, u.first_name, u.last_name, p.gender, p.biography, 
-//            p.fame_rating, p.city, p.country, p.latitude, p.longitude, p.birth_date,
-//            p.is_online, p.last_seen, curr.latitude, curr.longitude
-//   ${filters.orderByClause}
-//   LIMIT $3 OFFSET $4
-// `;
-
-//   const values = [
-//     userId,
-//     parseInt(filters.maxDistance) || 500,
-//     parseInt(filters.limit) || 20,
-//     parseInt(filters.offset) || 0,
-//   ];
-
-//   const ret = await pool.query(query, values);
-
-//   return ret;
-// };
-
 // suggested all matches
-export const getAllMatches = async (data) => {
-  const query = `
-      SELECT 
-      u.id,
-      u.username,
-      u.first_name,
-      u.last_name,
-      p.gender,
-      p.sexual_preference,
-      p.biography,
-      p.city,
-      p.country,
-      p.fame_rating,
-      p.last_seen,
-      p.is_online,
-      EXTRACT(YEAR FROM AGE(p.birth_date)) AS age,
-      p.latitude,
-      p.longitude,
-      COALESCE(
-        json_agg(
-          DISTINCT jsonb_build_object(
-            'id', ph.id,
-            'photo_url', ph.photo_url,
-            'is_profile_picture', ph.is_profile_picture
-          )
-        ) FILTER (WHERE ph.id IS NOT NULL),
-        '[]'
-      ) AS photos,
-      COALESCE(
-        json_agg(
-          DISTINCT jsonb_build_object(
-            'id', t.id,
-            'name', t.name
-          )
-        ) FILTER (WHERE t.id IS NOT NULL),
-        '[]'
-      ) AS tags
-    FROM likes l1
-    JOIN likes l2 
-      ON l1.liker_user_id = l2.liked_user_id
-      AND l1.liked_user_id = l2.liker_user_id
-    JOIN users u ON u.id = l1.liked_user_id
-    JOIN profiles p ON p.user_id = u.id
-    LEFT JOIN photos ph ON ph.user_id = u.id
-    LEFT JOIN user_tags ut ON ut.user_id = u.id
-    LEFT JOIN tags t ON t.id = ut.tag_id
-    WHERE l1.liker_user_id = $1
-    GROUP BY 
-      u.id, u.username, u.first_name, u.last_name,
-      p.gender, p.sexual_preference, p.biography, p.city, p.country,
-      p.fame_rating, p.last_seen, p.is_online, p.birth_date, p.latitude, p.longitude
-    ORDER BY p.fame_rating DESC
-    LIMIT $2 OFFSET $3;
-  `;
-  const values = [data.userId, parseInt(data.limit), parseInt(data.offset)];
-  const current = await pool.query(query, values);
-  return current;
+export const getAllMatches = async (data: any) => {
+  const userId = data.userId;
+  const limit = parseInt(data.limit) || 20;
+  const offset = parseInt(data.offset) || 0;
+
+  const matchesResult = await Likes.select(['l1.liked_user_id'])
+    .from('likes l1')
+    .join('INNER', 'likes l2', 'l1.liker_user_id = l2.liked_user_id AND l1.liked_user_id = l2.liker_user_id')
+    .where('l1.liker_user_id', userId)
+    .run();
+
+  const matchIds = matchesResult.rows.map((r: any) => r.liked_user_id);
+
+  if (matchIds.length === 0) {
+    return { rows: [] };
+  }
+
+  const usersResult = await User.select([
+    'u.id',
+    'u.username',
+    'u.first_name',
+    'u.last_name',
+    'p.gender',
+    'p.sexual_preference',
+    'p.biography',
+    'p.city',
+    'p.country',
+    'p.fame_rating',
+    'p.last_seen',
+    'p.is_online',
+    'p.latitude',
+    'p.longitude',
+    new Raw(`EXTRACT(YEAR FROM AGE(p.birth_date)) as age`),
+  ])
+    .from('users u')
+    .join('INNER', 'profiles p', 'u.id = p.user_id')
+    .whereIn('u.id', matchIds)
+    .run();
+
+  let users = usersResult.rows as any[];
+
+  users.sort((a, b) => Number(b.fame_rating) - Number(a.fame_rating));
+
+  const paginatedUsers = users.slice(offset, offset + limit);
+
+  if (paginatedUsers.length === 0) {
+    return { rows: [] };
+  }
+
+  const paginatedIds = paginatedUsers.map(u => u.id);
+
+  const allPhotos = await Photos.select(['id', 'user_id', 'photo_url', 'is_profile_picture'])
+    .whereIn('user_id', paginatedIds)
+    .run().then(res => res.rows);
+
+  const photosByUserId = allPhotos.reduce((acc: any, photo: any) => {
+    if (!acc[photo.user_id]) acc[photo.user_id] = [];
+    acc[photo.user_id].push({
+      id: photo.id,
+      photo_url: photo.photo_url,
+      is_profile_picture: photo.is_profile_picture
+    });
+    return acc;
+  }, {} as Record<number, any[]>);
+
+  const allTags = await UserTags.select(['ut.user_id', 't.name', 't.id'])
+    .from('user_tags ut')
+    .join('INNER', 'tags t', 'ut.tag_id = t.id')
+    .whereIn('ut.user_id', paginatedIds)
+    .run().then(res => res.rows);
+
+  const tagsByUserId = allTags.reduce((acc: any, tag: any) => {
+    if (!acc[tag.user_id]) acc[tag.user_id] = [];
+    acc[tag.user_id].push({
+      id: tag.id,
+      name: tag.name
+    });
+    return acc;
+  }, {} as Record<number, any[]>);
+
+  paginatedUsers.forEach(u => {
+    u.photos = photosByUserId[u.id] || [];
+    u.tags = tagsByUserId[u.id] || [];
+    u.age = Number(u.age);
+  });
+
+  return { rows: paginatedUsers };
 };
 
 // suggested profiles data for matches
-export const getProfileDataforMatches = async (userId) => {
+export const getProfileDataforMatches = async (userId: number) => {
   const query = `
     SELECT 
       p.gender,
@@ -424,7 +323,7 @@ export const getProfileDataforMatches = async (userId) => {
 };
 
 // get all likes for a user
-export const getUserLikes = async (userId) => {
+export const getUserLikes = async (userId: number) => {
   const query = `
       SELECT 
       u.id,
@@ -489,7 +388,7 @@ export const getUserLikes = async (userId) => {
  * @param {number} userId - ID of the user
  * @returns {Promise<number>} Number of matches
  */
-export const getMatchesCount = async (userId) => {
+export const getMatchesCount = async (userId: number) => {
   const query = `
     SELECT COUNT(*)::int AS total_matches
     FROM likes l1

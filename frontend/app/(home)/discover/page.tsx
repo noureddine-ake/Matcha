@@ -284,10 +284,10 @@ export default function DiscoverPage() {
                       <div className="flex flex-wrap gap-2">
                         {currentProfile.tags.map((tag) => (
                           <span
-                            key={tag}
+                            key={tag.id}
                             className="px-3 py-1.5 bg-purple-500/20 border border-purple-400/30 text-purple-200 rounded-full text-sm font-medium"
                           >
-                            {tag}
+                            {tag.name}
                           </span>
                         ))}
                       </div>
