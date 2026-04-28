@@ -423,12 +423,24 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
                     receiverId: String(m.receiverId),
                 }));
 
-                normalized.sort(
+                // Defensive deduplication (Layer 2)
+                const seenIds = new Set();
+                const deduplicated = normalized.filter((msg) => {
+                    const id = msg.databaseId || msg.id;
+                    if (seenIds.has(id)) {
+                        console.warn(`[ChatContext] Defensive fix: Duplicate message detected from backend:`, id);
+                        return false;
+                    }
+                    seenIds.add(id);
+                    return true;
+                });
+
+                deduplicated.sort(
                     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
                 );
 
                 setState((prev) => {
-                    const newMessages = isLoadMore ? [...normalized, ...prev.messages] : normalized;
+                    const newMessages = isLoadMore ? [...deduplicated, ...prev.messages] : deduplicated;
 
                     conversationCache.current[userId] = {
                         messages: newMessages,

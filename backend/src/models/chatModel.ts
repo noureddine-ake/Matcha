@@ -48,7 +48,15 @@ export async function getMessagesPaginated(senderId: any, receiverId: any, curso
       query2.whereBuilder.raw(`sent_at < '${new Date(cursorTimestamp).toISOString()}'`);
       const olderResult2Final = await query2.orderBy('sent_at', 'DESC').limit(limit).run();
       
-      messages = [...olderResult1Final.rows, ...olderResult2Final.rows]
+      const combinedRows = [...olderResult1Final.rows, ...olderResult2Final.rows];
+      const seenIds = new Set();
+      const uniqueRows = combinedRows.filter((msg: any) => {
+        if (seenIds.has(msg.id)) return false;
+        seenIds.add(msg.id);
+        return true;
+      });
+
+      messages = uniqueRows
         .sort((a: any, b: any) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
         .slice(0, limit);
     } else {
@@ -70,7 +78,15 @@ export async function getMessagesPaginated(senderId: any, receiverId: any, curso
         .limit(limit)
         .run();
       
-      messages = [...latestResult1.rows, ...latestResult2.rows]
+      const combinedRows = [...latestResult1.rows, ...latestResult2.rows];
+      const seenIds = new Set();
+      const uniqueRows = combinedRows.filter((msg: any) => {
+        if (seenIds.has(msg.id)) return false;
+        seenIds.add(msg.id);
+        return true;
+      });
+
+      messages = uniqueRows
         .sort((a: any, b: any) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
         .slice(0, limit);
     }
