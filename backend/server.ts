@@ -19,7 +19,8 @@ import cors from 'cors';
 import { googleCallbackController } from './src/controllers/oauthController.js';
 import path from 'path';
 import { swaggerUi, swaggerSpec } from "./swagger.js";
-import { setupWebSocket } from './src/config/websocket.js';
+import { setupWebSocket, registerChatHandler } from './src/config/websocket.js';
+import { registerChatHandlers } from './src/sockets/chatSocket.js';
 import http from 'http';
 import cookieParser from 'cookie-parser';
 import xss from 'xss-clean';
@@ -108,6 +109,10 @@ app.use((req, res) => res.status(404).json({message: "not found"}));
 const server = http.createServer(app);
 
 setupWebSocket(server);
+
+// Register chat handlers
+registerChatHandlers(registerChatHandler);
+console.log('✅ Chat handlers registered');
 
 // Error handling middleware
 app.use(errorHandler);

@@ -215,8 +215,12 @@ function broadcastUserStatus(userId, status, username = null) {
 // Handle chat messages
 async function handleChatMessage(senderId, data) {
   const handler = chatHandlers.get(data.type);
+  
   if (handler) {
+    console.log(`[WS] 🔄 Routing ${data.type} message from user ${senderId}`);
     await handler(senderId, data);
+  } else {
+    console.warn(`[WS] ⚠️ No handler found for message type: ${data.type}`);
   }
 }
 
