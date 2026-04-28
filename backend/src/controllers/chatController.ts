@@ -250,7 +250,7 @@ async function sendMessage(req, res) {
 
     console.log("🟡 Sending real-time message:", realTimeMessage);
     
-    const sentRealtime = sendRealTimeMessage(actualReceiverId, realTimeMessage);
+    const sentRealtime = sendRealTimeMessage(actualReceiverId.toString(), realTimeMessage);
     console.log("🟡 Real-time delivery:", sentRealtime ? "SUCCESS" : "FAILED - user offline");
 
     res.status(201).json({

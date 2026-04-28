@@ -459,6 +459,35 @@ export class QueryBuilder {
         }
         return conditions.map(cond => {
             switch (cond.type) {
+                case 'and':
+                    // Recursively build inner conditions and join with AND
+                    return cond.conditions.map(innerCond => {
+                        switch (innerCond.type) {
+                            case 'equals':
+                                params.push(innerCond.value);
+                                return `${innerCond.field} ${innerCond.equals ? '=' : '!='} $${params.length}`;
+                            case 'in':
+                                const placeholders = innerCond.values.map((_, idx) => {
+                                    params.push(innerCond.values[idx]);
+                                    return `$${params.length}`;
+                                });
+                                return `${innerCond.field} IN (${placeholders.join(', ')})`;
+                            case 'null':
+                                return innerCond.notNull
+                                    ? `${innerCond.field} IS NOT NULL`
+                                    : `${innerCond.field} IS NULL`;
+                            case 'grater_then':
+                                params.push(innerCond.value);
+                                return `${innerCond.field} > $${params.length}`;
+                            case 'less_then':
+                                params.push(innerCond.value);
+                                return `${innerCond.field} < $${params.length}`;
+                            case 'raw':
+                                return innerCond.sql;
+                            default:
+                                return '';
+                        }
+                    }).join(' AND ');
                 case 'equals':
                     params.push(cond.value);
                     return `${cond.field} ${cond.equals ? '=' : '!='} $${params.length}`;

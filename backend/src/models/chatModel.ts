@@ -1,4 +1,5 @@
 import { Messages, User, Notifications } from "../../database/entities/index.js";
+import { createAndSendNotification } from "../utils/notificationHelper.js";
 
 // ✅ Get messages with pagination
 export async function getMessagesPaginated(senderId: any, receiverId: any, cursor = null, limit = 20) {
@@ -228,16 +229,8 @@ export async function markMessagesAsRead(senderId: any, receiverId: any) {
 
 export async function createNotification(userId: any, fromUserId: any) {
   try {
-    await Notifications.insert({
-      user_id: userId,
-      from_user_id: fromUserId,
-      type: 'message',
-      is_read: false,
-      created_at: new Date()
-    })
-      .run();
+    await createAndSendNotification(userId, 'message', fromUserId);
   } catch (error) {
     console.error("❌ Error creating notification:", error);
-    throw error;
   }
 }
