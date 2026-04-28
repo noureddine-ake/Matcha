@@ -4,8 +4,10 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "dev": "npx nodemon server.js",
-    "start": "node server.js"
+    "build": "tsc",
+    "start": "node ./dist/server.js",
+    "dev": "node --trace-warnings --import tsx --watch server.ts",
+    "seed:test": "tsx scripts/seedTestData.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -17,13 +19,16 @@
     "express-rate-limit": "^8.1.0",
     "express-validator": "^6.15.0",
     "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
-    "nodemailer": "^7.0.9",
+    "nodemailer": "^8.0.4",
     "pg": "^8.11.0",
+    "pg-format": "^1.0.4",
     "redis": "^5.8.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "winston": "^3.19.0",
     "ws": "^8.18.3",
     "xss-clean": "^0.1.4"
   },
@@ -31,6 +36,15 @@
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.39.1",
     "@eslint/json": "^0.14.0",
+    "@types/express": "^5.0.6",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^25.5.0",
+    "@types/nodemailer": "^8.0.0",
+    "@types/pg": "^8.20.0",
+    "@types/pg-format": "^1.0.5",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.47.0",
     "@typescript-eslint/parser": "^8.47.0",
     "eslint": "^9.39.1",
@@ -38,6 +52,9 @@
     "eslint-plugin-prettier": "^5.5.4",
     "globals": "^16.5.0",
     "nodemon": "^3.1.10",
-    "prettier": "^3.6.2"
+    "prettier": "^3.6.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }

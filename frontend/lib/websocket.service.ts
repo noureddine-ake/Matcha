@@ -148,7 +148,7 @@ class WebSocketService {
     }
 
     /**
-     * Unregister a handler for a specific message type
+     * Un a handler for a specific message type
      */
     unregisterHandler<T extends WebSocketMessage>(
         type: MessageType,

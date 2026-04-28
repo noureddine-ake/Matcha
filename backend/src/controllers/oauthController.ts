@@ -1,0 +1,124 @@
+import JWT from '../middlewares/authMiddleware.js';
+import crypto from 'crypto'
+import bcrypt from 'bcryptjs'
+import { User } from '../../database/entities/users.entity.js';
+import { Request, Response } from 'express';
+
+
+const GOOGLE_OAUTH_URL = process.env.GOOGLE_OAUTH_URL || '';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GOOGLE_ACCESS_TOKEN_URL = process.env.GOOGLE_ACCESS_TOKEN_URL || '';
+// const GOOGLE_TOKEN_INFO_URL = process.env.GOOGLE_TOKEN_INFO_URL;
+const GOOGLE_CALLBACK_URL = 'http://localhost:5000/google/callback';
+const GOOGLE_OAUTH_SCOPES = [
+  'https://www.googleapis.com/auth/userinfo.email',
+
+  'https://www.googleapis.com/auth/userinfo.profile',
+];
+
+export const googleOauthController = async (_req: Request, res: Response) => {
+  const state = 'some_state';
+  const scopes = GOOGLE_OAUTH_SCOPES.join(' ');
+  const GOOGLE_OAUTH_CONSENT_SCREEN_URL = `${GOOGLE_OAUTH_URL}?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${GOOGLE_CALLBACK_URL}&access_type=offline&response_type=code&state=${state}&scope=${scopes}`;
+  res.redirect(GOOGLE_OAUTH_CONSENT_SCREEN_URL);
+};
+
+export const googleCallbackController = async (req: Request, res: Response) => {
+  const { code } = req.query;
+
+  if (!code) return res.status(400).send('No code received');
+
+  const params = new URLSearchParams();
+  params.append('code', code as string);
+  params.append('client_id', GOOGLE_CLIENT_ID);
+  params.append('client_secret', GOOGLE_CLIENT_SECRET);
+  params.append('redirect_uri', GOOGLE_CALLBACK_URL);
+  params.append('grant_type', 'authorization_code');
+
+  try {
+    // 1. Exchange code for tokens
+    const response = await fetch(GOOGLE_ACCESS_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+    const tokenData = await response.json();
+
+    // 2. Fetch user info from Google
+    const userResponse = await fetch(
+      'https://www.googleapis.com/oauth2/v2/userinfo',
+      {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      }
+    );
+    const userData = await userResponse.json();
+
+    let rows = await User.select(['*']).where('email', userData.email.toLowerCase()).run();
+    let user = rows.rows[0]
+    if (!rows.rowCount) {
+      const randomPassword = crypto.randomBytes(12).toString("base64");
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      let username = userData.name || userData.email.split('@')[0];
+      username = username.replace(/\s+/g, '_').toLowerCase();
+
+      let existingUsername = await User.select(['*']).where('username', username).run();
+      let counter = 1;
+      while (existingUsername.rowCount && existingUsername.rowCount > 0) {
+        username = `${username}_${counter}`;
+        existingUsername = await User.select(['*']).where('username', username).run();
+        counter++;
+      }
+
+      const newUser = {
+        email: userData.email,
+        username: username,
+        first_name: userData.given_name,
+        last_name: userData.family_name,
+        password_hash: hashedPassword,
+      };
+
+      const ret = await User.insert(newUser).returning(['*']).run();
+      user = ret[0];
+
+      await User.update({ is_verified: true }).where('id', user.id).run();
+    }
+    const token = JWT.createJWToken({
+      sessionData: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        is_verified: true,
+        completed_profile: user.completed_profile,
+      },
+      maxAge: '2 days',
+    });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: 'lax',
+    });
+
+    const refreshToken = JWT.createRefreshToken({
+      sessionData: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        completed_profile: user.completed_profile,
+      },
+    });
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    const redirectUrl = user.completed_profile ? `http://localhost:3000/profile/${user.username}` : 'http://localhost:3000/auth/profile/complete'
+    res.redirect(redirectUrl);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Failed to exchange code for token');
+  }
+};

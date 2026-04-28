@@ -20,6 +20,9 @@ let failedQueue: Array<{
   reject: (reason?: unknown) => void;
 }> = [];
 
+// Request deduplication cache - prevents duplicate requests in same render
+const requestCache = new Map<string, Promise<any>>();
+
 const processQueue = (
   error: AxiosError | null,
   token: string | null = null,
@@ -79,7 +82,6 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError as AxiosError);
-        // Use window.location for client-side navigation
         if (typeof window !== 'undefined') {
           window.location.href = "/auth/login";
         }
@@ -98,5 +100,24 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+// Deduplicate GET requests within the same render cycle
+const originalGet = api.get;
+api.get = function (url: string, config?: any) {
+  const cacheKey = `GET_${url}`;
+  
+  if (requestCache.has(cacheKey)) {
+    return requestCache.get(cacheKey)!;
+  }
+
+  const promise = originalGet.call(this, url, config);
+  requestCache.set(cacheKey, promise);
+
+  promise.finally(() => {
+    setTimeout(() => requestCache.delete(cacheKey), 0);
+  });
+
+  return promise;
+} as typeof api.get;
 
 export default api;

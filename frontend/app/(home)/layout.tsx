@@ -18,6 +18,8 @@ import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Toaster } from "sonner";
 import { AnimatePresence } from "framer-motion";
+import Link from "next/link";
+import Logo from "@/components/Logo";
 
 const ChatProviderFallback = () => (
   <div className="flex items-center justify-center h-full">
@@ -46,7 +48,7 @@ export default function HomeLayout({
   const [location, setLocation] = useState<LocationData | null>(null);
   const [locationStatus, setLocationStatus] = useState<'pending' | 'set' | 'denied' | 'updating'>('pending');
   const [isLocationMenuOpen, setIsLocationMenuOpen] = useState(false);
-  
+
   // Use ref to track if initial location check has been done
   const initialCheckDone = useRef(false);
 
@@ -60,13 +62,13 @@ export default function HomeLayout({
   const isValidLocation = (lat: number, lng: number, accuracy?: number): boolean => {
     // Basic bounds check
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
-    
+
     // Check for zero coordinates (often a sign of error)
     if (Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001) return false;
-    
+
     // If accuracy is provided and it's too low (> 1000 meters), location might be unreliable
     if (accuracy && accuracy > 1000) return false;
-    
+
     return true;
   };
 
@@ -90,18 +92,18 @@ export default function HomeLayout({
   // Load saved location on mount
   useEffect(() => {
     if (initialCheckDone.current) return;
-    
+
     const loadSavedLocation = async () => {
       const stored = localStorage.getItem("user_location");
-      
+
       if (stored && stored !== "denied") {
         try {
           const locationData = JSON.parse(stored);
-          
+
           // Check if stored location is still valid (not too old)
-          const isExpired = locationData.timestamp && 
+          const isExpired = locationData.timestamp &&
             (Date.now() - locationData.timestamp > 24 * 60 * 60 * 1000); // 24 hours
-            
+
           if (!isExpired && locationData.latitude && locationData.longitude) {
             // Validate the coordinates
             if (isValidLocation(locationData.latitude, locationData.longitude, locationData.accuracy)) {
@@ -121,7 +123,7 @@ export default function HomeLayout({
           // Invalid stored location, proceed to get new one
         }
       }
-      
+
       // No valid stored location, try to get fresh one
       checkInitialLocation();
     };
@@ -132,7 +134,7 @@ export default function HomeLayout({
 
   const checkInitialLocation = async () => {
     if (initialCheckDone.current) return;
-    
+
     if (!("geolocation" in navigator)) {
       setLocationStatus('denied');
       initialCheckDone.current = true;
@@ -142,11 +144,11 @@ export default function HomeLayout({
     try {
       // Try to get high accuracy location
       const position = await getHighAccuracyLocation();
-      
+
       const latitude = position.coords.latitude;
       const longitude = position.coords.longitude;
       const accuracy = position.coords.accuracy;
-      
+
       // Validate the coordinates
       if (!isValidLocation(latitude, longitude, accuracy)) {
         throw new Error('Invalid coordinates received');
@@ -157,14 +159,14 @@ export default function HomeLayout({
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
+
         const response = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18`,
           { signal: controller.signal }
         );
-        
+
         clearTimeout(timeoutId);
-        
+
         if (response.ok) {
           const data = await response.json();
           locationName = data.display_name || '';
@@ -173,18 +175,18 @@ export default function HomeLayout({
         // Silently fail - we can still use coordinates
       }
 
-      const locationData = { 
-        latitude: parseFloat(latitude.toFixed(6)), 
-        longitude: parseFloat(longitude.toFixed(6)), 
+      const locationData = {
+        latitude: parseFloat(latitude.toFixed(6)),
+        longitude: parseFloat(longitude.toFixed(6)),
         name: locationName || `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
         accuracy,
         timestamp: Date.now()
       };
-      
+
       localStorage.setItem("user_location", JSON.stringify(locationData));
-      setLocation({ 
-        lat: locationData.latitude, 
-        lng: locationData.longitude, 
+      setLocation({
+        lat: locationData.latitude,
+        lng: locationData.longitude,
         name: locationData.name,
         accuracy: locationData.accuracy,
         timestamp: locationData.timestamp
@@ -192,14 +194,14 @@ export default function HomeLayout({
       setLocationStatus('set');
 
       // Send to backend
-      await api.put("/profile/update-location", { 
-        latitude: locationData.latitude, 
-        longitude: locationData.longitude 
+      await api.put("/profile/update-location", {
+        latitude: locationData.latitude,
+        longitude: locationData.longitude
       });
-      
+
     } catch (error: unknown) {
       console.warn("Location error:", error);
-      
+
       // Try fallback with lower accuracy if high accuracy failed
       const errorCode = typeof error === 'object' && error !== null && 'code' in error ? (error as { code?: number }).code : undefined;
       if (errorCode !== 1) { // Not a permission error
@@ -208,22 +210,22 @@ export default function HomeLayout({
             async (pos) => {
               const latitude = pos.coords.latitude;
               const longitude = pos.coords.longitude;
-              
+
               if (isValidLocation(latitude, longitude, pos.coords.accuracy)) {
-                const locationData = { 
-                  latitude: parseFloat(latitude.toFixed(6)), 
-                  longitude: parseFloat(longitude.toFixed(6)), 
+                const locationData = {
+                  latitude: parseFloat(latitude.toFixed(6)),
+                  longitude: parseFloat(longitude.toFixed(6)),
                   accuracy: pos.coords.accuracy,
                   timestamp: Date.now()
                 };
-                
+
                 localStorage.setItem("user_location", JSON.stringify(locationData));
                 setLocation({ lat: locationData.latitude, lng: locationData.longitude });
                 setLocationStatus('set');
 
-                await api.put("/profile/update-location", { 
-                  latitude: locationData.latitude, 
-                  longitude: locationData.longitude 
+                await api.put("/profile/update-location", {
+                  latitude: locationData.latitude,
+                  longitude: locationData.longitude
                 });
               }
             },
@@ -232,10 +234,10 @@ export default function HomeLayout({
               localStorage.setItem("user_location", "denied");
               setLocationStatus('denied');
             },
-            { 
+            {
               enableHighAccuracy: false, // Lower accuracy fallback
-              timeout: 5000, 
-              maximumAge: 0 
+              timeout: 5000,
+              maximumAge: 0
             }
           );
         } catch {
@@ -253,7 +255,7 @@ export default function HomeLayout({
 
   const handleLocationSet = async (latitude: number, longitude: number, locationName?: string) => {
     setLocationStatus('updating');
-    
+
     try {
       // Validate coordinates
       if (!isValidLocation(latitude, longitude)) {
@@ -266,14 +268,14 @@ export default function HomeLayout({
         try {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000);
-          
+
           const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18`,
             { signal: controller.signal }
           );
-          
+
           clearTimeout(timeoutId);
-          
+
           if (response.ok) {
             const data = await response.json();
             name = data.display_name;
@@ -283,31 +285,31 @@ export default function HomeLayout({
         }
       }
 
-      const locationData = { 
-        latitude: parseFloat(latitude.toFixed(6)), 
-        longitude: parseFloat(longitude.toFixed(6)), 
+      const locationData = {
+        latitude: parseFloat(latitude.toFixed(6)),
+        longitude: parseFloat(longitude.toFixed(6)),
         name: name || `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
         timestamp: Date.now()
       };
 
       // Store in localStorage
       localStorage.setItem("user_location", JSON.stringify(locationData));
-      
+
       // Update state
-      setLocation({ 
-        lat: locationData.latitude, 
-        lng: locationData.longitude, 
+      setLocation({
+        lat: locationData.latitude,
+        lng: locationData.longitude,
         name: locationData.name,
         timestamp: locationData.timestamp
       });
       setLocationStatus('set');
 
       // Send to backend
-      await api.put("/profile/update-location", { 
-        latitude: locationData.latitude, 
-        longitude: locationData.longitude 
+      await api.put("/profile/update-location", {
+        latitude: locationData.latitude,
+        longitude: locationData.longitude
       });
-      
+
       // Close menu if open
       setIsLocationMenuOpen(false);
     } catch (err) {
@@ -318,7 +320,7 @@ export default function HomeLayout({
 
   const handleRefreshLocation = async () => {
     setIsLocationMenuOpen(false);
-    
+
     if (!("geolocation" in navigator)) {
       return;
     }
@@ -328,26 +330,26 @@ export default function HomeLayout({
     try {
       // Try high accuracy first
       const position = await getHighAccuracyLocation();
-      
+
       const latitude = position.coords.latitude;
       const longitude = position.coords.longitude;
-      
+
       if (!isValidLocation(latitude, longitude, position.coords.accuracy)) {
         throw new Error('Invalid coordinates');
       }
 
       await handleLocationSet(latitude, longitude);
-      
+
     } catch (error) {
       console.error("Error refreshing location:", error);
-      
+
       // Try fallback with lower accuracy
       try {
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
             const latitude = pos.coords.latitude;
             const longitude = pos.coords.longitude;
-            
+
             if (isValidLocation(latitude, longitude, pos.coords.accuracy)) {
               await handleLocationSet(latitude, longitude);
             } else {
@@ -357,7 +359,7 @@ export default function HomeLayout({
           () => {
             setLocationStatus('set');
           },
-          { 
+          {
             enableHighAccuracy: false,
             timeout: 5000,
             maximumAge: 0
@@ -387,7 +389,7 @@ export default function HomeLayout({
     <DiscoverProvider>
       <WebSocketProvider>
         <NotificationsProvider>
-          <Toaster 
+          <Toaster
             position="top-right"
             richColors
             closeButton
@@ -405,7 +407,7 @@ export default function HomeLayout({
               },
             }}
           />
-          
+
           {/* Location Modal */}
           <LocationModal
             isOpen={showLocationModal}
@@ -427,29 +429,27 @@ export default function HomeLayout({
                   transition={{ duration: 0.6 }}
                 >
                   <div className="flex items-center justify-between max-w-7xl mx-auto">
-                    <motion.div
-                      className="flex items-center gap-2 cursor-pointer"
-                      whileHover={{ scale: 1.05 }}
-                      onClick={() => router.push("/discover")}
+                    <Link
+                      href="/discover"
+                      className="flex items-center gap-2 z-10"
                     >
-                      <div className="w-10 h-10 bg-linear-to-br from-pink-400 to-purple-600 rounded-lg flex items-center justify-center">
-                        <Heart className="w-6 h-6 text-white fill-white" />
+                      <div className="w-8 h-8  flex items-center justify-center">
+                        <Logo width={32} height={32} color="white" />
                       </div>
-                      <span className="text-2xl font-bold text-white">Matcha</span>
-                    </motion.div>
-                    
+                      <span className="text-xl font-bold text-white">Matcha</span>
+                    </Link>
+
                     <div className="flex items-center gap-2">
                       {/* Location Button with Menu */}
                       <div className="relative">
                         <motion.button
                           onClick={() => setIsLocationMenuOpen(!isLocationMenuOpen)}
-                          className={`p-2 rounded-xl transition-all flex items-center gap-2 ${
-                            locationStatus === 'denied' 
-                              ? 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400' 
+                          className={`p-2 rounded-xl transition-all flex items-center gap-2 ${locationStatus === 'denied'
+                              ? 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400'
                               : locationStatus === 'updating'
-                              ? 'bg-blue-500/20 text-blue-400'
-                              : 'bg-white/10 hover:bg-white/20 text-white/80 hover:text-white'
-                          }`}
+                                ? 'bg-blue-500/20 text-blue-400'
+                                : 'bg-white/10 hover:bg-white/20 text-white/80 hover:text-white'
+                            }`}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           title={location?.name || "Location"}
@@ -500,7 +500,7 @@ export default function HomeLayout({
                                   <p className="text-gray-500 text-sm">No location set</p>
                                 )}
                               </div>
-                              
+
                               <div className="p-2">
                                 <button
                                   onClick={() => {
@@ -512,7 +512,7 @@ export default function HomeLayout({
                                   <MapPin className="w-4 h-4" />
                                   Update location
                                 </button>
-                                
+
                                 {location && (
                                   <button
                                     onClick={handleRefreshLocation}
@@ -530,7 +530,7 @@ export default function HomeLayout({
 
                       <FilterPopup />
                       <NotificationPopup />
-                      
+
                       <motion.button
                         onClick={handleLogout}
                         className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all"
@@ -570,11 +570,10 @@ export default function HomeLayout({
                             setActiveTab(tab.id);
                             router.push(`/${tab.id}`);
                           }}
-                          className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
-                            activeTab === tab.id
+                          className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${activeTab === tab.id
                               ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50"
                               : "text-white/60 hover:text-white hover:bg-white/10"
-                          }`}
+                            }`}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                         >

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Heart, Sparkles, Users, Shield, Zap, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import LightPillar from '@/components/LightPillar';
+import Logo from '@/components/Logo';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -21,25 +22,6 @@ export default function Home() {
     <div className="min-h-screen relative overflow-hidden no-scrollbar">
       <LightPillar />
 
-      {/* Animated background decorations */}
-      {/* <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          className="absolute top-20 left-10 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl"
-          animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
-          transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY }}
-        />
-        <motion.div
-          className="absolute bottom-20 right-10 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl"
-          animate={{ x: [0, -50, 0], y: [0, -30, 0] }}
-          transition={{ duration: 10, repeat: Number.POSITIVE_INFINITY }}
-        />
-        <motion.div
-          className="absolute top-1/2 left-1/2 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl"
-          animate={{ scale: [1, 1.2, 1] }}
-          transition={{ duration: 7, repeat: Number.POSITIVE_INFINITY }}
-        />
-      </div> */}
-
       {/* Navigation */}
       <motion.nav
         className="relative z-50 flex items-center justify-between px-6 md:px-12 py-6"
@@ -47,15 +29,15 @@ export default function Home() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        <motion.div
-          className="flex items-center gap-2"
-          whileHover={{ scale: 1.05 }}
+        <Link
+          href="/"
+          className="flex items-center gap-2 z-10"
         >
-          <div className="w-10 h-10 bg-gradient-to-br from-pink-400 to-purple-600 rounded-lg flex items-center justify-center">
-            <Heart className="w-6 h-6 text-white fill-white" />
+          <div className="w-8 h-8  flex items-center justify-center">
+            <Logo width={32} height={32} color="white" />
           </div>
-          <span className="text-2xl font-bold text-white">Matcha</span>
-        </motion.div>
+          <span className="text-xl font-bold text-white">Matcha</span>
+        </Link>
 
         <div className="hidden md:flex items-center gap-8">
           <motion.a

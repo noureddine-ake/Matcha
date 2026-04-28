@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, UserPlus, ArrowRight, Heart } from 'lucide-react';
 import api from '@/lib/api';
+import Logo from '@/components/Logo';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -72,18 +73,15 @@ export default function RegisterPage() {
           transition={{ duration: 0.7, ease: 'easeOut' }}
           className="hidden md:flex flex-col items-center justify-center lg:w-1/2 space-y-8"
         >
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-xl opacity-30"></div>
-            <motion.div
-              className="flex items-center gap-2"
-              whileHover={{ scale: 1.05 }}
-            >
-              <div className="w-48 h-48 bg-gradient-to-br from-pink-400 to-purple-600 rounded-lg flex items-center justify-center">
-                <Heart className="w-20 h-20 text-white fill-white" />
-              </div>
-              {/* <span className="text-2xl font-bold text-white">Matcha</span> */}
-            </motion.div>
-          </div>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            className="hidden md:flex flex-col items-center gap-2 z-10"
+          >
+            <div className="size-[]  flex items-center justify-center">
+              <Logo width={100} height={100} color="white" />
+            </div>
+            <span className="text-2xl font-bold text-white">Matcha</span>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
