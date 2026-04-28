@@ -324,63 +324,106 @@ export const getProfileDataforMatches = async (userId: number) => {
 
 // get all likes for a user
 export const getUserLikes = async (userId: number) => {
-  const query = `
-      SELECT 
-      u.id,
-      u.username,
-      u.first_name,
-      u.last_name,
-      p.gender,
-      p.sexual_preference,
-      p.biography,
-      p.city,
-      p.country,
-      p.fame_rating,
-      p.last_seen,
-      p.is_online,
-      EXTRACT(YEAR FROM AGE(p.birth_date)) AS age,
-      p.latitude,
-      p.longitude,
-      COALESCE(
-        json_agg(
-          DISTINCT jsonb_build_object(
-            'id', ph.id,
-            'photo_url', ph.photo_url,
-            'is_profile_picture', ph.is_profile_picture
-          )
-        ) FILTER (WHERE ph.id IS NOT NULL),
-        '[]'
-      ) AS photos,
-      COALESCE(
-        json_agg(
-          DISTINCT jsonb_build_object(
-            'id', t.id,
-            'name', t.name
-          )
-        ) FILTER (WHERE t.id IS NOT NULL),
-        '[]'
-      ) AS tags
-    FROM likes l
-    JOIN users u ON u.id = l.liker_user_id
-    JOIN profiles p ON p.user_id = u.id
-    LEFT JOIN photos ph ON ph.user_id = u.id
-    LEFT JOIN user_tags ut ON ut.user_id = u.id
-    LEFT JOIN tags t ON t.id = ut.tag_id
-    WHERE l.liked_user_id = $1
-      AND NOT EXISTS (
-        SELECT 1 
-        FROM likes l2
-        WHERE l2.liker_user_id = $1 
-          AND l2.liked_user_id = l.liker_user_id
-      )
-    GROUP BY 
-      u.id, u.username, u.first_name, u.last_name,
-      p.gender, p.sexual_preference, p.biography, p.city, p.country,
-      p.fame_rating, p.last_seen, p.is_online, p.birth_date, p.latitude, p.longitude;
-  ;`;
-  const values = [userId];
-  const current = await pool.query(query, values);
-  return current;
+  // 1. Fetch all user IDs that liked current user
+  const likersResult = await Likes.select(['liker_user_id'])
+    .where('liked_user_id', userId)
+    .run();
+  
+  const likerIds = likersResult.rows.map((r: any) => r.liker_user_id);
+
+  if (likerIds.length === 0) {
+    return { rows: [] };
+  }
+
+  // 2. Identify mutual matches to exclude
+  const mutualMatches = await Likes.select(['l1.liked_user_id'])
+    .from('likes l1')
+    .join('INNER', 'likes l2', 'l1.liker_user_id = l2.liked_user_id AND l1.liked_user_id = l2.liker_user_id')
+    .where('l1.liker_user_id', userId)
+    .run();
+
+  const mutualMatchIds = new Set(mutualMatches.rows.map((r: any) => r.liked_user_id));
+
+  // 3. Filter out mutual likers in TypeScript
+  const nonMutualLikerIds = likerIds.filter((id: number) => !mutualMatchIds.has(id));
+
+  if (nonMutualLikerIds.length === 0) {
+    return { rows: [] };
+  }
+
+  // 4. Fetch non-mutual user profiles with ORM + Raw age extraction
+  const usersResult = await User.select([
+    'u.id',
+    'u.username',
+    'u.first_name',
+    'u.last_name',
+    'p.gender',
+    'p.sexual_preference',
+    'p.biography',
+    'p.city',
+    'p.country',
+    'p.fame_rating',
+    'p.last_seen',
+    'p.is_online',
+    new Raw(`EXTRACT(YEAR FROM AGE(p.birth_date)) as age`),
+    'p.latitude',
+    'p.longitude',
+  ])
+    .from('users u')
+    .join('INNER', 'profiles p', 'u.id = p.user_id')
+    .whereIn('u.id', nonMutualLikerIds)
+    .run();
+
+  let users = usersResult.rows as any[];
+
+  // 5. Sort by fame_rating DESC
+  users.sort((a, b) => Number(b.fame_rating) - Number(a.fame_rating));
+
+  // 6. Apply pagination (defaults to no limit/no offset for now as per original raw SQL)
+  const paginatedUsers = users;
+
+  const paginatedIds = paginatedUsers.map(u => u.id);
+
+  // 7. Batch fetch photos for paginated users
+  const allPhotos = await Photos.select(['id', 'user_id', 'photo_url', 'is_profile_picture'])
+    .whereIn('user_id', paginatedIds)
+    .run().then(res => res.rows);
+
+  const photosByUserId = allPhotos.reduce((acc: any, photo: any) => {
+    if (!acc[photo.user_id]) acc[photo.user_id] = [];
+    acc[photo.user_id].push({
+      id: photo.id,
+      photo_url: photo.photo_url,
+      is_profile_picture: photo.is_profile_picture
+    });
+    return acc;
+  }, {} as Record<number, any[]>);
+
+  // 8. Batch fetch tags for paginated users (return {id, name} only)
+  const allTags = await UserTags.select(['ut.user_id', 't.name', 't.id'])
+    .from('user_tags ut')
+    .join('INNER', 'tags t', 'ut.tag_id = t.id')
+    .whereIn('ut.user_id', paginatedIds)
+    .run().then(res => res.rows);
+
+  const tagsByUserId = allTags.reduce((acc: any, tag: any) => {
+    if (!acc[tag.user_id]) acc[tag.user_id] = [];
+    acc[tag.user_id].push({
+      id: tag.id,
+      name: tag.name
+    });
+    return acc;
+  }, {} as Record<number, any[]>);
+
+  // 9. Combine tags/photos with user objects
+  paginatedUsers.forEach(u => {
+    u.photos = photosByUserId[u.id] || [];
+    u.tags = tagsByUserId[u.id] || [];
+    u.age = Number(u.age);
+  });
+
+  // 10. Return {rows: paginatedUsers}
+  return { rows: paginatedUsers };
 };
 
 /**
