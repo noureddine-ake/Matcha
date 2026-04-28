@@ -2,7 +2,6 @@ import { UserTags, Photos, Blocks, Likes } from '../../database/entities/index.j
 import { Profiles } from '../../database/entities/profiles.entity.js';
 import { User } from '../../database/entities/users.entity.js';
 import { Raw } from '../../database/raw.js';
-import { pool } from '../config/config.js';
 
 // -- Interfaces for TypeScript type safety============
 
@@ -303,23 +302,41 @@ export const getAllMatches = async (data: any) => {
 
 // suggested profiles data for matches
 export const getProfileDataforMatches = async (userId: number) => {
-  const query = `
-    SELECT 
-      p.gender,
-      p.sexual_preference,
-      p.latitude,
-      p.longitude,
-      p.birth_date,
-      array_agg(DISTINCT t.id) as user_tag_ids
-    FROM profiles p
-    LEFT JOIN user_tags ut ON p.user_id = ut.user_id
-    LEFT JOIN tags t ON ut.tag_id = t.id
-    WHERE p.user_id = $1
-    GROUP BY p.user_id, p.gender, p.sexual_preference, p.latitude, p.longitude, p.birth_date
-  ;`;
-  const values = [userId];
-  const current = await pool.query(query, values);
-  return current;
+  // 1. Fetch profile data with ORM
+  const profileResult = await Profiles.select([
+    'gender',
+    'sexual_preference',
+    'latitude',
+    'longitude',
+    'birth_date'
+  ])
+    .where('user_id', userId)
+    .run();
+
+  if (!profileResult.rows || profileResult.rows.length === 0) {
+    return { rows: [] };
+  }
+
+  const profile = profileResult.rows[0];
+
+  // 2. Fetch tag IDs for user with ORM
+  const userTagsResult = await UserTags.select(['tag_id'])
+    .where('user_id', userId)
+    .run();
+
+  const tagIds = userTagsResult.rows.map((t: any) => t.tag_id);
+
+  // 3. Combine and return profile data with tag IDs
+  return {
+    rows: [{
+      gender: profile.gender,
+      sexual_preference: profile.sexual_preference,
+      latitude: profile.latitude,
+      longitude: profile.longitude,
+      birth_date: profile.birth_date,
+      user_tag_ids: tagIds
+    }]
+  };
 };
 
 // get all likes for a user
@@ -432,15 +449,12 @@ export const getUserLikes = async (userId: number) => {
  * @returns {Promise<number>} Number of matches
  */
 export const getMatchesCount = async (userId: number) => {
-  const query = `
-    SELECT COUNT(*)::int AS total_matches
-    FROM likes l1
-    JOIN likes l2 
-      ON l1.liker_user_id = l2.liked_user_id
-      AND l1.liked_user_id = l2.liker_user_id
-    WHERE l1.liker_user_id = $1
-  `;
+  // Count mutual matches via ORM with complex JOIN
+  const result = await Likes.select(['COUNT(*) as total_matches'])
+    .from('likes l1')
+    .join('INNER', 'likes l2', 'l1.liker_user_id = l2.liked_user_id AND l1.liked_user_id = l2.liker_user_id')
+    .where('l1.liker_user_id', userId)
+    .run();
 
-  const result = await pool.query(query, [userId]);
-  return result.rows[0].total_matches;
+  return parseInt(result.rows[0].total_matches) || 0;
 };

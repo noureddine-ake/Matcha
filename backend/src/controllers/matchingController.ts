@@ -30,7 +30,7 @@ export const getSuggestions = async (req, res) => {
     } = req.query;
 
     const currentUserQuery = await getProfileDataforMatches(userId);
-    if (!currentUserQuery.rowCount) {
+    if (!currentUserQuery.rows || currentUserQuery.rows.length === 0) {
       return res.status(404).json({ error: 'Profile not found' });
     }
 
@@ -300,7 +300,7 @@ export const getMatches = async (req, res) => {
 
     res.json({
       matches: result.rows,
-      count: result.rowCount,
+      count: result.rows.length,
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
