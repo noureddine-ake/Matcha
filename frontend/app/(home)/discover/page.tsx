@@ -7,6 +7,7 @@ import Image from 'next/image';
 import api from '@/lib/api';
 import { Suggestions, useDiscover } from '@/contexts/discover-context';
 import MatchPopup, { MatchData } from '@/components/matchPopup';
+import { getImageUrl } from '@/lib/utils';
 
 const BASE_URL = process.env.BACKEND_URL || 'http://backend:5000';
 
@@ -118,7 +119,7 @@ export default function DiscoverPage() {
               >
                 {currentProfile.photos[currentImageIndex] && (
                   <Image
-                    src={`${BASE_URL}${currentProfile.photos[currentImageIndex].photo_url}`}
+                    src={getImageUrl(currentProfile.photos[currentImageIndex].photo_url)}
                     alt={currentProfile.username}
                     fill
                     className={`object-cover transition-all duration-500 ${
@@ -305,7 +306,7 @@ export default function DiscoverPage() {
                           }`}
                         >
                           <Image
-                            src={`${BASE_URL}${photo.photo_url}`}
+                            src={getImageUrl(photo.photo_url)}
                             alt={`Photo ${index + 1}`}
                             fill
                             className="object-cover"

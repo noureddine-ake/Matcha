@@ -36,7 +36,6 @@ export default function LikesPage() {
     try {
       const { data } = await api.get<Likes[]>('/likes');
       setLikes(data);
-      console.log(data);
     } catch (err: unknown) {
       console.error(err);
     }

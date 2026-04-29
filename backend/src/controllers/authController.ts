@@ -196,7 +196,6 @@ export const registrationControler = async (req: AuthRequest, res: Response) => 
 };
 
 export const loginController = async (req: AuthRequest, res: Response) => {
-  console.log('Login request body:', req.body); // Debug log
   try {
     const { username, password } = req.body;
 

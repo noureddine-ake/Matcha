@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useGlobal } from "@/contexts/globalcontext";
 import api from "@/lib/api";
 import AvatarEditor from 'react-avatar-editor';
+import { getImageUrl } from "@/lib/utils";
 
 interface Photo {
   id: string | number;
@@ -620,7 +621,7 @@ export default function PhotosGallery({
                     }`}
                   >
                     <Image
-                      src={`${backendUrl}${photo.photo_url}`}
+                      src={getImageUrl(photo.photo_url)}
                       alt="Gallery photo"
                       fill
                       className="object-cover transition-transform duration-300 group-hover:scale-105"

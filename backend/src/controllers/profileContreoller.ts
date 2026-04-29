@@ -891,15 +891,6 @@ export const updateProfile = async (req, res) => {
     const { latitude, longitude } = req.body;
     const userId = req.user.data.id;
 
-    console.log(
-      '[updateLocation] userId:',
-      userId,
-      'latitude:',
-      latitude,
-      'longitude:',
-      longitude
-    );
-
     if (latitude == null || longitude == null) {
       return res
         .status(400)

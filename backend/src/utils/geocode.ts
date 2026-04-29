@@ -2,7 +2,6 @@ import fetch from 'node-fetch';
 
 export async function reverseGeocode(latitude, longitude) {
   const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`;
-  console.log('[reverseGeocode] Fetching URL:', url);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
   const response = await fetch(url, {

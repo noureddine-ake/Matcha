@@ -65,7 +65,7 @@ export default function LocationModal({
     // Custom icon for better visibility
     const customIcon = window.L.divIcon({
       className: 'custom-marker',
-      html: `<div class="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full border-2 border-white shadow-lg animate-pulse"></div>`,
+      html: `<div class="w-6 h-6 bg-linear-to-r from-purple-500 to-pink-500 rounded-full border-2 border-white shadow-lg animate-pulse"></div>`,
       iconSize: [24, 24],
       iconAnchor: [12, 12]
     });
@@ -460,7 +460,7 @@ export default function LocationModal({
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
-                          className="absolute left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-xl overflow-hidden z-10 max-h-60 overflow-y-auto"
+                          className="absolute left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-xl overflow-hidden max-h-60 overflow-y-auto z-999"
                         >
                           {searchResults.map((result, index) => (
                             <button

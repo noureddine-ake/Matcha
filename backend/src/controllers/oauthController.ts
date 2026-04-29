@@ -80,7 +80,7 @@ export const googleCallbackController = async (req: Request, res: Response) => {
       };
 
       const ret = await User.insert(newUser).returning(['*']).run();
-      user = ret[0];
+      user = ret.rows[0];
 
       await User.update({ is_verified: true }).where('id', user.id).run();
     }

@@ -3,15 +3,16 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera } from "lucide-react";
 import { Photo } from "@/types/profile";
+import { getImageUrl } from "@/lib/utils";
 
 
-const PhotosGallerySection = ({ photos, backendUrl }: { photos: Photo[]; backendUrl: string }) => {
+const PhotosGallerySection = ({ photos }: { photos: Photo[] }) => {
     return (
       <motion.div
         layout
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-xl"
+        className="bg-linear-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-xl"
       >
         <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
           <Camera className="w-6 h-6 text-purple-400" />
@@ -48,7 +49,7 @@ const PhotosGallerySection = ({ photos, backendUrl }: { photos: Photo[]; backend
                     }`}
                   >
                     <Image
-                      src={`${backendUrl}${photo.photo_url}`}
+                      src={getImageUrl(photo.photo_url)}
                       alt="Gallery photo"
                       fill
                       className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -58,7 +59,7 @@ const PhotosGallerySection = ({ photos, backendUrl }: { photos: Photo[]; backend
                       <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="absolute top-1 right-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-2 py-1 rounded-full text-xs font-semibold border border-white/20 shadow"
+                        className="absolute top-1 right-1 bg-linear-to-r from-purple-600 to-pink-600 text-white px-2 py-1 rounded-full text-xs font-semibold border border-white/20 shadow"
                       >
                         Profile
                       </motion.div>

@@ -35,7 +35,6 @@ export default function RegisterPage() {
         '/auth/register',
         JSON.stringify(formData)
       );
-      console.log(response);
 
       router.push(`/auth/verify-email`);
     } catch (err) {

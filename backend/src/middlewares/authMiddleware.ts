@@ -25,7 +25,6 @@ const decodeToken = (token) => {
   try {
     return jwt.verify(token, JWT_SECRET);
   } catch (err) {
-    console.log('Invalid Token', err.message);
     return null;
   }
 };
@@ -63,7 +62,6 @@ const verifyRefreshToken = (token) => {
   try {
     return jwt.verify(token, REFRESH_TOKEN_SECRET);
   } catch (err) {
-    console.log('Invalid Refresh Token', err.message);
     return null;
   }
 };

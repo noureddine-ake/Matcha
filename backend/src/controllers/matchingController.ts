@@ -23,7 +23,7 @@ export const getSuggestions = async (req: Request, res: Response) => {
       limit = '20',
       offset = '0',
       sortBy = 'distance',
-      maxDistance = '500',
+      maxDistance = '100',
       minAge,
       maxAge,
       minFame,

@@ -2,7 +2,8 @@
 import { Photo } from '@/types/profile';
 import { Camera } from 'lucide-react';
 import Image from 'next/image';
-const ProfilePictureSection = ({ photos, backendUrl }: { photos: Photo[]; backendUrl: string }) => {
+import { getImageUrl } from '@/lib/utils';
+const ProfilePictureSection = ({ photos }: { photos: Photo[] }) => {
     const profilePhoto = photos.find((p: Photo) => p.is_profile_picture);
     const size = 192;
   
@@ -14,7 +15,7 @@ const ProfilePictureSection = ({ photos, backendUrl }: { photos: Photo[]; backen
         >
           {profilePhoto ? (
             <Image
-              src={`${backendUrl}${profilePhoto.photo_url}`}
+              src={getImageUrl(profilePhoto.photo_url)}
               alt="Profile"
               width={size}
               height={size}

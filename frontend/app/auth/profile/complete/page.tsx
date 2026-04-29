@@ -154,14 +154,11 @@ export default function ProfileCompletePage() {
         formData.append(`photo${index}`, photo)
       })
 
-      console.log("formData", formData);
-
       const response = await api.post("/profile/complete", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
-      console.log(response);
 
       // Redirect using username from response
       const username = response.data?.username;
