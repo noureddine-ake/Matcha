@@ -13,7 +13,7 @@ WORKDIR /app
 
 FROM base AS dependencies
 
-COPY package*.json ./
+COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 RUN pnpm install --prod --frozen-lockfile
 
@@ -21,7 +21,7 @@ RUN pnpm install --prod --frozen-lockfile
 
 FROM base AS dev-dependencies
 
-COPY package*.json ./
+COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 RUN pnpm install --frozen-lockfile
 
