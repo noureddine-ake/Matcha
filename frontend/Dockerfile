@@ -1,17 +1,64 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS base
+
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache bash curl
+
+RUN npm install -g pnpm@latest
+
+ENV NODE_OPTIONS=--max-old-space-size=1024
 
 WORKDIR /app
 
+##################################################
+
+FROM base AS dependencies
+
 COPY package*.json ./
-RUN npm install
+
+RUN pnpm install --prod --frozen-lockfile
+
+##################################################
+
+FROM base AS dev-dependencies
+
+COPY package*.json ./
+
+RUN pnpm install --frozen-lockfile
+
+##################################################
+
+FROM dev-dependencies AS development
+
+ENV NODE_ENV=development
 
 COPY . .
 
-# --- Production server ---
-# FROM node:18-alpine
-# WORKDIR /app
+EXPOSE 3000
 
-# COPY --from=builder /app ./
+CMD ["sh", "-c", "while true; do pnpm dev; done"]
+
+##################################################
+
+FROM dependencies AS builder
+
+COPY . .
+
+RUN pnpm build
+
+##################################################
+
+FROM base AS production
+
+ENV NODE_ENV=production
+
+COPY --from=dependencies /app/node_modules ./node_modules
+
+COPY --from=builder /app/.next ./.next
+
+COPY --from=builder /app/package.json ./
+
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
-CMD ["npm", "run", "dev"]
+
+CMD ["pnpm", "start"]

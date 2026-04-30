@@ -82,7 +82,7 @@ const COMMON_PASSWORDS = new Set([
  * @param {string} password - The password to check
  * @returns {boolean} - True if password is common, false otherwise
  */
-export const isCommonPassword = (password) => {
+export const isCommonPassword = (password: any) => {
   if (!password || typeof password !== 'string') {
     return false;
   }
@@ -100,7 +100,7 @@ export const isCommonPassword = (password) => {
  * @param {string} password - The password to validate
  * @returns {object} - { isValid: boolean, errors: string[] }
  */
-export const validatePasswordStrength = (password) => {
+export const validatePasswordStrength = (password: any) => {
   const errors = [];
 
   if (!password || typeof password !== 'string') {
@@ -165,7 +165,7 @@ export const validatePasswordStrength = (password) => {
  * @param {string} password - The password to validate
  * @returns {object} - { isValid: boolean, errors: string[], warnings: string[] }
  */
-export const validatePasswordWithRecommendations = (password) => {
+export const validatePasswordWithRecommendations = (password: any) => {
   const errors = [];
   const warnings = [];
 

@@ -1,5 +1,7 @@
+import type { Request, Response, NextFunction } from 'express';
+
 // middleware/errorHandler.js
-export function errorHandler(err, req, res, next) {
+export function errorHandler(err: any, req: Request, res: Response, next: NextFunction) {
     console.error("❌ Error:", err.stack || err.message);
   
     const statusCode = err.statusCode || 500;

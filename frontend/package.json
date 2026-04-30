@@ -2,6 +2,10 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
   "scripts": {
     "dev": "NEXT_DISABLE_TURBOPACK=1 next dev",
     "build": "next build",
@@ -19,12 +23,12 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.22",
-    "geist": "^1.5.1",
+    "geist": "^1.0.0",
     "i": "^0.3.7",
     "jwt-decode": "^4.0.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.545.0",
-    "next": "^15.5.9",
+    "next": "^16.2.4",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
     "react": "19.1.0",

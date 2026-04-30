@@ -1,12 +1,21 @@
+import type { Request, Response } from 'express';
 import { reverseGeocode } from '../utils/geocode.js';
 import { pool } from '../config/config.js';
 import fs from 'fs';
 import path from 'path';
 import JWT from '../middlewares/authMiddleware.js';
 
+interface AuthRequest {
+  user?: { data: { id: number; username?: string; email?: string } };
+  files?: any[];
+  file?: any;
+  body: any;
+  params: any;
+}
+
 const MIN_AGE = 18;
 
-const isValidAge = (birthDateStr) => {
+const isValidAge = (birthDateStr: string) => {
   const birthDate = new Date(birthDateStr);
   const today = new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
@@ -27,9 +36,10 @@ import { Raw } from '../../database/raw.js';
  * @param {Object} res - Express response object to send profile data
  * @returns {Object} JSON response with user profile details and statistics
  */
-export const getProfile = async (req, res) => {
+export const getProfile = async (req: any, res: any): Promise<void | Response> => {
   try {
-    const userId = req.user.data.id;
+    const userId = req.user?.data.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     // Fetch main profile data
     const profile = await Profiles.select(['*']).where('user_id', userId).run().then(result => result.rows[0]);
@@ -51,9 +61,9 @@ export const getProfile = async (req, res) => {
 
     const views = await ProfileViews.select(['COUNT(*)::int AS total_views'])
       .where('viewed_user_id', userId)
-      .run().then((result) => result.rows[0].total_views);
+      .run().then((result) => (result.rows[0] as any).total_views);
     const ret = await Likes.select(['COUNT(*)::int AS total_likes']).where('liked_user_id', userId).run();
-    const likes = ret.rows[0].total_likes;
+    const likes = (ret.rows[0] as any).total_likes;
     const matches = await getMatchesCount(userId)
     // Send comprehensive profile response
     res.status(200).json({
@@ -88,7 +98,7 @@ export const getProfile = async (req, res) => {
         messages: 5,
       },
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Error fetching profile:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -100,7 +110,7 @@ export const getProfile = async (req, res) => {
  * @access Protected (or Public, depending on your policy)
  */
 
-export const getProfileUser = async (req, res) => {
+export const getProfileUser = async (req: any, res: any): Promise<void | Response> => {
   try {
     const { username } = req.params;
     const viewerId = req.user?.data?.id; // logged-in user ID
@@ -165,9 +175,9 @@ export const getProfileUser = async (req, res) => {
     const photos = await Photos.select(['*']).where('user_id', viewedId).run().then(result => result.rows);
     const views = await ProfileViews.select(['COUNT(*)::int AS total_views'])
       .where('viewed_user_id', viewedId)
-      .run().then((result) => result.rows[0].total_views);
+      .run().then((result) => (result.rows[0] as any).total_views);
     const ret = await Likes.select(['COUNT(*)::int AS total_likes']).where('liked_user_id', viewedId).run();
-    const likes = ret.rows[0].total_likes;
+    const likes = (ret.rows[0] as any).total_likes;
     const matches = await getMatchesCount(viewedId)
     // 5. Return full profile
     res.status(200).json({
@@ -200,17 +210,17 @@ export const getProfileUser = async (req, res) => {
         // messages: profile.messages || 0,
       },
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Error fetching user profile by username:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 // get lsit of ppl who viwed u
 
-export const getWhoViewedYou = async (req, res) => {
+export const getWhoViewedYou = async (req: any, res: any): Promise<void | Response> => {
   try {
-    const userId = req.user.data.id;
-
+    const userId = req.user?.data.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     // Fetch all unique viewers
     const viewers = await ProfileViews.select([
@@ -224,7 +234,7 @@ export const getWhoViewedYou = async (req, res) => {
 
     res.status(200).json({
       totalViewers: viewers.length,
-      viewers: viewers.map((v) => ({
+      viewers: viewers.map((v: any) => ({
         id: v.id,
         username: v.username,
         first_name: v.first_name,
@@ -234,7 +244,7 @@ export const getWhoViewedYou = async (req, res) => {
         viewed_at: v.viewed_at,
       })),
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Error fetching profile viewers:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -246,9 +256,10 @@ export const getWhoViewedYou = async (req, res) => {
  * @param {Object} res - Express response object to send updated profile
  * @returns {Object} JSON response with updated user profile
  */
-export const updateProfile = async (req, res) => {
+export const updateProfile = async (req: any, res: any): Promise<void | Response> => {
   try {
-    const userId = req.user.data.id;
+    const userId = req.user?.data.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     // Verify profile exists for the authenticated user
     const existingProfile = await Profiles.select(['*']).where('user_id', userId).run().then(result => result.rowCount > 0);
@@ -257,7 +268,7 @@ export const updateProfile = async (req, res) => {
     }
 
     // Prepare updates for user account information (name, email, username)
-    const userUpdates = {};
+    const userUpdates: any = {};
     if (req.body.first_name) userUpdates.first_name = req.body.first_name;
     if (req.body.last_name) userUpdates.last_name = req.body.last_name;
 
@@ -290,7 +301,7 @@ export const updateProfile = async (req, res) => {
     }
 
     // Prepare updates for profile-specific information
-    const profileUpdates = {};
+    const profileUpdates: any = {};
     if (req.body.gender) profileUpdates.gender = req.body.gender;
 
     // Map user-friendly sexual preference values to database format
@@ -354,8 +365,8 @@ export const updateProfile = async (req, res) => {
     }
 
     // Handle photo uploads
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
+    if (req.files && (req.files as any[]).length > 0) {
+      for (const file of (req.files as any[])) {
         const photoPath = `/uploads/${file.filename}`;
         const photoIndex = parseInt(file.fieldname.replace('photo', ''));
         const existedPhoto = await Photos.select(['*'])
@@ -367,7 +378,7 @@ export const updateProfile = async (req, res) => {
           await Photos.insert({
             user_id: userId,
             photo_url: photoPath,
-            is_profile_picture: photoIndex === parseInt(req.body.profilePhotoIndex),
+            is_profile_picture: photoIndex === parseInt(req.body.profilePhotoIndex as string),
           }).returning(['*']).run();
         }
       }
@@ -413,7 +424,7 @@ export const updateProfile = async (req, res) => {
         messages: updatedProfile.messages,
       },
     });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error updating profile:', err);
       res.status(400).json({ error: 'Internal server error' });
     }
@@ -425,9 +436,10 @@ export const updateProfile = async (req, res) => {
    * @param {Object} res - Express response object to send success/error message
    * @returns {Object} JSON response indicating success or error
    */
-  export const updateProfilePicture = async (req, res) => {
+  export const updateProfilePicture = async (req: any, res: any): Promise<void | Response> => {
     try {
-      const userId = req.user.data.id;
+      const userId = req.user?.data.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
       // Validate that a file was uploaded
       if (!req.file) {
@@ -453,7 +465,7 @@ export const updateProfile = async (req, res) => {
       if (oldProfile.rows.length > 0) {
         const oldPhotoPath = path.join(
           process.cwd(),
-          oldProfile.rows[0].photo_url
+          (oldProfile.rows[0] as any).photo_url
         );
 
         // Remove old profile picture file from server
@@ -477,7 +489,7 @@ export const updateProfile = async (req, res) => {
       }).returning(['*']).run();
 
       res.status(200).json({ message: 'Profile picture updated successfully' });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error updating profile picture:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
@@ -489,9 +501,10 @@ export const updateProfile = async (req, res) => {
    * @param {Object} res - Express response object to send success/error message
    * @returns {Object} JSON response indicating success or error
    */
-  export const deleteProfilePicture = async (req, res) => {
+  export const deleteProfilePicture = async (req: any, res: any): Promise<void | Response> => {
     try {
-      const userId = req.user.data.id;
+      const userId = req.user?.data.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
       // Retrieve current profile picture
       const oldProfile = await Photos.select(['photo_url'])
@@ -502,7 +515,7 @@ export const updateProfile = async (req, res) => {
         return res.status(404).json({ error: 'No profile picture to delete' });
       }
 
-      const oldPhotoPath = path.join(process.cwd(), oldProfile.rows[0].photo_url);
+      const oldPhotoPath = path.join(process.cwd(), (oldProfile.rows[0] as any).photo_url);
 
       // Remove profile picture file from server
       if (fs.existsSync(oldPhotoPath)) {
@@ -516,7 +529,7 @@ export const updateProfile = async (req, res) => {
       }
 
       res.status(200).json({ message: 'Profile picture deleted successfully' });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error deleting profile picture:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
@@ -528,9 +541,10 @@ export const updateProfile = async (req, res) => {
    * @param {Object} res - Express response object to send success/error message
    * @returns {Object} JSON response indicating success or error
    */
-  export const addGalleryPicture = async (req, res) => {
+  export const addGalleryPicture = async (req: any, res: any): Promise<void | Response> => {
     try {
-      const userId = req.user.data.id;
+      const userId = req.user?.data.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
       // Validate that a file was uploaded
       if (!req.file) {
@@ -555,7 +569,7 @@ export const updateProfile = async (req, res) => {
       }).returning(['*']).run();
 
       res.status(200).json({ message: 'Gallery picture added successfully' });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error adding gallery picture:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
@@ -567,9 +581,10 @@ export const updateProfile = async (req, res) => {
    * @param {Object} res - Express response object to send success/error message
    * @returns {Object} JSON response indicating success or error
    */
-  export const deleteGalleryPicture = async (req, res) => {
+  export const deleteGalleryPicture = async (req: any, res: any): Promise<void | Response> => {
     try {
-      const userId = req.user.data.id;
+      const userId = req.user?.data.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
       const photoId = req.params.pictureId;
 
       // Retrieve the photo to verify ownership and existence
@@ -582,7 +597,7 @@ export const updateProfile = async (req, res) => {
         return res.status(404).json({ error: 'Gallery picture not found' });
       }
 
-      const photoPath = path.join(process.cwd(), photoResult.photo_url);
+      const photoPath = path.join(process.cwd(), (photoResult as any).photo_url);
 
       // Remove photo file from server if it exists
       if (fs.existsSync(photoPath)) {
@@ -593,7 +608,7 @@ export const updateProfile = async (req, res) => {
       await Photos.delete().where('id', photoId).run();
 
       res.status(200).json({ message: 'Gallery picture deleted successfully' });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error deleting gallery picture:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
@@ -605,13 +620,13 @@ export const updateProfile = async (req, res) => {
    * @param {Object} res - Express response object to clear cookie and send success message
    * @returns {Object} JSON response confirming logout
    */
-  export const logoutController = (req, res) => {
+  export const logoutController = (req: any, res: any): void => {
     const isProduction = process.env.NODE_ENV === 'production';
 
     const cookieOptions = {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
+      sameSite: (isProduction ? 'strict' : 'lax') as 'strict' | 'lax',
       path: '/',
     };
 
@@ -630,9 +645,10 @@ export const updateProfile = async (req, res) => {
    * @param {Object} res - Express response object to send success/error message
    * @returns {Object} JSON response indicating success or error
    */
-  export const completeProfile = async (req, res) => {
+  export const completeProfile = async (req: any, res: any): Promise<void | Response> => {
     try {
-      const userTokenData = req.user.data;
+      const userTokenData = req.user?.data;
+      if (!userTokenData) return res.status(401).json({ error: 'Unauthorized' });
 
       // Validate age
       if (req.body.birth_date) {
@@ -674,19 +690,19 @@ export const updateProfile = async (req, res) => {
         }
         // Check if user-tag association already exists
         const UserTagExisted = await UserTags.select(['*'])
-          .where('user_id', userTokenData.id).where('tag_id', existingTag.id)
+          .where('user_id', userTokenData.id).where('tag_id', (existingTag as any).id)
           .run().then(result => result.rows[0]);
         if (!UserTagExisted) {
           await UserTags.insert({
             user_id: userTokenData.id,
-            tag_id: existingTag.id,
+            tag_id: (existingTag as any).id,
           }).run();
         }
       }
 
       // Handle profile photo uploads
-      if (req.files && req.files.length > 0) {
-        for (const file of req.files) {
+      if (req.files && (req.files as any[]).length > 0) {
+        for (const file of (req.files as any[])) {
           const photoPath = `/uploads/${file.filename}`;
           const photoIndex = parseInt(file.fieldname.replace('photo', ''));
 
@@ -698,7 +714,7 @@ export const updateProfile = async (req, res) => {
               user_id: userTokenData.id,
               photo_url: photoPath,
               is_profile_picture:
-                photoIndex === parseInt(req.body.profilePhotoIndex),
+                photoIndex === parseInt(req.body.profilePhotoIndex as string),
             }).returning(['*']).run();
           }
         }
@@ -706,7 +722,7 @@ export const updateProfile = async (req, res) => {
 
       // Mark profile as completed in user record
       await User.update({ completed_profile: true }).where('id', userTokenData.id).run();
-      userTokenData.completed_profile = true;
+      (userTokenData as any).completed_profile = true;
 
       const token = JWT.createJWToken({
         sessionData: userTokenData,
@@ -722,7 +738,7 @@ export const updateProfile = async (req, res) => {
         message: 'profile completed',
         username: userTokenData.username,
       });
-    } catch (err) {
+    } catch (err: unknown) {
       res.status(500).json({
         err: 'Internal server error',
       });
@@ -736,9 +752,10 @@ export const updateProfile = async (req, res) => {
    * @route POST /profile/add-tag
    * @access Protected
    */
-  export const addUserTag = async (req, res) => {
+  export const addUserTag = async (req: any, res: any): Promise<void | Response> => {
     try {
-      const userId = req.user.data.id;
+      const userId = req.user?.data.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
       let { tagName } = req.body;
 
       if (!tagName)
@@ -757,7 +774,7 @@ export const updateProfile = async (req, res) => {
         try {
           const ret = await Tags.insert({ name: tagNameWithHash, created_at: new Date() }).returning(['*']).run();
           tag = ret.rows[0];
-        } catch (createErr) {
+        } catch (createErr: any) {
           if (createErr.code === '23505') {
             const ref = await Tags.select(['*']).where('name', tagNameWithHash).run();
             tag = ref.rows[0];
@@ -772,7 +789,7 @@ export const updateProfile = async (req, res) => {
 
       // Check if user already has this tag
       const userTagExists = await UserTags.select(['*']).where('user_id', userId)
-        .where('tag_id', tag.id)
+        .where('tag_id', (tag as any).id)
         .run()
         .then((result) => result.rows[0]);
       if (userTagExists) {
@@ -780,10 +797,10 @@ export const updateProfile = async (req, res) => {
       }
 
       // Create user-tag association
-      await UserTags.insert({ user_id: userId, tag_id: tag.id }).run();
+      await UserTags.insert({ user_id: userId, tag_id: (tag as any).id }).run();
 
       res.status(200).json({ message: 'Tag added successfully', tag });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error adding tag:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
@@ -794,16 +811,17 @@ export const updateProfile = async (req, res) => {
    * @route DELETE /profile/remove-tag/:tagId
    * @access Protected
    */
-  export const removeUserTag = async (req, res) => {
+  export const removeUserTag = async (req: any, res: any): Promise<void | Response> => {
     try {
-      const userId = req.user.data.id;
+      const userId = req.user?.data.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
       const { tagId } = req.params;
 
       // Verify tag exists and belongs to user
       const userTags = await UserTags.select(['t.id', 't.name']).from('user_tags ut')
         .join('INNER', 'tags t', 'ut.tag_id = t.id').where('ut.user_id', userId)
         .run().then((result) => result.rows);
-      const tagExists = userTags.some((tag) => tag.id == tagId);
+      const tagExists = userTags.some((tag: any) => tag.id == tagId);
 
       if (!tagExists) {
         return res.status(404).json({ error: 'Tag not found in user profile' });
@@ -816,7 +834,7 @@ export const updateProfile = async (req, res) => {
       );
 
       res.status(200).json({ message: 'Tag removed successfully' });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error removing tag:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
@@ -827,9 +845,10 @@ export const updateProfile = async (req, res) => {
    * @route PUT /profile/update-tags
    * @access Protected
    */
-  export const updateUserTags = async (req, res) => {
+  export const updateUserTags = async (req: any, res: any): Promise<void | Response> => {
     try {
-      const userId = req.user.data.id;
+      const userId = req.user?.data.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
       const { tags } = req.body; // Array of tag names
 
       if (!Array.isArray(tags)) {
@@ -847,7 +866,7 @@ export const updateProfile = async (req, res) => {
           const ret = await Tags.insert({ name: tagName, created_at: new Date() }).returning(['*']).run();
           tag = ret.rows[0];
         }
-        await UserTags.insert({ user_id: userId, tag_id: tag.id }).run();
+        await UserTags.insert({ user_id: userId, tag_id: (tag as any).id }).run();
       }
 
       // Return updated tags
@@ -857,7 +876,7 @@ export const updateProfile = async (req, res) => {
       res
         .status(200)
         .json({ message: 'Tags updated successfully', tags: updatedTags });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error updating tags:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
@@ -868,11 +887,11 @@ export const updateProfile = async (req, res) => {
    * @route GET /profile/available-tags
    * @access Protected
    */
-  export const getAvailableTags = async (req, res) => {
+  export const getAvailableTags = async (req: any, res: any): Promise<void> => {
     try {
       const result = await pool.query('SELECT id, name FROM tags ORDER BY name');
       res.status(200).json(result.rows);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error fetching available tags:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
@@ -887,9 +906,10 @@ export const updateProfile = async (req, res) => {
    * @route PUT /profile/location
    * @access Protected
    */
-  export const updateLocation = async (req, res) => {
+  export const updateLocation = async (req: any, res: any): Promise<void | Response> => {
     const { latitude, longitude } = req.body;
-    const userId = req.user.data.id;
+    const userId = req.user?.data.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     if (latitude == null || longitude == null) {
       return res
@@ -913,7 +933,7 @@ export const updateProfile = async (req, res) => {
       res
         .status(200)
         .json({ message: 'Location updated successfully', user: updatedUser });
-    } catch (error) {
+    } catch (error: unknown) {
       res
         .status(500)
         .json({ message: 'Error updating location' });

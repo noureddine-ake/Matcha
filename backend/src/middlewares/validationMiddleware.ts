@@ -3,13 +3,14 @@
  * Implements OWASP password guidelines
  */
 
+import type { Request, Response, NextFunction } from 'express';
 import { validatePasswordWithRecommendations } from '../utils/passwordValidator.js';
 
 /**
  * Validate password strength middleware
  * Used in registration and password change endpoints
  */
-export const validatePasswordMiddleware = (req, res, next) => {
+export const validatePasswordMiddleware = (req: any, res: Response, next: NextFunction) => {
   let password = req.body.password;
   if (password != null) password = password.toString();
   // ensure password is not an array or object
@@ -37,7 +38,7 @@ export const validatePasswordMiddleware = (req, res, next) => {
 /**
  * Validate registration fields
  */
-export const validateRegistrationMiddleware = (req, res, next) => {
+export const validateRegistrationMiddleware = (req: Request, res: Response, next: NextFunction) => {
   // trim and convert to strings to avoid malicious payloads
   const email = (req.body.email || '').toString().trim();
   const username = (req.body.username || '').toString().trim();
@@ -100,7 +101,7 @@ export const validateRegistrationMiddleware = (req, res, next) => {
 /**
  * Validate login fields
  */
-export const validateLoginMiddleware = (req, res, next) => {
+export const validateLoginMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const { username, password } = req.body;
 
   if (!username || !password) {

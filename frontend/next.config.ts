@@ -26,11 +26,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  api: {
-    bodyParser: {
-      sizeLimit: '5mb',
-    },
-  },
 };
 
 export default nextConfig;

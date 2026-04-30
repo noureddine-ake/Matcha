@@ -1,8 +1,14 @@
+import type { Request, Response } from 'express';
 import nodemailer from 'nodemailer';
 import { randomBytes } from 'crypto';
 import { User } from '../../database/entities/users.entity.js';
 
-const getEmailUpdateContent = (username, verifyLink, newEmail) => {
+interface AuthRequest {
+  user?: { data: { id: number; username?: string; email?: string } };
+  body: any;
+}
+
+const getEmailUpdateContent = (username: string, verifyLink: string, newEmail: string) => {
   return `
     <!DOCTYPE html>
     <html>
@@ -40,9 +46,10 @@ const getEmailUpdateContent = (username, verifyLink, newEmail) => {
   `.trim();
 };
 
-export const requestEmailUpdate = async (req, res) => {
+export const requestEmailUpdate = async (req: any, res: any): Promise<void | Response> => {
   try {
-    const user = req.user.data;
+    const user = req.user?.data;
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
     const { newEmail } = req.body;
 
     if (!newEmail) {
@@ -84,20 +91,20 @@ export const requestEmailUpdate = async (req, res) => {
       from: process.env.MAIL_USER,
       to: newEmail,
       subject: 'Confirm your new email address - Matcha',
-      html: getEmailUpdateContent(user.username, verifyLink, newEmail),
+      html: getEmailUpdateContent(user.username || '', verifyLink, newEmail),
     });
 
     res.status(200).json({
       message: 'Verification link sent to your new email address',
       pendingEmail: newEmail
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Request email update error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-export const verifyPendingEmail = async (req, res) => {
+export const verifyPendingEmail = async (req: any, res: any): Promise<void | Response> => {
   try {
     const { token } = req.body;
 
@@ -130,15 +137,16 @@ export const verifyPendingEmail = async (req, res) => {
         username: updatedUser.username,
       }
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Verify pending email error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-export const cancelEmailUpdate = async (req, res) => {
+export const cancelEmailUpdate = async (req: any, res: any): Promise<void | Response> => {
   try {
-    const user = req.user.data;
+    const user = req.user?.data;
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
     const ret = await User.select(['*']).where('id', user.id).run();
     const currentUser = ret.rows[0];
@@ -150,15 +158,16 @@ export const cancelEmailUpdate = async (req, res) => {
     await User.update({ pending_email: null, pending_email_token: null, updated_at: new Date() }).where('id', user.id).run();
 
     res.status(200).json({ message: 'Email change cancelled successfully' });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Cancel email update error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-export const getPendingEmailStatus = async (req, res) => {
+export const getPendingEmailStatus = async (req: any, res: any): Promise<void | Response> => {
   try {
-    const user = req.user.data;
+    const user = req.user?.data;
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
     const ret = await User.select(['*']).where('id', user.id).run();
     const currentUser = ret.rows[0];
 
@@ -167,7 +176,7 @@ export const getPendingEmailStatus = async (req, res) => {
       pendingEmail: currentUser.pending_email || null,
       currentEmail: currentUser.email,
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Get pending email status error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }

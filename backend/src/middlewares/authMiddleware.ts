@@ -1,13 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'refresh_secret';
 
-function verifyJWT(req, res, next) {
-  const authHeader = req.headers['authorization'];
-}
-
-function createJWToken(details) {
+function createJWToken(details: any) {
   const token = jwt.sign(
     {
       data: details.sessionData,
@@ -21,7 +20,7 @@ function createJWToken(details) {
   return token;
 }
 
-const decodeToken = (token) => {
+const decodeToken = (token: string) => {
   try {
     return jwt.verify(token, JWT_SECRET);
   } catch (err) {
@@ -29,27 +28,27 @@ const decodeToken = (token) => {
   }
 };
 
-const getTokeFromCookies = (req) => {
+const getTokeFromCookies = (req: Request) => {
   if (!req.headers.cookie) return null;
 
   const cookies = req.headers.cookie.split('; ');
-  const tokenCookie = cookies.find((c) => c.startsWith('token='));
+  const tokenCookie = cookies.find((c: string) => c.startsWith('token='));
 
   if (!tokenCookie) return null;
   return tokenCookie.split('=')[1];
 };
 
-const getRefreshTokenFromCookies = (req) => {
+const getRefreshTokenFromCookies = (req: Request) => {
   if (!req.headers.cookie) return null;
 
   const cookies = req.headers.cookie.split('; ');
-  const refreshCookie = cookies.find((c) => c.startsWith('refreshToken='));
+  const refreshCookie = cookies.find((c: string) => c.startsWith('refreshToken='));
 
   if (!refreshCookie) return null;
   return refreshCookie.split('=')[1];
 };
 
-const createRefreshToken = (details) => {
+const createRefreshToken = (details: any) => {
   const token = jwt.sign(
     { data: details.sessionData },
     REFRESH_TOKEN_SECRET,
@@ -58,7 +57,7 @@ const createRefreshToken = (details) => {
   return token;
 };
 
-const verifyRefreshToken = (token) => {
+const verifyRefreshToken = (token: string) => {
   try {
     return jwt.verify(token, REFRESH_TOKEN_SECRET);
   } catch (err) {
@@ -66,7 +65,7 @@ const verifyRefreshToken = (token) => {
   }
 };
 
-const verifyAndDecodeToken = (req, res, next) => {
+const verifyAndDecodeToken = (req: any, res: Response, next: NextFunction) => {
   const token = getTokeFromCookies(req);
   if (!token) {
     return res.status(401).json({ error: 'no token provided' });
@@ -84,7 +83,6 @@ const verifyAndDecodeToken = (req, res, next) => {
 export default {
   createJWToken,
   decodeToken,
-  verifyJWT,
   getTokeFromCookies,
   verifyAndDecodeToken,
   getRefreshTokenFromCookies,

@@ -1,6 +1,32 @@
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket, RawData } from 'ws';
 import jwtHelper from '../middlewares/authMiddleware.js';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
+
+declare module 'ws' {
+  interface WebSocket {
+    userId?: string | number;
+  }
+}
+
+interface OnlineUser {
+  userId: string | number;
+  status: 'online' | 'offline';
+  username?: string;
+  lastSeen?: Date;
+}
+
+interface ChatMessage {
+  type: string;
+  payload?: any;
+}
+
+interface MessageHandler {
+  (messageType: string, handler: (ws: WebSocket, data: any) => Promise<void>): void;
+}
+
+interface NotificationHandler {
+  (userId: string | number, notification: any): Promise<void>;
+}
 
 // Store connected clients: userId -> WebSocket connection
 const clients = new Map();
@@ -20,7 +46,7 @@ export const setupWebSocket = (server: Server<typeof IncomingMessage, typeof Ser
   wss.on('connection', (ws, req) => {
     console.log('🔌 New WebSocket connection attempt');
     
-    const token = jwtHelper.getTokeFromCookies(req);
+    const token = jwtHelper.getTokeFromCookies(req as any);
 
     if (!token) {
       console.log('❌ No token provided');
@@ -93,9 +119,9 @@ export const setupWebSocket = (server: Server<typeof IncomingMessage, typeof Ser
       }));
 
       // Handle client messages
-      ws.on('message', (message) => {
+      ws.on('message', (message: RawData) => {
         try {
-          const data = JSON.parse(message);
+          const data: ChatMessage = JSON.parse(message.toString());
 
           if (data.type === 'ping') {
             ws.send(JSON.stringify({ type: 'pong' }));
@@ -139,8 +165,9 @@ export const setupWebSocket = (server: Server<typeof IncomingMessage, typeof Ser
       });
 
       // Handle errors
-      ws.on('error', (error) => {
-        console.error(`WebSocket error for user ${userId}:`, error);
+      ws.on('error', (error: unknown) => {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`WebSocket error for user ${userId}:`, errorMsg);
         clients.delete(userId);
         
         const status = userStatus.get(userId);
@@ -153,8 +180,9 @@ export const setupWebSocket = (server: Server<typeof IncomingMessage, typeof Ser
         broadcastUserStatus(userId, 'offline');
       });
 
-    } catch (error) {
-      console.log('❌ Error:', error.message);
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.log('❌ Error:', errorMsg);
       ws.close(1008, 'Invalid authentication token');
     }
   });
@@ -164,12 +192,12 @@ export const setupWebSocket = (server: Server<typeof IncomingMessage, typeof Ser
 };
 
 // Handle status request
-function handleStatusRequest(ws, data) {
+function handleStatusRequest(ws: WebSocket, data: any): void {
   const { userIds } = data;
   
   if (Array.isArray(userIds)) {
-    const statuses = {};
-    userIds.forEach(id => {
+    const statuses: Record<string, any> = {};
+    userIds.forEach((id: any) => {
       const idStr = id.toString();
       const status = userStatus.get(idStr) || { 
         status: 'offline', 
@@ -191,7 +219,7 @@ function handleStatusRequest(ws, data) {
 }
 
 // Broadcast user status change to all connected clients
-function broadcastUserStatus(userId, status, username = null) {
+function broadcastUserStatus(userId: string | number, status: string, username?: string | null): void {
   const statusData = {
     userId,
     status,
@@ -200,7 +228,7 @@ function broadcastUserStatus(userId, status, username = null) {
     timestamp: new Date().toISOString()
   };
 
-  clients.forEach((client) => {
+  clients.forEach((client: WebSocket) => {
     if (client.readyState === 1) {
       client.send(JSON.stringify({
         type: 'user_status_change',
@@ -213,7 +241,7 @@ function broadcastUserStatus(userId, status, username = null) {
 }
 
 // Handle chat messages
-async function handleChatMessage(senderId, data) {
+async function handleChatMessage(senderId: string | number, data: any): Promise<void> {
   const handler = chatHandlers.get(data.type);
   
   if (handler) {
@@ -242,12 +270,12 @@ export const sendRealTimeMessage = (receiverId: string, messageData: any) => {
 };
 
 // Register chat handler
-export const registerChatHandler = (messageType, handler) => {
+export const registerChatHandler = (messageType: string, handler: (senderId: string | number, data: any) => Promise<void>): void => {
   chatHandlers.set(messageType, handler);
 };
 
 // Send notification
-export const sendNotificationToUser = (userId, notification) => {
+export const sendNotificationToUser = (userId: string | number, notification: any): boolean => {
   const userIdStr = userId.toString();
   const client = clients.get(userIdStr);
 
@@ -263,9 +291,9 @@ export const sendNotificationToUser = (userId, notification) => {
 };
 
 // Get online users list with details
-export const getOnlineUsersList = () => {
-  const onlineUsers = [];
-  clients.forEach((client, userId) => {
+export const getOnlineUsersList = (): OnlineUser[] => {
+  const onlineUsers: OnlineUser[] = [];
+  clients.forEach((client: WebSocket, userId: string | number) => {
     if (client.readyState === 1) {
       const status = userStatus.get(userId) || { 
         status: 'online', 
@@ -275,8 +303,8 @@ export const getOnlineUsersList = () => {
       onlineUsers.push({
         userId,
         status: status.status,
-        lastSeen: status.lastSeen,
-        username: status.username
+        username: status.username,
+        lastSeen: status.lastSeen
       });
     }
   });

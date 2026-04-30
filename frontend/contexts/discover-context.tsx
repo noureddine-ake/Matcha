@@ -8,7 +8,7 @@ import React, {
   ReactNode,
   useCallback,
 } from 'react';
-import { Photo } from './globalcontext';
+import { Photo, Tag } from './globalcontext';
 import api from '@/lib/api';
 
 // ==== Types ====
@@ -38,7 +38,7 @@ export interface Suggestions {
   age: number;
   distance: number;
   photos: Photo[];
-  tags: string[];
+  tags: Tag[];
 }
 
 interface DiscoverContextType {
