@@ -20,10 +20,10 @@ Migrate the Matcha project from `npm` to `pnpm` for faster installs, better disk
 
 ## Pre-Execution Checklist
 
-- [ ] Backup current state (create git branch)
-- [ ] Understand pnpm basics (symlinks, shamefully-hoist)
-- [ ] Have Docker running
-- [ ] pnpm not yet installed globally (will install in Phase 1)
+- [x] Backup current state (create git branch) - Done via git commits (a5e1607, 32f15f6)
+- [x] Understand pnpm basics (symlinks, shamefully-hoist) - Applied in .npmrc
+- [x] Have Docker running - Verified during Phase 9 testing
+- [x] pnpm not yet installed globally (will install in Phase 1) - Installed in Phase 1 (v10.33.2)
 
 ---
 
