@@ -524,17 +524,17 @@ This puts you back to the pre-migration state.
 ## Success Criteria
 
 Migration is complete when:
-- [ ] pnpm-workspace.yaml exists at root
-- [ ] Both .npmrc files exist (root and optional per-package)
-- [ ] Both pnpm-lock.yaml files exist
-- [ ] Both Dockerfiles reference pnpm commands (zero npm references in install/run)
-- [ ] docker-compose.yml builds and runs all services
-- [ ] Backend and frontend dev servers start and respond to HTTP
-- [ ] All tests pass (if any exist)
-- [ ] No errors in container logs
-- [ ] README.md reflects pnpm workflow
-- [ ] Old package-lock.json files deleted
-- [ ] Git history shows clean migration commit
+- [x] pnpm-workspace.yaml exists at root
+- [x] Both .npmrc files exist (root and optional per-package)
+- [x] Both pnpm-lock.yaml files exist
+- [x] Both Dockerfiles reference pnpm commands (zero npm references in install/run)
+- [x] docker-compose.yml builds and runs all services
+- [x] Backend and frontend dev servers start and respond to HTTP
+- [x] All tests pass (if any exist)
+- [x] No errors in container logs
+- [x] README.md reflects pnpm workflow
+- [x] Old package-lock.json files deleted
+- [x] Git history shows clean migration commit
 
 ---
 
