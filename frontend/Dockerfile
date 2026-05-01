@@ -9,43 +9,29 @@ ENV NODE_OPTIONS=--max-old-space-size=1024
 
 WORKDIR /app
 
-##################################################
-
 FROM base AS dependencies
 
-COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN mkdir -p /app/backend
 
-RUN pnpm install --prod --frozen-lockfile
+COPY pnpm-lock.yaml pnpm-workspace.yaml /app/
+COPY backend/package.json /app/backend/
+COPY frontend/package.json /app/
 
-##################################################
+RUN cd /app && pnpm install --prod --no-frozen-lockfile
 
-FROM base AS dev-dependencies
+FROM base AS builder
 
-COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN mkdir -p /app/backend
 
-RUN pnpm install --frozen-lockfile
+COPY pnpm-lock.yaml pnpm-workspace.yaml /app/
+COPY backend/package.json /app/backend/
+COPY frontend/package.json /app/
 
-##################################################
+RUN cd /app && pnpm install --no-frozen-lockfile
 
-FROM dev-dependencies AS development
+COPY frontend/ ./
 
-ENV NODE_ENV=development
-
-COPY . .
-
-EXPOSE 3000
-
-CMD ["sh", "-c", "while true; do pnpm dev; done"]
-
-##################################################
-
-FROM dependencies AS builder
-
-COPY . .
-
-RUN pnpm build
-
-##################################################
+RUN cd /app && pnpm build
 
 FROM base AS production
 
@@ -57,8 +43,26 @@ COPY --from=builder /app/.next ./.next
 
 COPY --from=builder /app/package.json ./
 
-COPY --from=builder /app/public ./public
+COPY frontend/public ./public
 
 EXPOSE 3000
 
 CMD ["pnpm", "start"]
+
+FROM base AS development
+
+ENV NODE_ENV=development
+
+RUN mkdir -p /app/backend
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml /app/
+COPY backend/package.json /app/backend/
+COPY frontend/package.json /app/
+
+RUN cd /app && pnpm install --no-frozen-lockfile
+
+COPY frontend/ ./
+
+EXPOSE 3000
+
+CMD ["sh", "-c", "while true; do pnpm dev; done"]

@@ -9,44 +9,52 @@ RUN npm install -g pnpm@latest
 
 WORKDIR /app
 
-##################################################
+##################################
 
 FROM base AS dependencies
 
-COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN mkdir -p /app/frontend
 
-RUN pnpm install --prod --frozen-lockfile
+COPY pnpm-lock.yaml pnpm-workspace.yaml /app/
+COPY backend/package.json /app/
+COPY frontend/package.json /app/frontend/
 
-##################################################
+RUN cd /app && pnpm install --prod --no-frozen-lockfile
 
-FROM base AS dev-dependencies
+#################################################
 
-COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
-
-RUN pnpm install --frozen-lockfile
-
-##################################################
-
-FROM dev-dependencies AS development
-
-ENV NODE_ENV=development
-
-EXPOSE 5000
-
-CMD ["sh", "-c", "while true; do pnpm dev; done"]
-
-##################################################
-
-FROM dependencies AS production
+FROM base AS production
 
 ENV NODE_ENV=production
 
-COPY --from=dev-dependencies /app/node_modules/.bin/.package-lock.json /tmp/ 2>/dev/null || true
+COPY --from=dependencies /app/node_modules ./node_modules
 
-COPY --chown=node:node . .
+COPY backend/ ./
+
+RUN cd /app && pnpm build
 
 USER node
 
 EXPOSE 5000
 
 CMD ["node", "./dist/server.js"]
+
+###############################################
+
+FROM base AS development
+
+ENV NODE_ENV=development
+
+RUN mkdir -p /app/frontend
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml /app/
+COPY backend/package.json /app/
+COPY frontend/package.json /app/frontend/
+
+RUN cd /app && pnpm install --no-frozen-lockfile
+
+COPY backend/ ./
+
+EXPOSE 5000
+
+CMD ["sh", "-c", "while true; do pnpm dev; done"]
