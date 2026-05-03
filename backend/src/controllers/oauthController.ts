@@ -10,7 +10,7 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const GOOGLE_ACCESS_TOKEN_URL = process.env.GOOGLE_ACCESS_TOKEN_URL || '';
 // const GOOGLE_TOKEN_INFO_URL = process.env.GOOGLE_TOKEN_INFO_URL;
-const GOOGLE_CALLBACK_URL = 'http://localhost:5000/google/callback';
+const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/google/callback';
 const GOOGLE_OAUTH_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
 
@@ -18,6 +18,8 @@ const GOOGLE_OAUTH_SCOPES = [
 ];
 
 export const googleOauthController = async (_req: Request, res: Response) => {
+  console.log('from Google:');
+  
   const state = 'some_state';
   const scopes = GOOGLE_OAUTH_SCOPES.join(' ');
   const GOOGLE_OAUTH_CONSENT_SCREEN_URL = `${GOOGLE_OAUTH_URL}?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${GOOGLE_CALLBACK_URL}&access_type=offline&response_type=code&state=${state}&scope=${scopes}`;
@@ -26,6 +28,9 @@ export const googleOauthController = async (_req: Request, res: Response) => {
 
 export const googleCallbackController = async (req: Request, res: Response) => {
   const { code } = req.query;
+
+
+  console.log('Received code from Google:', code);
 
   if (!code) return res.status(400).send('No code received');
 

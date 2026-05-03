@@ -55,38 +55,20 @@ export const setupWebSocket = (server: Server<typeof IncomingMessage, typeof Ser
     }
 
     try {
-      // Decode token
-      const decoded = jwtHelper.decodeToken(token);
+      // Decode token - always returns { data: sessionData }
+      const decoded = jwtHelper.decodeToken(token) as { data: { id: string; username?: string } } | null;
       
-      if (!decoded) {
+      if (!decoded || !decoded.data) {
         console.log('❌ Invalid token');
         ws.close(1008, 'Invalid authentication token');
         return;
       }
 
-      // Extract user ID from token (try different paths)
-      let userId = null;
-      if (decoded.data && decoded.data.id) {
-        userId = decoded.data.id;
-      } else if (decoded.id) {
-        userId = decoded.id;
-      } else if (decoded.userId) {
-        userId = decoded.userId;
-      } else if (decoded.sub) {
-        userId = decoded.sub;
-      }
-
-      if (!userId) {
-        console.log('❌ Could not extract userId from token');
-        ws.close(1008, 'Invalid token structure');
-        return;
-      }
-
-      // Convert to string for consistent comparison
-      userId = userId.toString();
+      // Extract user ID from token - always in data.id
+      const userId = decoded.data.id;
 
       // Get username from token
-      const username = decoded.data?.username || decoded.username || `User ${userId}`;
+      const username = decoded.data.username || `User ${userId}`;
 
       // Store connection
       clients.set(userId, ws);

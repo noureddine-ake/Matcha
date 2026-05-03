@@ -24,7 +24,7 @@ import SettingsPanel from "@/components/profile/SettingsPanel";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://backend:5000";
+  process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000";
 
 type BlockStatus = {
   iBlocked: boolean;

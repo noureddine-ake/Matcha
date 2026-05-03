@@ -24,6 +24,8 @@ services:
     image: redis:7
     container_name: redis
     restart: always
+    env_file:
+      - .env
     volumes:
       - redis_data:/data
     networks:
@@ -50,6 +52,9 @@ services:
       - redis
     ports:
       - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
     networks:
       - app-network
 
@@ -63,12 +68,18 @@ services:
       target: development
     container_name: frontend
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=development
+      - PORT=3000
     depends_on:
       - backend
     ports:
       - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     networks:
       - app-network
 

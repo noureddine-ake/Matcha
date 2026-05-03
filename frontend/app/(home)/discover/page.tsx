@@ -9,7 +9,7 @@ import { Suggestions, useDiscover } from '@/contexts/discover-context';
 import MatchPopup, { MatchData } from '@/components/matchPopup';
 import { getImageUrl } from '@/lib/utils';
 
-const BASE_URL = process.env.BACKEND_URL || 'http://backend:5000';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5000';
 
 export default function DiscoverPage() {
   const discover = useDiscover();

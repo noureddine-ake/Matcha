@@ -7,7 +7,7 @@ import { Skeleton } from './ui/skeleton';
 import { Suggestions } from '@/contexts/discover-context';
 
 const MatchesCarousel = () => {
-  const backend_url = process.env.BACKEND_URL || 'http://backend:5000';
+  const backend_url = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5000';
   const [matches, setMatches] = useState<Suggestions[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -52,9 +52,8 @@ const MatchesCarousel = () => {
             >
               <Image
                 src={
-                  backend_url +
                   match.photos.find((item) => item.is_profile_picture)
-                    ?.photo_url
+                    ?.photo_url || '/placeholder.jpg'
                 }
                 alt={`${match.first_name} ${match.last_name}`}
                 fill

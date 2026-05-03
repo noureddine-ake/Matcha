@@ -318,7 +318,7 @@ export default function RegisterPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.6 }}
                 className="flex items-center justify-center w-full py-3 px-4 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-colors border border-white/20"
-                onClick={() => {window.location.href = process.env.BACKEND_URL || "http://localhost:5000/api/oauth/google"}}
+                onClick={() => {window.location.href = `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000"}/api/oauth/google`}}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path

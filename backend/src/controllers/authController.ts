@@ -564,7 +564,7 @@ export const confirmPasswordReset = async (req: AuthRequest, res: Response) => {
     for (const key of keys) {
       const value = await redisClient.get(key);
       if (value === token) {
-        userId = key.split(":")[1];
+        userId = String(key).split(":")[1];
         break;
       }
     }
@@ -599,7 +599,7 @@ export const refreshTokenController = async (req: AuthRequest, res: Response) =>
     }
 
     // Verify refresh token
-    const userData = JWT.verifyRefreshToken(refreshToken);
+    const userData = JWT.verifyRefreshToken(refreshToken) as { data: any } | null;
     if (!userData) {
       // Clear invalid tokens
       res.clearCookie('token', cookieOptions);

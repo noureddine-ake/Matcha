@@ -7,7 +7,7 @@ import api from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://backend:5000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000";
 interface Viewer {
   id: number;
   username: string;
@@ -111,7 +111,7 @@ export default function ProfileViewsPage() {
             >
               {/* Profile Picture */}
               <Image
-                src={`${v.picture ? BACKEND_URL +  v.picture : '/default_profile_picture.png'}`}
+                src={`${v.picture ? v.picture : '/default_profile_picture.png'}`}
                 alt={`${v.first_name} ${v.last_name}`}
                 height={100}
                 width={100}

@@ -1,5 +1,9 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import dns from 'node:dns';
+
+// Fix Node 18+ IPv6 fetch timeouts in Docker
+dns.setDefaultResultOrder('ipv4first');
 
 import { registerRoute } from './src/routes/authRoutes.js';
 import { profileRoute } from './src/routes/profileRoutes.js';
@@ -46,7 +50,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-app.use(xss());
+app.use(xss() as any);
 app.use(
   morgan("combined", {
     stream: {
@@ -64,29 +68,10 @@ const corsOptions = {
 }
 app.use(cors(corsOptions));
 
-
-// Health check route
-// app.get('/health', async (req, res) => {
-//   try {
-//     const client = await pool.connect();
-//     await client.query('SELECT 1');
-//     client.release();
-
-//     res.status(200).json({
-//       status: 'ok',
-//       server: 'running',
-//       database: 'connected',
-//     });
-//   } catch (err) {
-//     res.status(500).json({
-//       status: 'error',
-//       message: err.message,
-//     });
-//   }
-// });
-
-
-// routes
+app.get('/health', (req, res) => {
+  console.log('Health check endpoint hit');
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 app.use('/api/auth', registerRoute);
 app.use('/api/profile', profileRoute);
 app.use('/api/oauth', googleOauthRoute);

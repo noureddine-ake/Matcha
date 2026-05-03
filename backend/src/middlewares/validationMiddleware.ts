@@ -11,7 +11,7 @@ import { validatePasswordWithRecommendations } from '../utils/passwordValidator.
  * Used in registration and password change endpoints
  */
 export const validatePasswordMiddleware = (req: any, res: Response, next: NextFunction) => {
-  let password = req.body.password;
+  let password = req.body.newPassword;
   if (password != null) password = password.toString();
   // ensure password is not an array or object
   if (!password) {

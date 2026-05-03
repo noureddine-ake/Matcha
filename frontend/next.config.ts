@@ -2,6 +2,14 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   transpilePackages: ['date-fns'],
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/:path*',
+        destination: 'http://backend:5000/uploads/:path*',
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

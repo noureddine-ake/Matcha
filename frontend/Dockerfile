@@ -9,6 +9,8 @@ ENV NODE_OPTIONS=--max-old-space-size=1024
 
 WORKDIR /app
 
+##################################
+
 FROM base AS dependencies
 
 RUN mkdir -p /app/backend
@@ -18,6 +20,8 @@ COPY backend/package.json /app/backend/
 COPY frontend/package.json /app/
 
 RUN cd /app && pnpm install --prod --no-frozen-lockfile
+
+##################################
 
 FROM base AS builder
 
@@ -32,6 +36,8 @@ RUN cd /app && pnpm install --no-frozen-lockfile
 COPY frontend/ ./
 
 RUN cd /app && pnpm build
+
+##################################
 
 FROM base AS production
 
@@ -48,6 +54,8 @@ COPY frontend/public ./public
 EXPOSE 3000
 
 CMD ["pnpm", "start"]
+
+##################################
 
 FROM base AS development
 
