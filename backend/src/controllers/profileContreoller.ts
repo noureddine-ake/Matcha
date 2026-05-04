@@ -918,18 +918,29 @@ export const updateProfile = async (req: any, res: any): Promise<void | Response
     }
 
     try {
-      // Reverse geocode to get city and country
-      const { city, country } = await reverseGeocode(latitude, longitude);
+      let city, country;
+      try {
+        const geo = await reverseGeocode(latitude, longitude);
+        city = geo.city;
+        country = geo.country;
+      } catch (geoError) {
+        console.warn(`Reverse geocode failed for (${latitude}, ${longitude}):`, geoError);
+      }
 
-      const updatedUser = await Profiles.update({
+      console.log(`Updating location for user ${userId}: (${latitude}, ${longitude})`);
+      
+      const updateData: any = {
         latitude: latitude,
         longitude: longitude,
-        city: city,
-        country: country,
         updated_at: new Date(),
-      }).where('user_id', userId).returning(['*'])
-        .run().then(result => result.rows[0]);
+      };
+      
+      if (city) updateData.city = city;
+      if (country) updateData.country = country;
 
+      const updatedUser = await Profiles.update(updateData).where('user_id', userId).returning(['*'])
+        .run().then(result => result.rows[0]);
+      console.log('Location updated successfully:', updatedUser);
       res
         .status(200)
         .json({ message: 'Location updated successfully', user: updatedUser });

@@ -35,6 +35,7 @@ ENV NODE_ENV=production
 COPY --from=dev-dependencies /app/node_modules ./node_modules
 COPY backend/ ./
 RUN cd /app && pnpm build
+RUN mkdir -p /app/uploads && chown -R node:node /app/uploads
 USER node
 EXPOSE 5000
 CMD ["node", "./dist/server.js"]

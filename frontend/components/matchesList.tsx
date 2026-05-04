@@ -27,6 +27,15 @@ const MatchesCarousel = () => {
       }
     };
     fetchMatches();
+
+    const handleNewMatch = () => {
+      fetchMatches();
+    };
+
+    window.addEventListener('refresh_matches', handleNewMatch);
+    return () => {
+      window.removeEventListener('refresh_matches', handleNewMatch);
+    };
   }, []);
 
   return (

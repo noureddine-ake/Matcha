@@ -60,10 +60,10 @@ const getVerificationEmailContent = (username: string, verifyLink: string) => {
 
 export const registrationControler = async (req: AuthRequest, res: Response) => {
   try {
-    const { email, username, password, firstName, lastName } = req.body;
+    const { email, username, newPassword, firstName, lastName } = req.body;
 
     // Validate required fields
-    if (!email || !username || !password || !firstName || !lastName) {
+    if (!email || !username || !newPassword || !firstName || !lastName) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
@@ -82,7 +82,7 @@ export const registrationControler = async (req: AuthRequest, res: Response) => 
     }
 
     // Validate password strength against best practices
-    const passwordValidation = validatePasswordWithRecommendations(password);
+    const passwordValidation = validatePasswordWithRecommendations(newPassword);
     if (!passwordValidation.isValid) {
       return res.status(400).json({
         error: 'Password does not meet security requirements',
@@ -108,7 +108,7 @@ export const registrationControler = async (req: AuthRequest, res: Response) => 
     if (existingUsername.rowCount) {
       return res.status(400).json({ error: 'Username already exists' });
     }
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    const hashedPassword = await bcrypt.hash(req.body.newPassword, 10);
 
     const newUser = {
       email: req.body.email,
@@ -354,7 +354,8 @@ export const verifyEmailByToken = async (req: AuthRequest, res: Response) => {
     }
 
     await User.update({
-      is_verified: null,
+      is_verified: true,
+      verification_token: null,
       updated_at: new Raw('CURRENT_TIMESTAMP')})
       .where('id', user.id).run();
 

@@ -123,7 +123,7 @@ export const verifyPendingEmail = async (req: any, res: any): Promise<void | Res
       email: user.pending_email,
       pending_email: null,
       pending_email_token: null,
-      is_verified: false,
+      is_verified: true,
       verification_token: null,
       updated_at: new Date(),
     }).where('id', user.id).returning(['*']).run();

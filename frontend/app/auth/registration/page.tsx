@@ -20,7 +20,7 @@ export default function RegisterPage() {
     lastName: '',
     email: '',
     username: '',
-    password: '',
+    newPassword: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -233,7 +233,7 @@ export default function RegisterPage() {
                 </div>
               </motion.div>
 
-              {/* Password */}
+              {/* newPassword */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -241,19 +241,19 @@ export default function RegisterPage() {
                 className="space-y-2"
               >
                 <Label
-                  htmlFor="password"
+                  htmlFor="newPassword"
                   className="text-white text-base font-medium"
                 >
-                  Password
+                  newPassword
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-400 w-5 h-5" />
                   <Input
-                    id="password"
-                    name="password"
+                    id="newPassword"
+                    name="newPassword"
                     type="password"
-                    placeholder="enter your password"
-                    value={formData.password}
+                    placeholder="enter your newPassword"
+                    value={formData.newPassword}
                     onChange={handleChange}
                     required
                     className="h-14 bg-white/10 border-0 text-white placeholder:text-white/50 rounded-2xl pl-12 pr-6 focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-0 text-lg"

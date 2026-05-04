@@ -64,8 +64,8 @@ export const setupWebSocket = (server: Server<typeof IncomingMessage, typeof Ser
         return;
       }
 
-      // Extract user ID from token - always in data.id
-      const userId = decoded.data.id;
+      // Extract user ID from token - always in data.id and enforce string type for Map lookups
+      const userId = String(decoded.data.id);
 
       // Get username from token
       const username = decoded.data.username || `User ${userId}`;

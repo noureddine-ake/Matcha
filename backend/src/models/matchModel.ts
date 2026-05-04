@@ -110,13 +110,15 @@ export const searchSuggestions = async (
     .from('users u')
     .join('INNER', 'profiles p', 'u.id = p.user_id')
     .where('u.id', userId, '!=')
-    .where('u.is_verified', true)
-    .where('p.gender', null, 'not null')
+    // .where('u.is_verified', true)
+    // .where('p.gender', null, 'not null')
     .where('p.latitude', null, 'not null')
     .where('p.longitude', null, 'not null')
     .run();
 
   let users = usersResult.rows as any[];
+
+  console.log('Users:', userId, users);
 
   // 1. Filter out blocked/blocking users
   users = users.filter(u => !blockedUserIds.has(u.id));

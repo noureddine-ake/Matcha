@@ -8,18 +8,23 @@ import api from '@/lib/api';
 import { Suggestions, useDiscover } from '@/contexts/discover-context';
 import MatchPopup, { MatchData } from '@/components/matchPopup';
 import { getImageUrl } from '@/lib/utils';
+import { useGlobal } from '@/contexts/globalcontext';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5000';
 
 export default function DiscoverPage() {
   const discover = useDiscover();
+  const { user, setShowLocationModal } = useGlobal();
   const [matchData, setMatchData] = useState<MatchData | null>(null);
 
-
   useEffect(() => {
-    discover.fetchSuggestions();
+    if (user && (user.latitude === null || user.longitude === null)) {
+      setShowLocationModal(true);
+    } else if (user?.latitude && user?.longitude) {
+      discover.fetchSuggestions();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.latitude, user?.longitude, setShowLocationModal]);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showSidebar, setShowSidebar] = useState(false);

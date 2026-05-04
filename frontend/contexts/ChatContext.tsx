@@ -43,6 +43,7 @@ interface ChatContextType {
     getUnreadCount: (userId: string) => number;
     getLastMessage: (userId: string) => { content: string; timestamp: string; senderId: string } | null;
     clearUnreadCount: (userId: string) => void;
+    fetchUsers: () => Promise<void>;
 
     // Refs (for components that need direct access)
     refs: {
@@ -691,6 +692,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         });
     }, []);
 
+    // Listen for match refreshes
+    useEffect(() => {
+        const handleNewMatch = async () => {
+            chatService.clearCache();
+            await fetchUsers();
+        };
+
+        window.addEventListener('refresh_matches', handleNewMatch);
+        return () => {
+            window.removeEventListener('refresh_matches', handleNewMatch);
+        };
+    }, [fetchUsers]);
+
     // ==== Initialization ====
 
     useEffect(() => {
@@ -837,6 +851,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             getUnreadCount,
             getLastMessage,
             clearUnreadCount,
+            fetchUsers,
             refs: {
                 messagesContainerRef,
                 messagesEndRef,
@@ -859,6 +874,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             getUnreadCount,
             getLastMessage,
             clearUnreadCount,
+            fetchUsers,
         ]
     );
 

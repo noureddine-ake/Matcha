@@ -75,11 +75,14 @@ interface GlobalContextType {
   loading: boolean;
   updating: boolean;
   error: string | null;
+  showLocationModal: boolean;
 
   // Functions
   fetchProfile: () => Promise<void>;
   updateProfile: (data: FormUpdateUser) => Promise<void>;
   fetchUserProfile?: (username: string) => Promise<User | null>;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  setShowLocationModal: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // ==== Context ====
@@ -93,6 +96,7 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
@@ -145,8 +149,11 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
       fetchProfile,
       updateProfile,
       fetchUserProfile,
+      setUser,
+      showLocationModal,
+      setShowLocationModal,
     }),
-    [user, loading, updating, error, fetchProfile, updateProfile, fetchUserProfile]
+    [user, loading, updating, error, fetchProfile, updateProfile, fetchUserProfile, setUser, showLocationModal, setShowLocationModal]
   );
 
   return (

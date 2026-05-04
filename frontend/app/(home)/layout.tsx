@@ -42,9 +42,8 @@ export default function HomeLayout({
 }>) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("discover");
-  const { user, fetchProfile } = useGlobal();
+  const { user, fetchProfile, setUser, showLocationModal, setShowLocationModal } = useGlobal();
   const pathname = usePathname();
-  const [showLocationModal, setShowLocationModal] = useState(false);
   const [location, setLocation] = useState<LocationData | null>(null);
   const [locationStatus, setLocationStatus] = useState<'pending' | 'set' | 'denied' | 'updating'>('pending');
   const [isLocationMenuOpen, setIsLocationMenuOpen] = useState(false);
@@ -194,10 +193,20 @@ export default function HomeLayout({
       setLocationStatus('set');
 
       // Send to backend
-      await api.put("/profile/update-location", {
+      const res = await api.put("/profile/update-location", {
         latitude: locationData.latitude,
         longitude: locationData.longitude
       });
+      if (res.data?.user) {
+        setUser(prev => prev ? {
+          ...prev,
+          ...res.data.user,
+          position: {
+            latitude: res.data.user.latitude,
+            longitude: res.data.user.longitude
+          }
+        } : null);
+      }
 
     } catch (error: unknown) {
       console.warn("Location error:", error);
@@ -223,10 +232,20 @@ export default function HomeLayout({
                 setLocation({ lat: locationData.latitude, lng: locationData.longitude });
                 setLocationStatus('set');
 
-                await api.put("/profile/update-location", {
+                const res = await api.put("/profile/update-location", {
                   latitude: locationData.latitude,
                   longitude: locationData.longitude
                 });
+                if (res.data?.user) {
+                  setUser(prev => prev ? {
+                    ...prev,
+                    ...res.data.user,
+                    position: {
+                      latitude: res.data.user.latitude,
+                      longitude: res.data.user.longitude
+                    }
+                  } : null);
+                }
               }
             },
             (fallbackErr) => {
@@ -305,10 +324,20 @@ export default function HomeLayout({
       setLocationStatus('set');
 
       // Send to backend
-      await api.put("/profile/update-location", {
+      const res = await api.put("/profile/update-location", {
         latitude: locationData.latitude,
         longitude: locationData.longitude
       });
+      if (res.data?.user) {
+        setUser(prev => prev ? {
+          ...prev,
+          ...res.data.user,
+          position: {
+            latitude: res.data.user.latitude,
+            longitude: res.data.user.longitude
+          }
+        } : null);
+      }
 
       // Close menu if open
       setIsLocationMenuOpen(false);

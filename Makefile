@@ -3,30 +3,54 @@
 # ===============================
 
 COMPOSE = docker compose
+COMPOSE_PROD = docker compose -f docker-compose.prod.yml
 
-.PHONY: up down build restart logs ps clean
+.PHONY: dev dev-d prod prod-d down down-prod rm restart logs ps prune clean
 
-# Start containers
-up:
-	$(COMPOSE) up -d 
+# ===============================
+# Development
+# ===============================
+# Build and start development containers (attached logs)
+dev:
+	$(COMPOSE) up --build
 
-# Stop containers
+# Build and start development containers (detached)
+dev-d:
+	$(COMPOSE) up -d --build
+
+# Stop development containers
 down:
 	$(COMPOSE) down
 
-# remove container
-rm:
-	$(COMPOSE) rm -f
-# Build containers
-build:
-	$(COMPOSE) build
+# ===============================
+# Production
+# ===============================
+# Build and start production containers (attached logs)
+prod:
+	$(COMPOSE_PROD) up --build
 
-# Rebuild and start
+# Build and start production containers (detached)
+prod-d:
+	$(COMPOSE_PROD) up -d --build
+
+# Stop production containers
+down-prod:
+	$(COMPOSE_PROD) down
+
+# ===============================
+# Utilities
+# ===============================
+# Rebuild and start development
 restart:
 	$(COMPOSE) down
-	$(COMPOSE) up -d 
+	$(COMPOSE) up -d --build
 
-# Show logs
+# Remove stopped containers
+rm:
+	$(COMPOSE) rm -f
+	$(COMPOSE_PROD) rm -f
+
+# Show logs (development)
 logs:
 	$(COMPOSE) logs -f
 
@@ -34,9 +58,11 @@ logs:
 ps:
 	$(COMPOSE) ps
 
+# Clean unused docker resources globally
 prune:
 	docker system prune -af
 
-# Remove containers, networks, volumes
+# Fully remove containers, networks, and volumes for BOTH environments
 clean:
 	$(COMPOSE) down -v --remove-orphans
+	$(COMPOSE_PROD) down -v --remove-orphans

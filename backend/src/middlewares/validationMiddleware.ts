@@ -42,22 +42,22 @@ export const validateRegistrationMiddleware = (req: Request, res: Response, next
   // trim and convert to strings to avoid malicious payloads
   const email = (req.body.email || '').toString().trim();
   const username = (req.body.username || '').toString().trim();
-  const password = (req.body.password || '').toString();
+  const newPassword = (req.body.newPassword || '').toString();
   const firstName = (req.body.firstName || '').toString().trim();
   const lastName = (req.body.lastName || '').toString().trim();
 
   // overwrite sanitized values back into body
   req.body.email = email;
   req.body.username = username;
-  req.body.password = password;
+  req.body.newPassword = newPassword;
   req.body.firstName = firstName;
   req.body.lastName = lastName;
 
   // Check required fields
-  if (!email || !username || !password || !firstName || !lastName) {
+  if (!email || !username || !newPassword || !firstName || !lastName) {
     return res.status(400).json({ 
       error: 'All fields are required',
-      required: ['email', 'username', 'password', 'firstName', 'lastName']
+      required: ['email', 'username', 'newPassword', 'firstName', 'lastName']
     });
   }
 
