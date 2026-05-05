@@ -1,4 +1,4 @@
 declare module 'xss-clean' {
-  const value: () => any;
+  const value: () => unknown;
   export default value;
 }   

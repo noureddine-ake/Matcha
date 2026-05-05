@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Camera, Trash2, Upload, X, Check, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import api from '@/lib/api';
 import { useGlobal } from '@/contexts/globalcontext';
+import { getImageUrl } from '@/lib/utils';
 
 interface Photo {
   photo_url: string;
@@ -13,7 +14,6 @@ interface Photo {
 
 interface ProfilePictureUploaderProps {
   photos: Photo[];
-  backendUrl: string;
   size?: number;
   onUpdated?: () => void;
   editable?: boolean;
@@ -36,7 +36,6 @@ const validateFile = (file: File): string | null => {
 
 const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
   photos,
-  backendUrl,
   size = 192,
   onUpdated,
   editable = true,
@@ -318,7 +317,7 @@ const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
         ) : profilePhoto ? (
           <>
             <Image
-              src={`${backendUrl}${profilePhoto.photo_url}`}
+              src={getImageUrl(profilePhoto.photo_url)}
               alt="Profile"
               width={size}
               height={size}

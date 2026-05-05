@@ -245,9 +245,9 @@ export default function LoginPage() {
 
             {/* Divider */}
             <div className="flex items-center my-6">
-              <div className="flex-grow border-t border-white/20"></div>
+              <div className="grow border-t border-white/20"></div>
               <span className="mx-4 text-purple-300 text-sm">or continue with</span>
-              <div className="flex-grow border-t border-white/20"></div>
+              <div className="grow border-t border-white/20"></div>
             </div>
 
             {/* Social Login Buttons */}
@@ -257,7 +257,7 @@ export default function LoginPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.6 }}
                 className="flex items-center justify-center w-full py-3 px-4 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-colors border border-white/20"
-                onClick={() => { window.location.href = process.env.BACKEND_URL || "http://localhost:5000/api/oauth/google" }}
+                onClick={() => { window.location.href = `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000"}/api/oauth/google` }}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />

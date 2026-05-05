@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, QueryResult } from "pg";
 import {
     ColumnAttributes,
     ColumnReference,
@@ -9,7 +9,6 @@ import {
 } from "./define_types.js";
 import config from '../utils/config.js'
 import format from 'pg-format';
-import { QueryBuilder } from "./query_builder.js";
 
 const sqlFunctions = ["CURRENT_TIMESTAMP", "NOW()"] as const;
 
@@ -106,18 +105,19 @@ class ORM {
             )
 
             await this.connection?.query(query);
-        } catch (error: any) {
+        } catch (error: unknown) {
             throw (error);
         }
     }
 
-    public run = async (query: string, params: any[]): Promise<any> => {
+    public run = async (query: string, params: unknown[]): Promise<QueryResult<any> | null> => {
         try {
-            if (!query || query.trim().length) {
+            if (query.trim().length) {
                 const ret = await this.connection?.query(query, params);
                 return ret;
             }
-        } catch (error: any) {
+            return null;
+        } catch (error: unknown) {
             throw (error)
         }
     }

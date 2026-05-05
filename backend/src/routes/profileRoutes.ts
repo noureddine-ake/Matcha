@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import express from 'express';
+// @ts-ignore
 import multer from 'multer';
 import JWT from '../middlewares/authMiddleware.js';
 import { 
@@ -45,11 +46,11 @@ const ALLOWED_MIME_TYPES = [
 ];
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname),
+  destination: (req: any, file: any, cb: any) => cb(null, uploadsDir),
+  filename: (req: any, file: any, cb: any) => cb(null, Date.now() + '-' + file.originalname),
 });
 
-const fileFilter = (req, file, cb) => {
+const fileFilter = (req: any, file: any, cb: any) => {
   const ext = file.originalname.toLowerCase().split('.').pop();
   const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
   
@@ -66,8 +67,8 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 } 
 });
 
-const handleMulterError = (err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
+const handleMulterError = (err: any, req: any, res: any, next: any) => {
+  if (err instanceof (multer as any).MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
     }

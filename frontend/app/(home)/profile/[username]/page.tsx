@@ -24,7 +24,7 @@ import SettingsPanel from "@/components/profile/SettingsPanel";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://backend:5000";
+  process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000";
 
 type BlockStatus = {
   iBlocked: boolean;
@@ -129,17 +129,6 @@ export default function ProfilePage() {
 
   const { registerHandler, send, isConnected, onlineUsers, userStatuses } = useWebSocket();
 
-  const updateLocationAllFields = useCallback(async (lat: number, lng: number) => {
-    try {
-      await api.put("/profile/update-location", { latitude: lat, longitude: lng });
-      setCurrentProfile((prev) =>
-        prev ? { ...prev, latitude: lat, longitude: lng, position: { latitude: lat, longitude: lng } } : prev
-      );
-    } catch (err) {
-      console.error("[updateLocationAllFields] Error:", err);
-    }
-  }, []);
-
   const isCurrentUser = Boolean(user && user.username === decodeURIComponent(username));
 
   useEffect(() => {
@@ -166,29 +155,18 @@ export default function ProfilePage() {
   }, [user, username, fetchUserProfile]);
 
   useEffect(() => {
-    let userLocation = { latitude: null, longitude: null };
-    try {
-      const stored = window.localStorage.getItem("user_location");
-      if (stored && stored !== "denied") {
-        userLocation = JSON.parse(stored);
-      }
-    } catch (e) {
-      console.warn("Invalid user_location in localStorage:", e);
-    }
-    const { latitude, longitude } = userLocation;
+    if (!currentProfile?.latitude || !currentProfile?.longitude) return;
 
     const getFlag = async () => {
-      if (latitude && longitude) {
-        const url = await fetchFlag({ latitude, longitude });
-        setFlagUrl(url || null);
-      }
+      const url = await fetchFlag({ 
+        latitude: currentProfile.latitude, 
+        longitude: currentProfile.longitude 
+      });
+      setFlagUrl(url || null);
     };
-    getFlag();
 
-    if (isCurrentUser && latitude && longitude) {
-      updateLocationAllFields(latitude, longitude);
-    }
-  }, [isCurrentUser, updateLocationAllFields]);
+    getFlag();
+  }, [currentProfile?.latitude, currentProfile?.longitude]);
 
   useEffect(() => {
     if (!currentProfile?.id) return;

@@ -1,7 +1,7 @@
 // PostgreSQL connection pool
 import pkg from 'pg';
 import dotenv from 'dotenv';
-import { ORM } from '../src/db/orm.js';
+import ORM from '../database/orm.js';
 
 dotenv.config();
 

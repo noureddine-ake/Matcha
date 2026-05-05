@@ -23,7 +23,7 @@ export const getSuggestions = async (req: Request, res: Response) => {
       limit = '20',
       offset = '0',
       sortBy = 'distance',
-      maxDistance = '500',
+      maxDistance = '100',
       minAge,
       maxAge,
       minFame,
@@ -52,7 +52,16 @@ export const getSuggestions = async (req: Request, res: Response) => {
       limit: parseInt(limit as string),
       offset: parseInt(offset as string),
     });
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message === 'User location not found') {
+      return res.status(200).json({
+        suggestions: [],
+        count: 0,
+        limit: parseInt(req.query.limit as string || '20'),
+        offset: parseInt(req.query.offset as string || '0'),
+        message: 'Location required to get suggestions.'
+      });
+    }
     console.error('Error fetching profile:', err);
     res.status(500).json({ error: 'Internal server error' });
   }

@@ -26,7 +26,7 @@ export const registerRoute = express.Router();
 const registrationValidation = [
   body('email').isEmail().normalizeEmail(),
   body('username').trim().escape(),
-  body('password').isLength({ min: 8 }).withMessage('password must be at least 8 characters'),
+  body('newPassword').isLength({ min: 8 }).withMessage('password must be at least 8 characters'),
   body('firstName').trim().escape(),
   body('lastName').trim().escape(),
 ];

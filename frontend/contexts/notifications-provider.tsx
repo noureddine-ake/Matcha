@@ -86,6 +86,10 @@ export const NotificationsProvider = ({
 
     setNotifications((prev) => [newNotification, ...prev]);
     toast(msg);
+    
+    if (type === "match") {
+      window.dispatchEvent(new Event('refresh_matches'));
+    }
   }, []);
 
   // ✅ Register WebSocket handler for notifications

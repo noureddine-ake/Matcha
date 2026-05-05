@@ -70,7 +70,7 @@ docs: update setup instructions
 * Always check code formatting and lint before committing:
 
   ```
-  npm run lint && npm run format
+  pnpm lint && pnpm format
   ```
 
 ---
@@ -156,7 +156,7 @@ docs: update setup instructions
 ### Install Dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### Environment Variables
@@ -171,8 +171,19 @@ JWT_SECRET=your_secret
 ### Run Development
 
 ```bash
-npm run dev
+pnpm -C backend dev
+pnpm -C frontend dev
 ```
+
+### Commit Rules
+
+Follow **Conventional Commits** and always use **pnpm** for dependency management:
+
+* Use **pnpm** for all dependency operations: `pnpm install`, `pnpm add`, `pnpm remove`
+* Only commit `pnpm-lock.yaml` files, never `package-lock.json`
+* Delete old npm lockfiles when encountered
+* Use clear, concise commit messages
+* Each commit should address only one logical change
 
 ### Run with Nginx (Production)
 

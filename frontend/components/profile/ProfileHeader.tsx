@@ -82,7 +82,6 @@ export default function ProfileHeader({
       <div className="relative">
         <ProfilePicture
           photos={currentProfile.photos}
-          backendUrl={backendUrl}
           size={192}
           editable={isCurrentUser}
         />

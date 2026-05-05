@@ -8,8 +8,10 @@ import React, {
   ReactNode,
   useCallback,
 } from 'react';
-import { Photo } from './globalcontext';
+import { Photo, Tag } from './globalcontext';
 import api from '@/lib/api';
+
+import { useGlobal } from '@/contexts/globalcontext';
 
 // ==== Types ====
 
@@ -38,7 +40,7 @@ export interface Suggestions {
   age: number;
   distance: number;
   photos: Photo[];
-  tags: string[];
+  tags: Tag[];
 }
 
 interface DiscoverContextType {
@@ -64,21 +66,27 @@ const DiscoverContext = createContext<DiscoverContextType | undefined>(
 // ==== Provider ====
 
 export const DiscoverProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useGlobal();
   const [showPopup, setShowPopup] = useState<boolean>(false);
   const [suggestions, setSuggestions] = useState<Suggestions[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
 
   const [filters, setFilters] = useState<Filters>({
-    maxDistance: 500,
+    maxDistance: 100,
     minAge: 18,
     maxAge: 100,
     minFame: 0,
-    maxFame: 100,
+    maxFame: 5,
     sortBy: 'distance',
   });
 
   const fetchSuggestions = useCallback(async () => {
+    if (!user || user.latitude === null || user.longitude === null) {
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -97,7 +105,7 @@ export const DiscoverProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, user]);
 
   // ==== Memoized value ====
   const value = useMemo(
@@ -129,6 +137,6 @@ export const DiscoverProvider = ({ children }: { children: ReactNode }) => {
 export const useDiscover = () => {
   const context = useContext(DiscoverContext);
   if (!context)
-    throw new Error('useGlobal must be used within a DiscoverProvider');
+    throw new Error('useDiscover must be used within a DiscoverProvider');
   return context;
 };

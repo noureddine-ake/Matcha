@@ -82,81 +82,11 @@ const COMMON_PASSWORDS = new Set([
  * @param {string} password - The password to check
  * @returns {boolean} - True if password is common, false otherwise
  */
-export const isCommonPassword = (password) => {
+export const isCommonPassword = (password: any) => {
   if (!password || typeof password !== 'string') {
     return false;
   }
   return COMMON_PASSWORDS.has(password.toLowerCase());
-};
-
-/**
- * Check password strength based on OWASP guidelines
- * Requirements:
- * - At least 8 characters (12+ recommended)
- * - Mix of uppercase and lowercase letters
- * - At least one number
- * - At least one special character
- * - Not a common password
- * @param {string} password - The password to validate
- * @returns {object} - { isValid: boolean, errors: string[] }
- */
-export const validatePasswordStrength = (password) => {
-  const errors = [];
-
-  if (!password || typeof password !== 'string') {
-    return {
-      isValid: false,
-      errors: ['Password is required and must be a string'],
-    };
-  }
-
-  // Check length
-  if (password.length < 8) {
-    errors.push('Password must be at least 8 characters long');
-  }
-  if (password.length < 12) {
-    errors.push('Password should be at least 12 characters for better security (you have ' + password.length + ')');
-  }
-
-  // Check for uppercase letters
-  if (!/[A-Z]/.test(password)) {
-    errors.push('Password must contain at least one uppercase letter');
-  }
-
-  // Check for lowercase letters
-  if (!/[a-z]/.test(password)) {
-    errors.push('Password must contain at least one lowercase letter');
-  }
-
-  // Check for numbers
-  if (!/[0-9]/.test(password)) {
-    errors.push('Password must contain at least one number');
-  }
-
-  // Check for special characters
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-    errors.push('Password must contain at least one special character (!@#$%^&* etc.)');
-  }
-
-  // Check against common passwords (this is a hard requirement)
-  if (isCommonPassword(password)) {
-    errors.push('This password is too common. Please choose a more unique password');
-  }
-
-  // Check for sequential numbers
-  if (/0123|1234|2345|3456|4567|5678|6789|9876|8765|7654|6543|5432|4321|3210/.test(password)) {
-    errors.push('Password contains sequential numbers - please avoid patterns');
-  }
-
-  // Check for repeated characters (more than 2 in a row)
-  if (/(.)\1{2,}/.test(password)) {
-    errors.push('Password contains repeated characters - please vary your characters');
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors: errors.filter(e => !e.includes('should be at least 12')) || [], // Keep only critical errors for validation
-  };
 };
 
 /**
@@ -165,7 +95,7 @@ export const validatePasswordStrength = (password) => {
  * @param {string} password - The password to validate
  * @returns {object} - { isValid: boolean, errors: string[], warnings: string[] }
  */
-export const validatePasswordWithRecommendations = (password) => {
+export const validatePasswordWithRecommendations = (password: any) => {
   const errors = [];
   const warnings = [];
 
@@ -224,6 +154,5 @@ export const validatePasswordWithRecommendations = (password) => {
 
 export default {
   isCommonPassword,
-  validatePasswordStrength,
   validatePasswordWithRecommendations,
 };

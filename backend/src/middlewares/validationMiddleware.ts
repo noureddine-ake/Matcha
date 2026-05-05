@@ -3,14 +3,15 @@
  * Implements OWASP password guidelines
  */
 
+import type { Request, Response, NextFunction } from 'express';
 import { validatePasswordWithRecommendations } from '../utils/passwordValidator.js';
 
 /**
  * Validate password strength middleware
  * Used in registration and password change endpoints
  */
-export const validatePasswordMiddleware = (req, res, next) => {
-  let password = req.body.password;
+export const validatePasswordMiddleware = (req: any, res: Response, next: NextFunction) => {
+  let password = req.body.newPassword;
   if (password != null) password = password.toString();
   // ensure password is not an array or object
   if (!password) {
@@ -37,26 +38,26 @@ export const validatePasswordMiddleware = (req, res, next) => {
 /**
  * Validate registration fields
  */
-export const validateRegistrationMiddleware = (req, res, next) => {
+export const validateRegistrationMiddleware = (req: Request, res: Response, next: NextFunction) => {
   // trim and convert to strings to avoid malicious payloads
   const email = (req.body.email || '').toString().trim();
   const username = (req.body.username || '').toString().trim();
-  const password = (req.body.password || '').toString();
+  const newPassword = (req.body.newPassword || '').toString();
   const firstName = (req.body.firstName || '').toString().trim();
   const lastName = (req.body.lastName || '').toString().trim();
 
   // overwrite sanitized values back into body
   req.body.email = email;
   req.body.username = username;
-  req.body.password = password;
+  req.body.newPassword = newPassword;
   req.body.firstName = firstName;
   req.body.lastName = lastName;
 
   // Check required fields
-  if (!email || !username || !password || !firstName || !lastName) {
+  if (!email || !username || !newPassword || !firstName || !lastName) {
     return res.status(400).json({ 
       error: 'All fields are required',
-      required: ['email', 'username', 'password', 'firstName', 'lastName']
+      required: ['email', 'username', 'newPassword', 'firstName', 'lastName']
     });
   }
 
@@ -100,7 +101,7 @@ export const validateRegistrationMiddleware = (req, res, next) => {
 /**
  * Validate login fields
  */
-export const validateLoginMiddleware = (req, res, next) => {
+export const validateLoginMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const { username, password } = req.body;
 
   if (!username || !password) {

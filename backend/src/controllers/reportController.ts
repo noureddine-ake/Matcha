@@ -11,7 +11,6 @@ export const reportController = {
 
       const { userId } = req.params;
       const { reason } = req.body;
-      console.log(`ids: `, reporterId, ` `, userId);
 
       // Validate
       if (!reason) {
@@ -35,7 +34,6 @@ export const reportController = {
         reason
       }).returning(['*']).run().then(result => result.rows[0]);
 
-      console.log('Report created:', report);
       // Increment report count in profile table
       const userReportCount = await Profiles
         .update({
@@ -46,14 +44,9 @@ export const reportController = {
         .where('user_id', userId).returning(['report_count'])
         .run().then(result => result.rows[0]?.report_count || 0);
 
-      console.log(`User ${userId} has ${userReportCount} reports----`);
-
       if (userReportCount >= 20) {
-        console.log(`🚨 User ${userId} reached 20 reports - DELETING ACCOUNT`);
-
         // Delete user account
         await User.delete().where('id', userId).run();
-        console.log(`✅ User ${userId} PERMANENTLY deleted`);
 
         return res.status(201).json({
           message: 'Report submitted successfully. User account has been deleted due to excessive reports.',

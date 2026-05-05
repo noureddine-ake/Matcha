@@ -1,8 +1,7 @@
 import fetch from 'node-fetch';
 
-export async function reverseGeocode(latitude, longitude) {
+export async function reverseGeocode(latitude: any, longitude: any) {
   const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`;
-  console.log('[reverseGeocode] Fetching URL:', url);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
   const response = await fetch(url, {
@@ -14,9 +13,9 @@ export async function reverseGeocode(latitude, longitude) {
   });
   clearTimeout(timeout);
   if (!response.ok) throw new Error('Failed to fetch geocode');
-  const data = await response.json();
+  const data: any = await response.json();
   // Helper to extract only the Latin part (before any non-Latin/Unicode chunk)
-  function extractLatin(str) {
+  function extractLatin(str: any) {
     if (!str) return '';
     const match = str.match(/^[A-Za-z0-9 .,'-]+/);
     if (!match) return str;

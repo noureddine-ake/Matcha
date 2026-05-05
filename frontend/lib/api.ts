@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios, {
   AxiosResponse,
   AxiosError,
   InternalAxiosRequestConfig,
 } from "axios";
 
-const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000/api";
+const baseURL = `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000"}/api`;
 
 const api = axios.create({
   baseURL,
@@ -103,7 +104,7 @@ api.interceptors.response.use(
 
 // Deduplicate GET requests within the same render cycle
 const originalGet = api.get;
-api.get = function (url: string, config?: any) {
+api.get = function (this: typeof api, url: string, config?: any) {
   const cacheKey = `GET_${url}`;
   
   if (requestCache.has(cacheKey)) {

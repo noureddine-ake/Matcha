@@ -8,7 +8,7 @@ import api from '@/lib/api';
 import { Photo } from '@/contexts/globalcontext';
 
 
-const BASE_URL = process.env.BACKEND_URL || "http://backend:5000"
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000"
 
 interface Likes {
   id: number;
@@ -36,7 +36,6 @@ export default function LikesPage() {
     try {
       const { data } = await api.get<Likes[]>('/likes');
       setLikes(data);
-      console.log(data);
     } catch (err: unknown) {
       console.error(err);
     }
@@ -69,7 +68,7 @@ export default function LikesPage() {
           >
             <div className="relative overflow-hidden rounded-2xl aspect-square">
               <Image
-                src={BASE_URL + like.photos[0].photo_url}
+                src={like.photos[0].photo_url}
                 alt={`Profile ${like.id}`}
                 width={100}
                 height={100}

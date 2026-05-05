@@ -7,20 +7,21 @@ import { fileURLToPath } from 'url';
 // Load environment variables
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
 
 const { Pool } = pkg;
 const pool = new Pool({
   user: process.env.PGUSER,
-  host: process.env.PGHOST,
+  host: 'localhost',
   database: process.env.PGDATABASE,
   password: process.env.PGPASSWORD,
-  port: parseInt(process.env.PGPORT || '5432'),
+  port: 5431,
 });
 
 // Command line arguments
 const args = process.argv.slice(2);
-const numUsers = parseInt(args.find(arg => arg.startsWith('--users='))?.split('=')[1] || '50');
+const numUsers = parseInt(args.find(arg => arg.startsWith('--users='))?.split('=')[1] || '550');
 const clearData = args.includes('--clear');
 const dryRun = args.includes('--dry-run');
 
@@ -30,7 +31,15 @@ const firstNames = [
   'Isabella', 'Logan', 'Charlotte', 'Oliver', 'Amelia', 'Elijah', 'Harper', 'Aiden', 'Evelyn', 'James',
   'Abigail', 'Benjamin', 'Emily', 'Sebastian', 'Elizabeth', 'Jack', 'Sofia', 'Alexander', 'Avery', 'William',
   'Ella', 'Michael', 'Scarlett', 'Daniel', 'Madison', 'Henry', 'Chloe', 'Owen', 'Victoria', 'Wyatt',
-  'Thomas', 'Camille', 'Antoine', 'Léa', 'Julien', 'Manon', 'Nicolas', 'Inès', 'Hugo', 'Sarah'
+  'Thomas', 'Camille', 'Antoine', 'Léa', 'Julien', 'Manon', 'Nicolas', 'Inès', 'Hugo', 'Sarah',
+  'Alice', 'Bob', 'Charlie', 'Diana', 'Edward', 'Fiona', 'George', 'Hannah', 'Isaac', 'Julia',
+  'Kevin', 'Laura', 'Matthew', 'Natalie', 'Oscar', 'Patricia', 'Quincy', 'Rachel', 'Samuel', 'Tina',
+  'Ulysses', 'Violet', 'Walter', 'Xena', 'Yuki', 'Zachary', 'Abigail', 'Bradley', 'Casey', 'Devon',
+  'Ethan', 'Fiona', 'Gabriel', 'Hazel', 'Ivan', 'Jacqueline', 'Keith', 'Lillian', 'Milo', 'Natalie',
+  'Oliver', 'Piper', 'Quinn', 'Rosa', 'Sam', 'Taylor', 'Uma', 'Victor', 'Whitney', 'Xavier',
+  'Yara', 'Zoe', 'Aaron', 'Bella', 'Clark', 'Diana', 'Ezra', 'Faith', 'Grace', 'Henry',
+  'Iris', 'Jake', 'Kate', 'Leo', 'Molly', 'Nora', 'Owen', 'Poppy', 'Riley', 'Stella',
+  'Theo', 'Uma', 'Vincent', 'Wendy', 'Xander', 'Yasmin', 'Zeke', 'Ava', 'Aiden', 'Amelia'
 ];
 
 const lastNames = [
@@ -38,7 +47,15 @@ const lastNames = [
   'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin',
   'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson',
   'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores',
-  'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon'
+  'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon',
+  'Laurent', 'Lefebvre', 'Michel', 'Garcia', 'David', 'Bertrand', 'Roux', 'Vincent', 'Fournier', 'Morel',
+  'Girard', 'Andre', 'Legrand', 'Garnier', 'Favre', 'Rousseau', 'Blanc', 'Guerin', 'Boyer', 'Hubert',
+  'Renard', 'Gillet', 'Deschamps', 'Perrin', 'Renaud', 'Gendron', 'Guillot', 'Benard', 'Bourgeois', 'Chevallier',
+  'Coleman', 'Jenkins', 'Perry', 'Powell', 'Long', 'Patterson', 'Hughes', 'Flowers', 'Parks', 'Payne',
+  'Cunningham', 'Pierce', 'Curry', 'Pace', 'Pierce', 'Salazar', 'Salinas', 'Salmons', 'Sample', 'Samuel',
+  'Sanders', 'Sanderson', 'Sandifer', 'Sandlin', 'Sanford', 'Santiago', 'Santos', 'Sankey', 'Sargent', 'Sargis',
+  'Sato', 'Sauceda', 'Sauer', 'Saulsbury', 'Saunders', 'Sauvage', 'Savage', 'Savalla', 'Savannah', 'Savery',
+  'Savidge', 'Savill', 'Saville', 'Savitzky', 'Savoy', 'Sawaya', 'Sawbridge', 'Sawers', 'Sawicki', 'Sawicky'
 ];
 
 const cities = [
@@ -61,7 +78,27 @@ const cities = [
   { name: 'Dijon', lat: 47.3220, lng: 5.0415 },
   { name: 'Angers', lat: 47.4784, lng: -0.5632 },
   { name: 'Nîmes', lat: 43.8367, lng: 4.3601 },
-  { name: 'Villeurbanne', lat: 45.7719, lng: 4.8842 }
+  { name: 'Villeurbanne', lat: 45.7719, lng: 4.8842 },
+  { name: 'Aix-en-Provence', lat: 43.5298, lng: 5.4474 },
+  { name: 'Brest', lat: 48.3905, lng: -4.4860 },
+  { name: 'Havre', lat: 49.4944, lng: 0.1079 },
+  { name: 'Saint-Denis', lat: 48.9352, lng: 2.3597 },
+  { name: 'Bethune', lat: 50.5239, lng: 2.6359 },
+  { name: 'Orleans', lat: 47.9029, lng: 1.9090 },
+  { name: 'Amiens', lat: 49.8941, lng: 2.2959 },
+  { name: 'Limoges', lat: 45.8336, lng: 1.2611 },
+  { name: 'Rouen', lat: 49.4432, lng: 1.0993 },
+  { name: 'Lens', lat: 50.4263, lng: 2.8217 },
+  { name: 'Saint-Quentin', lat: 49.8507, lng: 3.2833 },
+  { name: 'Saint-Paul', lat: 48.9511, lng: 2.2511 },
+  { name: 'Villepinte', lat: 48.9703, lng: 2.5593 },
+  { name: 'Argenteuil', lat: 48.9483, lng: 2.2162 },
+  { name: 'Montreuil', lat: 48.8626, lng: 2.4424 },
+  { name: 'Créteil', lat: 48.7798, lng: 2.4549 },
+  { name: 'Nanterre', lat: 48.8966, lng: 2.2250 },
+  { name: 'Metz', lat: 49.1193, lng: 6.1757 },
+  { name: 'Mulhouse', lat: 47.7412, lng: 7.3191 },
+  { name: 'Thionville', lat: 49.3603, lng: 6.1650 }
 ];
 
 const tags = [

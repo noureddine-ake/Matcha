@@ -138,7 +138,6 @@ export async function getAllUsersExcept(currentUserId: any) {
 export async function userExists(userId: any) {
   try {
     if (!userId || isNaN(userId)) {
-      console.log("❌ Invalid user ID:", userId);
       return false;
     }
     const result = await User.select(['id'])

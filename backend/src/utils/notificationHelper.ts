@@ -4,7 +4,7 @@ import { sendNotificationToUser } from '../config/websocket.js';
 /**
  * Create and send notification
  */
-export const createAndSendNotification = async (userId, type, fromUserId, additionalData = {}) => {
+export const createAndSendNotification = async (userId: any, type: any, fromUserId: any, additionalData: any = {}) => {
   try {
     // Insert notification into database
     const query = `

@@ -73,7 +73,7 @@ const FilterPopup = () => {
                   </div>
                   <Slider
                     value={[discover.filters.maxDistance]}
-                    max={200}
+                    max={100}
                     step={5}
                     onValueChange={(v: number[]) => handleChange("maxDistance", v)}
                     className="py-2"

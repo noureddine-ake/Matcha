@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 
-const BASE_URL = process.env.BACKEND_URL || "http://backend:5000";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000";
 
 interface BlockedUser {
   id: number;
@@ -413,7 +413,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                               <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500">
                                 {user.profile_picture ? (
                                   <Image
-                                    src={BASE_URL + user.profile_picture}
+                                    src={user.profile_picture}
                                     alt={user.username}
                                     width={48}
                                     height={48}
