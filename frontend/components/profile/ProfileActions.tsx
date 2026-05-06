@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+// import { useChat } from "@/contexts/ChatContext";
 
 interface ProfileActionsProps {
     isCurrentUser: boolean;
@@ -29,6 +30,7 @@ export default function ProfileActions({ isCurrentUser, username, userId }: Prof
     const [isLoadingLikeStatus, setIsLoadingLikeStatus] = useState(true);
     const [isLikeActionPending, setIsLikeActionPending] = useState(false);
     const router = useRouter();
+    // const { removeUserFromChatList } = useChat();
 
     useEffect(() => {
         if (!username || isCurrentUser) {
@@ -101,6 +103,9 @@ export default function ProfileActions({ isCurrentUser, username, userId }: Prof
         try {
             await api.post(`/users/block/${username}`);
             toast.success("User blocked");
+            // if (userId) {
+            //     removeUserFromChatList(userId.toString());
+            // }
             router.push('/discover');
         } catch (err) {
             console.error("Error blocking user:", err);

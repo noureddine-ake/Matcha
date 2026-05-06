@@ -1,6 +1,7 @@
 import { Photos } from "../../database/entities/photos.entity.js";
 import { User } from "../../database/entities/users.entity.js";
 import { isUserOnline, sendRealTimeMessage } from "../config/websocket.js";
+import { pool } from '../config/config.js';
 import type { Request, Response } from 'express';
 import {
   getAllUsersExcept,
@@ -124,7 +125,8 @@ async function getChatUsers(req: any, res: any): Promise<void | Response> {
             is_online: isUserOnline(user.id.toString()),
             last_message: null,
             unread_count: 0,
-            is_connected: false
+            is_connected: false,
+            is_blocked: user.is_blocked || false,
           };
           
         } catch (photoError: unknown) {
@@ -139,7 +141,8 @@ async function getChatUsers(req: any, res: any): Promise<void | Response> {
             is_online: isUserOnline(user.id.toString()),
             last_message: null,
             unread_count: 0,
-            is_connected: false
+            is_connected: false,
+            is_blocked: user.is_blocked || false,
           };
         }
       })
@@ -247,6 +250,14 @@ async function sendMessage(req: any, res: any): Promise<void | Response> {
     
     if (!senderExists || !receiverExists) {
       return res.status(404).json({ error: "One or both users do not exist" });
+    }
+
+    const blockCheck = await pool.query(
+      'SELECT 1 FROM blocks WHERE (blocker_user_id = $1 AND blocked_user_id = $2) OR (blocker_user_id = $2 AND blocked_user_id = $1)',
+      [actualSenderId, actualReceiverId]
+    );
+    if (blockCheck.rows.length > 0) {
+      return res.status(403).json({ error: "Forbidden: Cannot send message due to block" });
     }
 
     const message = await saveMessage(actualSenderId, actualReceiverId, content);

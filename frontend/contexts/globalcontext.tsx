@@ -32,6 +32,7 @@ export interface User {
   position: Position;
   fame_rating?: string;
   stats: Stats;
+  is_blocked?: boolean;
 };
 
 export interface FormUpdateUser {

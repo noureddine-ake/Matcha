@@ -25,7 +25,7 @@ export default function ChatPage() {
   const { isConnected } = useWebSocket();
   const searchParams = useSearchParams();
 
-  const selectedUser = state.users.find(user => user.id === state.selectedUserId);
+  const selectedUser = state.users.find(user => user.id === state.selectedUserId || searchParams?.get('id') === user.id.toString());
 
   useEffect(() => {
     const username = searchParams?.get('username');
@@ -102,6 +102,7 @@ export default function ChatPage() {
               disabled={!selectedUser || state.sending}
               sending={state.sending}
               textareaRef={refs.textareaRef}
+              is_blocked={selectedUser?.is_blocked}
             />
           </>
         ) : (

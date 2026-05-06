@@ -40,6 +40,7 @@ export default function ProfileInfo({
                             alt="Country Flag"
                             width={32}
                             height={24}
+                            unoptimized
                             className="inline-block ml-2 rounded-sm border border-white/20"
                         />
                     )}

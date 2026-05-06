@@ -56,7 +56,13 @@ router.post('/block/:username', async (req, res) => {
 
     await client.query(
       `INSERT INTO blocks (blocker_user_id, blocked_user_id)
-       VALUES ($1, $2)`,
+       VALUES ($1, $2)
+       ON CONFLICT (blocker_user_id, blocked_user_id) DO NOTHING`,
+      [blockerId, blockedUserId]
+    );
+
+    await client.query(
+      'DELETE FROM notifications WHERE (from_user_id = $1 AND user_id = $2) OR (from_user_id = $2 AND user_id = $1)',
       [blockerId, blockedUserId]
     );
 

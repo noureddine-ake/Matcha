@@ -1,5 +1,6 @@
-import { Messages, User, Notifications } from "../../database/entities/index.js";
+import { Messages, User } from "../../database/entities/index.js";
 import { createAndSendNotification } from "../utils/notificationHelper.js";
+import { pool } from '../config/config.js';
 
 // ✅ Get messages with pagination
 export async function getMessagesPaginated(senderId: any, receiverId: any, cursor = null, limit = 20) {
@@ -121,16 +122,18 @@ export async function getMessagesPaginated(senderId: any, receiverId: any, curso
 
 export async function getAllUsersExcept(currentUserId: any) {
   try {
-    const result = await User.select(['u.id', 'u.username', 'u.email', 'u.created_at'])
-      .from('users u')
-      .join('INNER', 'likes l1', `l1.liker_user_id = ${currentUserId} AND l1.liked_user_id = u.id`)
-      .join('INNER', 'likes l2', `l2.liker_user_id = u.id AND l2.liked_user_id = ${currentUserId}`)
-      .orderBy('u.username', 'ASC')
-      .run();
-    
+    const result = await pool.query(`
+      SELECT u.id, u.username, u.email, u.created_at,
+             CASE WHEN b.id IS NOT NULL THEN true ELSE false END as is_blocked
+      FROM users u
+      INNER JOIN likes l1 ON l1.liker_user_id = $1 AND l1.liked_user_id = u.id
+      INNER JOIN likes l2 ON l2.liker_user_id = u.id AND l2.liked_user_id = $1
+      LEFT JOIN blocks b ON (b.blocker_user_id = u.id AND b.blocked_user_id = $1) OR (b.blocker_user_id = $1 AND b.blocked_user_id = u.id)
+      ORDER BY u.username ASC
+    `, [currentUserId]);
     return result.rows;
   } catch (error) {
-    console.error("❌ Error in getMatchedUsers:", error);
+    console.error("❌ Error in getAllUsersExcept:", error);
     throw error;
   }
 }
