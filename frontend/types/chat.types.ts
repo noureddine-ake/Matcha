@@ -7,6 +7,7 @@ export interface User {
   last_seen?: string;
   first_name?: string;
   last_name?: string;
+  is_blocked?: boolean;
 }
 
 export interface Message {

@@ -38,6 +38,7 @@ interface ChatContextType {
     toggleSidebar: () => void;
     setSearchTerm: (term: string) => void;
     setNewMessage: (message: string) => void;
+    // removeUserFromChatList: (userId: string) => void;
 
     // Helpers
     getUnreadCount: (userId: string) => number;
@@ -548,6 +549,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             return;
         }
 
+        const targetUserId = state.selectedUserId;
+
         const tempId = `temp_${Date.now()}`;
         const tempMessage: Message = {
             id: tempId,
@@ -590,17 +593,34 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
                 ),
                 sending: false,
             }));
-        } catch (error: unknown) {
-            console.error("Failed to send message:", error);
+        } catch (err: any) {
+            console.error("❌ Failed to send message:", err);
 
-            setState((prev) => ({
+            setState(prev => ({
                 ...prev,
-                messages: prev.messages.map((msg) =>
-                    msg.id === tempId ? { ...msg, isSending: false, isFailed: true } : msg
-                ),
-                sending: false,
-                error: error instanceof Error ? error.message : "Failed to send message",
+                messages: prev.messages.filter(m => m.id !== tempId),
+                sending: false
             }));
+
+            if (err.response?.status === 403) {
+                toast.error("You are blocking or blocked by this user......");
+                setState(prev => {
+                    const updatedUsers = prev.users.map(u => 
+                        u.id === targetUserId 
+                        ? { ...u, is_blocked: true } 
+                        : u
+                    );
+                    return {
+                        ...prev,
+                        users: updatedUsers
+                    };
+                });
+            } else {
+                setState(prev => ({
+                    ...prev,
+                    error: err instanceof Error ? err.message : "Failed to send message. Please try again."
+                }));
+            }
 
             setTimeout(() => {
                 setState((prev) => ({ ...prev, newMessage: messageContent }));
@@ -663,6 +683,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     const setNewMessage = useCallback((message: string) => {
         setState((prev) => ({ ...prev, newMessage: message }));
     }, []);
+
+    // const removeUserFromChatList = useCallback((userId: string) => {
+    //     setState((prev) => ({
+    //         ...prev,
+    //         users: prev.users.filter((u) => u.id.toString() !== userId.toString()),
+    //         selectedUserId: prev.selectedUserId?.toString() === userId.toString() ? null : prev.selectedUserId,
+    //     }));
+    // }, []);
 
     // Helpers
     const getUnreadCount = useCallback(
@@ -848,6 +876,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             toggleSidebar,
             setSearchTerm,
             setNewMessage,
+            // removeUserFromChatList,
             getUnreadCount,
             getLastMessage,
             clearUnreadCount,
@@ -871,6 +900,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             toggleSidebar,
             setSearchTerm,
             setNewMessage,
+            // removeUserFromChatList,
             getUnreadCount,
             getLastMessage,
             clearUnreadCount,

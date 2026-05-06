@@ -10,6 +10,7 @@ interface ChatInputProps {
   disabled: boolean;
   sending: boolean;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  is_blocked?: boolean;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -21,7 +22,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   disabled,
   sending,
   textareaRef,
+  is_blocked,
 }) => {
+  if (is_blocked) {
+    return (
+      <div className="absolut bottom-0 left-0 right-0 md:relative md:bottom-auto p-4 border-t border-white/20 backdrop-blur-lg z-30">
+        <div className="container mx-auto max-w-7xl">
+          <div className="flex w-full items-center p-4 bg-muted/50 text-muted-foreground justify-center text-sm rounded-md border border-white/10 text-white/70">
+            You are blocking or blocked by this user.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="absolut bottom-0 left-0 right-0 md:relative md:bottom-auto p-4 border-t border-white/20 backdrop-blur-lg z-30">
       <div className="container mx-auto max-w-7xl">

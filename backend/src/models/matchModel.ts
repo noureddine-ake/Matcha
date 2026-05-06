@@ -1,4 +1,4 @@
-import { UserTags, Photos, Blocks, Likes } from '../../database/entities/index.js';
+import { UserTags, Photos, Likes } from '../../database/entities/index.js';
 import { Profiles } from '../../database/entities/profiles.entity.js';
 import { User } from '../../database/entities/users.entity.js';
 import { Raw } from '../../database/raw.js';
@@ -69,15 +69,6 @@ export const searchSuggestions = async (
     throw new Error('Current user not found');
   }
 
-  // Fetch blocked users and users who blocked current user
-  const blocks = await Blocks.select(['*'])
-    .where('blocker_user_id', userId)
-    .run().then(res => res.rows);
-  const blocks2 = await Blocks.select(['*'])
-    .where('blocked_user_id', userId)
-    .run().then(res => res.rows);
-  const blockedUserIds = new Set([...blocks, ...blocks2].flatMap((b: any) => [b.blocker_user_id, b.blocked_user_id]));
-
   // Fetch users already liked by current user
   const userLikes = await Likes.select(['liked_user_id'])
     .where('liker_user_id', userId)
@@ -109,19 +100,18 @@ export const searchSuggestions = async (
   ])
     .from('users u')
     .join('INNER', 'profiles p', 'u.id = p.user_id')
+    .join('LEFT', 'blocks b', `(b.blocker_user_id = u.id AND b.blocked_user_id = ${userId}) OR (b.blocker_user_id = ${userId} AND b.blocked_user_id = u.id)`)
     .where('u.id', userId, '!=')
     // .where('u.is_verified', true)
     // .where('p.gender', null, 'not null')
     .where('p.latitude', null, 'not null')
     .where('p.longitude', null, 'not null')
+    .where('b.id', null, 'null')
     .run();
 
   let users = usersResult.rows as any[];
 
   console.log('Users:', userId, users);
-
-  // 1. Filter out blocked/blocking users
-  users = users.filter(u => !blockedUserIds.has(u.id));
 
   console.log('Users after block filtering:', users.length);
   // 2. Filter out already liked users
