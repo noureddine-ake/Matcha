@@ -1,11 +1,12 @@
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
+
+ENV NODE_OPTIONS=--max-old-space-size=1024
+ENV PNPM_ONLY_BUILT_DEPENDENCIES='*'
 
 RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache bash curl
 
-RUN npm install -g pnpm@latest
-
-ENV NODE_OPTIONS=--max-old-space-size=1024
+RUN npm install -g pnpm@10
 
 WORKDIR /app
 

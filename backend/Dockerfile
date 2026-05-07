@@ -1,11 +1,11 @@
-
 ##################################
 
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 ENV NODE_OPTIONS=--max-old-space-size=4096
+ENV PNPM_ONLY_BUILT_DEPENDENCIES='*'
 RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache bash curl
-RUN npm install -g pnpm@latest
+RUN npm install -g pnpm@10
 WORKDIR /app
 
 ##################################
@@ -52,4 +52,4 @@ COPY .npmrc /app/.npmrc
 RUN cd /app && pnpm install --no-frozen-lockfile
 COPY backend/ ./
 EXPOSE 5000
-CMD ["sh", "-c", "while true; do pnpm dev; done"]"
+CMD ["sh", "-c", "while true; do pnpm dev; done"]
