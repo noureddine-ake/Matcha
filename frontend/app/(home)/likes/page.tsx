@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Flame } from 'lucide-react';
 import api from '@/lib/api';
 import { Photo } from '@/contexts/globalcontext';
@@ -72,13 +73,13 @@ export default function LikesPage() {
                 alt={`Profile ${like.id}`}
                 width={100}
                 height={100}
-                className="w-full h-full object-cover blur-md group-hover:blur-0 group-hover:scale-110 transition-all duration-300"
+                className="w-full h-full object-cover group-hover:scale-110 transition-all duration-300"
               />
               <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent flex items-end p-4">
-                <div>
+                <Link href={`/profile/${like.username}`} className="hover:underline">
                   <p className="text-white font-bold text-lg">{like.username}</p>
-                  <p className="text-white/80 text-sm">Liked you {}</p>
-                </div>
+                </Link>
+                <p className="text-white/80 text-sm">Liked you</p>
               </div>
             </div>
           </motion.div>
