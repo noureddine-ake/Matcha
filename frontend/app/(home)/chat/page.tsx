@@ -28,14 +28,11 @@ export default function ChatPage() {
   const selectedUser = state.users.find(user => user.id === state.selectedUserId || searchParams?.get('id') === user.id.toString());
 
   useEffect(() => {
-    const username = searchParams?.get('username');
-    if (username && !state.loading && state.users.length > 0 && !state.selectedUserId) {
-      const user = state.users.find(u => u.username === decodeURIComponent(username));
-      if (user) {
-        selectUser(user.id.toString());
-      }
+    const userId = searchParams?.get('id');
+    if (userId && !state.selectedUserId) {
+      selectUser(userId);
     }
-  }, [searchParams, state.users, state.selectedUserId, state.loading, selectUser]);
+  }, [searchParams, state.selectedUserId, selectUser]);
 
   if (state.loading) {
     return (

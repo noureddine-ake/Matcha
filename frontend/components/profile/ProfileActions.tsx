@@ -92,7 +92,9 @@ export default function ProfileActions({ isCurrentUser, username, userId }: Prof
     };
 
     const handleChat = () => {
-        router.push(`/chat?username=${username}`);
+        if (userId) {
+            router.push(`/chat?id=${userId}`);
+        }
     };
 
     const handleReport = () => {

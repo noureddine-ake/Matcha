@@ -120,7 +120,7 @@ export const googleCallbackController = async (req: Request, res: Response) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    const redirectUrl = user.completed_profile ? `http://localhost:3000/profile/${user.username}` : 'http://localhost:3000/auth/profile/complete'
+    const redirectUrl = user.completed_profile ? `${process.env.FRONTEND_URL}/profile/${user.username}` : `${process.env.FRONTEND_URL}/auth/profile/complete`
     res.redirect(redirectUrl);
   } catch (err) {
     console.error(err);

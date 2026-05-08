@@ -51,7 +51,13 @@ export default function DiscoverPage() {
 
       setShowSidebar(false);
       setCurrentImageIndex(0);
-      discover.setSuggestions((prev) => [...prev.slice(1)]);
+      discover.setSuggestions((prev) => {
+        const nextSuggestions = prev.slice(1);
+        if (nextSuggestions.length <= 3 && discover.hasMore) {
+          discover.fetchMore();
+        }
+        return [...nextSuggestions];
+      });
       controls.set({ x: 0, opacity: 1 });
     } catch (err) {
       console.error(err);
