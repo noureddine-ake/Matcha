@@ -332,7 +332,7 @@ export const getProfileDataforMatches = async (userId: number) => {
 };
 
 // get all likes for a user
-export const getUserLikes = async (userId: number) => {
+export const getUserLikes = async (userId: number, options: { limit?: number; offset?: number } = {}) => {
   // 1. Fetch all user IDs that liked current user
   const likersResult = await Likes.select(['liker_user_id'])
     .where('liked_user_id', userId)
@@ -388,8 +388,10 @@ export const getUserLikes = async (userId: number) => {
   // 5. Sort by fame_rating DESC
   users.sort((a, b) => Number(b.fame_rating) - Number(a.fame_rating));
 
-  // 6. Apply pagination (defaults to no limit/no offset for now as per original raw SQL)
-  const paginatedUsers = users;
+  // 6. Apply pagination
+  const limit = options.limit || users.length;
+  const offset = options.offset || 0;
+  const paginatedUsers = users.slice(offset, offset + limit);
 
   const paginatedIds = paginatedUsers.map(u => u.id);
 

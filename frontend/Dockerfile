@@ -26,6 +26,9 @@ RUN cd /app && pnpm install --prod --no-frozen-lockfile
 
 FROM base AS builder
 
+ARG NEXT_PUBLIC_BASE_URL=http://localhost:5000
+ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
+
 RUN mkdir -p /app/backend
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml /app/

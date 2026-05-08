@@ -38,6 +38,7 @@ interface ChatContextType {
     toggleSidebar: () => void;
     setSearchTerm: (term: string) => void;
     setNewMessage: (message: string) => void;
+    removeFromMatches: (userId: string) => void;
     // removeUserFromChatList: (userId: string) => void;
 
     // Helpers
@@ -603,18 +604,23 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             }));
 
             if (err.response?.status === 403) {
-                toast.error("You are blocking or blocked by this user......");
-                setState(prev => {
-                    const updatedUsers = prev.users.map(u => 
-                        u.id === targetUserId 
-                        ? { ...u, is_blocked: true } 
-                        : u
-                    );
-                    return {
-                        ...prev,
-                        users: updatedUsers
-                    };
-                });
+                if (err.response?.data?.error === "NOT_MATCHED") {
+                    removeFromMatches(targetUserId);
+                    toast.error("You are no longer matched with this user.");
+                } else {
+                    toast.error("You are blocking or blocked by this user......");
+                    setState(prev => {
+                        const updatedUsers = prev.users.map(u => 
+                            u.id === targetUserId 
+                            ? { ...u, is_blocked: true } 
+                            : u
+                        );
+                        return {
+                            ...prev,
+                            users: updatedUsers
+                        };
+                    });
+                }
             } else {
                 setState(prev => ({
                     ...prev,
@@ -682,6 +688,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
     const setNewMessage = useCallback((message: string) => {
         setState((prev) => ({ ...prev, newMessage: message }));
+    }, []);
+
+    const removeFromMatches = useCallback((userId: string) => {
+        setState((prev) => ({
+            ...prev,
+            users: prev.users.filter((u) => u.id.toString() !== userId.toString()),
+            selectedUserId: prev.selectedUserId?.toString() === userId.toString() ? null : prev.selectedUserId,
+        }));
     }, []);
 
     // const removeUserFromChatList = useCallback((userId: string) => {
@@ -876,6 +890,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             toggleSidebar,
             setSearchTerm,
             setNewMessage,
+            removeFromMatches,
             // removeUserFromChatList,
             getUnreadCount,
             getLastMessage,
@@ -900,6 +915,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             toggleSidebar,
             setSearchTerm,
             setNewMessage,
+            removeFromMatches,
             // removeUserFromChatList,
             getUnreadCount,
             getLastMessage,

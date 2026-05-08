@@ -191,6 +191,27 @@ async function getChat(req: any, res: any): Promise<void | Response> {
       return res.status(404).json({ error: "One or both users do not exist" });
     }
 
+    // Check for blocks
+    const blockCheck = await pool.query(
+      'SELECT 1 FROM blocks WHERE (blocker_user_id = $1 AND blocked_user_id = $2) OR (blocker_user_id = $2 AND blocked_user_id = $1)',
+      [actualSenderId, actualReceiverId]
+    );
+    if (blockCheck.rows.length > 0) {
+      return res.status(403).json({ error: "Forbidden: Access denied due to block" });
+    }
+
+    // Verify users are matched (mutual likes)
+    const matchCheck = await pool.query(
+      `SELECT 1 FROM likes l1 
+       INNER JOIN likes l2 ON l1.liker_user_id = l2.liked_user_id 
+       AND l1.liked_user_id = l2.liker_user_id 
+       WHERE l1.liker_user_id = $1 AND l1.liked_user_id = $2`,
+      [actualSenderId, actualReceiverId]
+    );
+    if (matchCheck.rows.length === 0) {
+      return res.status(403).json({ error: "NOT_MATCHED", message: "You must match with this user to view chat history" });
+    }
+
     const { messages, hasMore, nextCursor, totalMessages } = await getMessagesPaginated(
       actualSenderId, 
       actualReceiverId, 
@@ -258,6 +279,17 @@ async function sendMessage(req: any, res: any): Promise<void | Response> {
     );
     if (blockCheck.rows.length > 0) {
       return res.status(403).json({ error: "Forbidden: Cannot send message due to block" });
+    }
+
+    const matchCheck = await pool.query(
+      `SELECT 1 FROM likes l1 
+       INNER JOIN likes l2 ON l1.liker_user_id = l2.liked_user_id 
+       AND l1.liked_user_id = l2.liker_user_id 
+       WHERE l1.liker_user_id = $1 AND l1.liked_user_id = $2`,
+      [actualSenderId, actualReceiverId]
+    );
+    if (matchCheck.rows.length === 0) {
+      return res.status(403).json({ error: "NOT_MATCHED", message: "You must match with this user to send messages" });
     }
 
     const message = await saveMessage(actualSenderId, actualReceiverId, content);

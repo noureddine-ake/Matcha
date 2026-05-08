@@ -49,12 +49,17 @@ interface DiscoverContextType {
   suggestions: Suggestions[];
   loading: boolean;
   error: string;
+  hasMore: boolean;
+  offset: number;
+  limit: number;
 
   // Functions
   setShowPopup: React.Dispatch<React.SetStateAction<boolean>>;
   setFilters: React.Dispatch<React.SetStateAction<Filters>>;
   setSuggestions: React.Dispatch<React.SetStateAction<Suggestions[]>>;
-  fetchSuggestions: () => Promise<void>;
+  fetchSuggestions: (reset?: boolean) => Promise<void>;
+  fetchMore: () => Promise<void>;
+  resetPagination: () => void;
 }
 
 // ==== Context ====
@@ -71,6 +76,9 @@ export const DiscoverProvider = ({ children }: { children: ReactNode }) => {
   const [suggestions, setSuggestions] = useState<Suggestions[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const limit = 20;
 
   const [filters, setFilters] = useState<Filters>({
     maxDistance: 100,
@@ -81,23 +89,34 @@ export const DiscoverProvider = ({ children }: { children: ReactNode }) => {
     sortBy: 'distance',
   });
 
-  const fetchSuggestions = useCallback(async () => {
+  const fetchSuggestions = useCallback(async (reset = true) => {
     if (!user || user.latitude === null || user.longitude === null) {
       setLoading(false);
       return;
     }
     
     setLoading(true);
-
+    const currentOffset = reset ? 0 : offset;
+    
     try {
+      const params = {
+        ...filters,
+        limit: String(limit),
+        offset: String(currentOffset),
+      };
       const query = new URLSearchParams(
-        Object.entries(filters).reduce((acc, [key, value]) => {
-          acc[key] = String(value);
-          return acc;
-        }, {} as Record<string, string>)
+        params as unknown as Record<string, string>
       ).toString();
       const res = await api.post(`/suggestions?${query}`);
-      setSuggestions(res.data.suggestions);
+      
+      if (reset) {
+        setSuggestions(res.data.suggestions);
+      } else {
+        setSuggestions(prev => [...prev, ...res.data.suggestions]);
+      }
+      
+      setOffset(currentOffset + res.data.count);
+      setHasMore(res.data.count === limit);
       setError('');
     } catch (err) {
       console.error(err);
@@ -105,7 +124,19 @@ export const DiscoverProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, [filters, user]);
+  }, [filters, user, offset, limit]);
+
+  const fetchMore = useCallback(async () => {
+    if (hasMore && !loading) {
+      fetchSuggestions(false);
+    }
+  }, [hasMore, loading, fetchSuggestions]);
+
+  const resetPagination = useCallback(() => {
+    setOffset(0);
+    setHasMore(true);
+    setSuggestions([]);
+  }, []);
 
   // ==== Memoized value ====
   const value = useMemo(
@@ -115,14 +146,31 @@ export const DiscoverProvider = ({ children }: { children: ReactNode }) => {
       suggestions,
       loading,
       error,
+      hasMore,
+      offset,
+      limit,
 
       // Functions
       setShowPopup,
       setFilters,
       fetchSuggestions,
+      fetchMore,
+      resetPagination,
       setSuggestions,
     }),
-    [showPopup, filters, suggestions, loading, error, fetchSuggestions]
+    [
+      showPopup,
+      filters,
+      suggestions,
+      loading,
+      error,
+      hasMore,
+      offset,
+      limit,
+      fetchSuggestions,
+      fetchMore,
+      resetPagination,
+    ]
   );
 
   return (
